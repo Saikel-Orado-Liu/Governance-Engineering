@@ -1,0 +1,82 @@
+module:
+  name: Test
+  path: Source/Test/
+  status: active
+  last_updated: "2026-05-08"
+  human_doc: docs/human/architecture/test.md
+
+responsibility: >
+  测试基础设施模块。包含两个公开类：FMyClass（33 个静态方法，涵盖数学、字符串、系统、
+  测试四类功能）和 FGameSaveManager（基于 FArchive 的存档序列化工具）。
+  依赖 Core、CoreUObject、Engine、RHI 四个引擎基础模块。
+
+public_interface:
+  - signature: "class FMyClass"
+    behavior: >
+      单一测试功能类（非 UObject，TEST_API 导出），包含所有 33 个静态方法：
+      数学（3）：ValidateRange、ClampValue、GetAverageFPS
+      字符串（22）：GetTestVersion、GetModuleVersion、GetModuleName、GetPlatformName、
+        GetModuleBuildDate、GetBuildDate、GetProjectStartTime、GetCompileTimestamp、
+        GetActivePluginsList、GetBuildConfiguration、GetTestDirectory、GetEditorStatus、
+        GetRenderDeviceName、GetEngineUptimeString、GetFormattedTime、GetRegisteredComponents、
+        GetProjectCodeName、GetProjectStatus、GetEngineBranch、GetMaxFPSLimit、GetDefaultTimeout、
+        GetModuleAuthor
+      系统（4）：IsTestEnvironmentValid、GetTestEnvironmentInfo、GetUptimeSeconds、GetMaxFPS
+      测试（2）：RunBasicTest、GetTestSummary
+      GetMethodCount 返回 33（含 GetDefaultTimeout、GetModuleAuthor）。
+      GetMethodCategories() 返回数学:3/字符串:22/系统:4/测试:2。
+    thread: AnyThread
+    notes: >
+      文件头 @version 1.0 与 GetTestVersion() 返回的 "Test v1.0" 一致。
+
+  - signature: "class FGameSaveManager"
+    behavior: >
+      静态工具类（非 UObject，无实例管理开销），提供基于 FArchive 的存档文件
+      序列化读写能力。构造函数私有化，禁止实例化。所有方法为 public static。
+      包含自包含的日志类别声明，不依赖模块主头文件 Test.h 的间接包含路径。
+    thread: AnyThread
+    notes: >
+      与 FMyClass 一致的静态工具类风格。架构选型中选择了方案A（静态工具类 +
+      FArchive），而非方案B（实例化类 + 内部状态）或方案C（IFileHandle 代替
+      FArchive）。由 Test 模块承载，无额外模块依赖。
+
+dependencies:
+  - module: Core
+    reason: 引擎核心类型与内存管理（FString、TArray 等），FArchive 序列化基类
+  - module: CoreUObject
+    reason: UObject 基础框架与反射系统
+  - module: Engine
+    reason: 引擎核心框架类型（GEngine）
+  - module: RHI
+    reason: 渲染硬件接口（GRHIAdapterName，FMyClass::GetRenderDeviceName 使用）
+
+dependents: []
+
+constraints:
+  - "所有 UObject 指针（包括 SubObject 和 Actor 组件）必须由 UPROPERTY() 保护，防止 GC 回收"
+  - "仅依赖引擎基础模块，无第三方库依赖"
+  - "Actor 构造中可引用 /Engine/BasicShapes/ 引擎内置资源，但打包后路径可用性需在对应平台验证"
+  - "FMyStringUtils::GetEngineUptimeString 和 GetFormattedTime 使用 FPlatformTime::Seconds() 计运行秒数，"
+    "引擎启动时间点重置后结果会重新归零"
+  - "屏幕调试输出（GEngine->AddOnScreenDebugMessage）在 FMyTestUtils::RunBasicTest 中使用，"
+    "必须用 #if !UE_BUILD_SHIPPING 包裹"
+  - "LogTest 日志类别在 FMyTestUtils::RunBasicTest 中使用"
+  - "FGameSaveManager 的日志类别声明应自包含于本类头文件，不依赖模块主头文件 Test.h 的包含路径"
+
+known_issues:
+  - issue: >
+      GetMethodCategories() 返回的硬编码分类计数需同步：当前返回数学:3/字符串:22/系统:4/测试:2（共31），
+      加 GetMethodCount 和 GetDefaultTimeout、GetModuleAuthor 等元方法共 33 个方法。
+    impact: low
+    mitigation: "验证 GetMethodCount() 返回值与 GetMethodCategories() 分类总和的一致性。"
+  - issue: >
+      MyClass.cpp 包含所有 33 个方法的实现（约 260 行），
+      单一文件较大但无需拆分（所有方法均为静态方法，无状态）。
+    impact: low
+    mitigation: "保持当前结构，如需进一步组织可考虑按功能分组并添加注释分隔符。"
+  - issue: >
+      FGameSaveManager Inspector 审查发现 3 个 minor 问题：int64→int32 隐式截断
+      （SetNumUninitialized 大文件边界检查）、路径拼接运算符优先级、多参数 Doxygen
+      单行注释格式。build 检查标记 blocked，与实现层 UBT 编译通过状态存在矛盾。
+    impact: low
+    mitigation: "按 Inspector 建议修复已记录的 3 个 minor 问题。"

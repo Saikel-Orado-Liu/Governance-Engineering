@@ -1,0 +1,11 @@
+# 架构规范 (L1)
+
+type: standard
+level: L1
+
+rules:
+  - "单模块架构，所有源码位于 src/ 下"
+  - "Canvas 2D 渲染，不引入 DOM UI 框架"
+  - "游戏状态使用不可变更新模式"
+  - "模块间通过接口（type/interface）而非具体实现耦合"
+  - "存档序列化为 JSON，保证往返一致性"

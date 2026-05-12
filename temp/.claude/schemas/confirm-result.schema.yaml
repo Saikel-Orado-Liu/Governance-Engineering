@@ -1,0 +1,80 @@
+# confirm_result — 需求确认阶段输出
+# 生产者: confirm-agent → 消费者: plan-agent (standard) / developer-agent (simple)
+# 传递方式: Team Lead 提取裸 YAML → 注入下游 Fork prompt
+
+requirement:
+  type: string
+  required: true
+  description: 需求概括，单句描述用户要什么
+  example: "在 FMyClass 中新增静态方法 GetUptimeHours"
+
+status:
+  type: enum[normal, already_complete]
+  required: true
+  description: normal=正常流转; already_complete=功能已存在,触发快速出口
+
+ambiguity:
+  type: object
+  required: true
+  fields:
+    high: {type: array, description: "不确认无法继续的歧义"}
+    medium: {type: array, description: "可推断但建议确认的歧义"}
+    low: {type: array, description: "可从框架惯例确定的歧义"}
+    none: {type: boolean, description: "三维度全部无歧义"}
+
+detection:
+  type: object
+  required: true
+  fields:
+    interface_conflict: {passed: boolean, findings: array}
+    naming_ambiguity: {passed: boolean, findings: array}
+    behavior_ambiguity: {passed: boolean, findings: array}
+
+simplicity_score:
+  type: integer[0-100]
+  required: true
+  description: 八维加权总分。≥70=simple, <70=standard
+  calculation: round(Σ(weight_i × score_i) / 100)
+
+simplicity_tier:
+  type: enum[simple, standard]
+  required: true
+  description: 路由决策。simple→Fork(developer-agent); standard→explore→plan
+
+estimated_loc:
+  type: integer
+  required: true
+  description: 预估代码行数。来自八维评分中 estimated_loc 维度的实际预估值。AUTO-PIPELINE 条件用此字段判定 ≤20
+
+confidence:
+  type: enum[high, medium, low]
+  required: true
+  description: low 时强制降级为 standard
+
+scoring_breakdown:
+  type: array[8]
+  required: false
+  description: 八维逐项评分。simple 时可省略
+  items:
+    - criterion: public_api_changes  # weight:30, 100=无变更, 50=append-only, 0=修改/删除
+    - criterion: header_changes      # weight:20, 100=无变更, 50=追加声明/仅注释, 0=新建/修改/删除
+    - criterion: files_modified      # weight:15, 100=0-1, 50=2, 0=≥3
+    - criterion: algorithmic_novelty # weight:15, 100=纯数据, 50=简单算法≤20LOC, 0=新算法
+    - criterion: estimated_loc       # weight:10, 100=≤20, 50=21-50, 0=>50
+    - criterion: new_module_deps     # weight:5,  100=无, 50=#include已声明, 0=改{{BUILD_CONFIG}}
+    - criterion: files_created       # weight:3,  100=0, 50=1≤50LOC, 0=≥2或>50LOC
+    - criterion: ambiguity_level     # weight:2,  100=NONE, 50=LOW, 0=MEDIUM/HIGH
+
+restatement:
+  type: object
+  required: true
+  fields:
+    scope: {type: string, description: "涉及的文件和模块范围"}
+    affected_modules: [{name, impact, files}]
+    constraints: [string]
+    clarifications: [string]  # 用户提供的澄清信息,N>1次迭代时填充
+    assumptions: [string]
+
+# 传递链
+# confirm_result → Fork(plan-agent) for standard tasks
+# confirm_result → Fork(developer-agent) for simple tasks

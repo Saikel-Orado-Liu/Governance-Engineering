@@ -1,0 +1,48 @@
+# refactor_report — 全量代码健康扫描结果
+# 生产者: refactor-agent → 消费者: Team Lead (审批提案)
+
+scan_summary:
+  type: object
+  required: true
+  fields:
+    files_scanned: integer
+    total_issues: integer
+
+quality_scan:
+  type: object
+  required: true
+  fields:
+    unused_code: integer
+    naming_violations: integer
+    cyclic_deps: integer
+    high_complexity: integer
+    long_functions: integer
+    long_files: integer
+
+performance_scan:
+  type: object
+  required: true
+  fields:
+    hot_functions: integer       # Tick/循环中调用的函数
+    sync_io_in_loops: integer    # 循环中的同步 I/O
+    cache_opportunities: integer # 可缓存但未缓存的计算
+    simd_opportunities: integer  # 可 SIMD/AVX 向量化的运算
+
+risk_distribution:
+  type: object
+  required: true
+  fields:
+    low: integer       # 已自动执行
+    medium: integer    # 批量提案
+    high: integer      # 逐项审批
+    performance: integer
+
+auto_applied:
+  type: array
+  required: false
+  items: {file, change, risk: low}
+
+proposals:
+  type: array
+  required: false
+  items: {id, title, risk, category: quality|performance|both, type: algorithm|cache|simd|inline|structure, current_state, proposed_change, expected_benefit, risk_if_not_done}

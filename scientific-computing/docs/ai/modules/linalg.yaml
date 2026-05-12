@@ -1,0 +1,83 @@
+# linalg — 线性代数模块
+
+module: linalg
+path: src/scicomp/linalg/
+status: active
+
+dependencies:
+  - numpy
+
+dependents: []
+
+public_interface:
+  - name: matrix_multiply
+    signature: "matrix_multiply(A: ArrayLike, B: ArrayLike) -> np.ndarray"
+    description: 矩阵乘法。验证二维输入 + 维度兼容性检查，使用 numpy 原生 @ 运算
+  - name: lu_decomposition
+    signature: "lu_decomposition(A: ArrayLike) -> tuple[np.ndarray, np.ndarray, np.ndarray]"
+    description: LU 分解（部分主元法）。返回 (L, U, P) 满足 PA = LU。动态 pivot 容差 n * eps * ||A||_1
+  - name: solve_linear_system
+    signature: "solve_linear_system(A: ArrayLike, b: ArrayLike) -> np.ndarray"
+    description: 基于 LU 分解解线性方程组 Ax = b，支持 1D 和 2D 右端项。奇异矩阵 raise ValueError
+  - name: determinant
+    signature: "determinant(A: ArrayLike) -> float"
+    description: 通过 LU 分解计算方阵行列式。奇异矩阵返回 0.0
+  - name: eigenvalues_2x2
+    signature: "eigenvalues_2x2(A: ArrayLike) -> np.ndarray"
+    description: 2x2 矩阵特征值二次公式解析解，支持实数与复数特征值。仅限 2x2
+
+precision:
+  max_relative_error: 1e-12
+  reference: numpy.linalg
+
+functions:
+  - name: matrix_multiply
+    category: basic
+    loc: 16
+    design: "委托 numpy @ 实现，只做校验封装"
+    validated: true
+  - name: lu_decomposition
+    category: decomposition
+    loc: 50
+    design: "部分主元法，动态容差 n * eps * ||A||_1，原地修改 U 矩阵"
+    validated: true
+  - name: solve_linear_system
+    category: solver
+    loc: 37
+    design: "复用 lu_decomposition + 前代/回代，支持 1D/2D b"
+    validated: true
+  - name: determinant
+    category: property
+    loc: 19
+    design: "复用 lu_decomposition，奇异矩阵返回 0.0 而非 raise"
+    validated: true
+  - name: eigenvalues_2x2
+    category: property
+    loc: 24
+    design: "二次公式闭式解，判别式分支处理实数/复数"
+    validated: true
+
+design_decisions:
+  - topic: 单文件 vs 多文件
+    choice: 单文件 core.py
+    rationale: "模块功能紧密耦合（solve_linear_system 依赖 lu_decomposition，determinant 也依赖它），过早多文件拆分增加维护开销。等模块膨胀到 >800 LOC 再拆分"
+  - topic: 奇异矩阵处理
+    choice: lu_decomposition raise ValueError，determinant 返回 0.0
+    rationale: "分解阶段必须报错（无法继续），行列式计算中奇异是可接受输入值"
+  - topic: 特征值方法
+    choice: 二次公式解析解
+    rationale: "2x2 矩阵有稳定的闭式解，比迭代法更简单高效。n>2 用 numpy.linalg.eigvals"
+
+known_issues:
+  - issue: "lu_decomposition 部分主元法对 nearly-singular 矩阵可能不够稳定"
+    mitigation: "使用动态容差 n * eps * ||A||_1，对极端病态矩阵建议用户直接用 numpy.linalg"
+    severity: low
+  - issue: "eigenvalues_2x2 仅支持 2x2，对更大矩阵没有 fallback"
+    mitigation: "设计上明确限定 2x2，n>2 的应用应另外实现或使用 numpy.linalg.eigvals"
+    severity: low
+
+constraints:
+  - "所有公共函数输入必须是 2D 矩阵（matrix_multiply 对两个参数均检查）"
+  - "浮点精度上限 float64，不保证 float32 输入的精度"
+
+last_updated: "2026-05-12"

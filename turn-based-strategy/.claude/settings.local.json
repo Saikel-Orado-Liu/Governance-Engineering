@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"G:\\\\Test\\\\TEMP\\\\.claude\" 2>/dev/null || echo \"TEMPLATE_PATH_NOT_FOUND\")",
+      "Read(//g/Test/TEMP/.claude/**)",
+      "Bash(ls -la \"G:\\\\Test\\\\TEMP\" 2>/dev/null)",
+      "Read(//g/Test/TEMP/**)",
+      "Bash(python \"d:/Projects/governance-engineering/turn-based-strategy/.claude/skills/init/scripts/validate_init.py\" \"d:/Projects/governance-engineering/turn-based-strategy\")",
+      "Bash(npm run *)",
+      "Bash(npm test *)"
+    ]
+  }
+}

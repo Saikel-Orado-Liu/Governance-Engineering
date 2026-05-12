@@ -1,0 +1,17 @@
+# Module Index — Task Board
+# AI 知识库模块索引。由 Summarize Agent 自动维护。
+
+modules:
+  - name: backend
+    path: backend/src/
+    language: Python 3.11+
+    framework: FastAPI >=0.115
+    description: FastAPI API 服务——任务 CRUD、状态流转、数据持久化
+    status: active
+
+  - name: frontend
+    path: frontend/src/
+    language: TypeScript 5.6
+    framework: React 18 + Vite 6
+    description: React SPA 前端——看板视图、拖拽排序、任务管理界面
+    status: active

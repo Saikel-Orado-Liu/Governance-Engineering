@@ -1,0 +1,33 @@
+# sync_report — VCS 同步结果
+# 生产者: sync-agent → 消费者: Team Lead (可能有 AskUserQuestion 冲突确认)
+# 传递方式: Team Lead 提取裸 YAML → 展示 + 处理冲突
+
+status:
+  type: enum[synced, conflicts_found, blocked]
+  required: true
+  description: synced=成功同步; conflicts_found=有冲突需确认; blocked=无法同步
+
+range:
+  type: object
+  required: true
+  fields:
+    last_sync: string
+    current_head: string
+    human_commits: integer
+
+knowledge_updates:
+  type: array
+  required: false
+  items: {file, change}
+
+conflicts:
+  type: array
+  required: false
+  items: {conflict, resolution: NEEDS_HUMAN_CONFIRMATION, suggested_fix}
+
+skipped:
+  type: array
+  required: false
+  items: {file, reason}
+
+# 不参与流水线 — 手动 /sync 或 Cron 触发

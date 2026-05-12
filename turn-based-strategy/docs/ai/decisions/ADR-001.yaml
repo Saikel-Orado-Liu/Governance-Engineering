@@ -1,0 +1,37 @@
+# ADR-001: 8x8 网格地图数据模型与随机生成策略
+
+status: accepted
+date: 2026-05-12
+
+## 背景
+
+回合制策略游戏需要一张棋盘式地图，支持不同地形及其移动成本。需求为固定 8x8 网格，每格一种地形，初始生成确保起点 (0,0) 到终点 (7,7) 存在可达路径。
+
+## 决策
+
+1. **TileType const enum + TILE_PROPERTIES 记录**：执行时零开销的类型分发，属性表（移动力成本、通行性）集中管理，便于后续扩展新地形。
+
+2. **MapGrid 作为纯数据容器**：不包含生成或渲染逻辑，仅提供 `isPassable(row, col)` 和 `getMoveCost(row, col)` 查询，含边界检查。
+
+3. **MapGenerator 随机生成 + BFS 后验验证**：按固定比例（50/25/15/10）分配地形后运行 BFS 验证可达性，不可达则重新生成（上限 100 次）。起点和终点强制 Plain 以保证可通行。
+
+4. **Canvas 2D 无状态渲染**：MapRenderer 每次 render() 从 MapGrid 快照绘制，不持有游戏状态引用，循环可独立替换。
+
+## 备选方案
+
+| 方案 | 放弃理由 |
+|------|---------|
+| 手写地图（JSON 文件） | 扩展性差，每局需要随机性 |
+| 噪声函数（Perlin/Simplex） | 8x8 过小，噪声无法有效表现，且复杂度过度 |
+| 预生成 BFS 后直接连通分量 | 重试生成在实际测试中几乎从未超过 3 次，BFS 足够 |
+
+## 影响
+
+- 正面：模块职责清晰（Model / Generator / Renderer 三分离），测试友好
+- 正面：BFS 路径保证独立于生成逻辑，可单独测试
+- 约束：固定 8x8 网格不可动态 resize，未来扩展需修改 MapGrid 构造参数
+
+## 相关
+
+- module: "docs/ai/modules/map.yaml"
+- standards: "docs/ai/standards/architecture.yaml" (模块间通过接口耦合)

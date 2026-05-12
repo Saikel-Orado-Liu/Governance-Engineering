@@ -1,0 +1,204 @@
+# Init 占位符映射表
+# 每个占位符包含：描述、自动推断规则、示例值、优先级（required→必须替换, auto→自动推断, manual→需用户提供）
+
+placeholders:
+  PROJECT_NAME:
+    description: "项目名称"
+    rule: "从项目配置文件的 name 字段提取，或用户直接提供"
+    examples:
+      ue: "Test"
+      node: "my-web-app"
+      rust: "my-cli-tool"
+      python: "my_package"
+    priority: required
+
+  PROJECT_TYPE:
+    description: "项目类型和技术栈描述"
+    rule: "格式：{语言及版本}（{框架及版本}）{项目类别}"
+    examples:
+      ue: "Unreal Engine 5.7 C++20 项目"
+      node: "TypeScript 5.x + React 18 前端项目"
+      python: "Python 3.12 + Django 4.2 后端项目"
+      rust: "Rust 1.75 CLI 工具"
+    priority: required
+
+  PROJECT_MODULES:
+    description: "模块结构描述"
+    rule: "从源码目录结构生成。格式：单/多模块 \"{ModuleName}\"（{路径}/）依赖 {Deps} 或 无外部依赖"
+    examples:
+      ue: '单模块 "Test"（{{SOURCE_DIR}}/Test/），依赖 Core/CoreUObject/Engine/RHI'
+      node: '多包 monorepo：packages/web + packages/api + packages/shared'
+      rust: '单 crate "my-tool"（src/），依赖 clap/tokio/serde'
+    priority: required
+
+  BUILD_COMMAND:
+    description: "项目构建命令"
+    rule: "用户提供 or 从构建配置推断"
+    examples:
+      ue: 'mcp__{{BUILD_TOOL}}__project(action="build", configuration="Development", platform="Win64")'
+      node: "npm run build"
+      rust: "cargo build --release"
+      python: "python -m build"
+    priority: required
+
+  BUILD_DESC:
+    description: "构建命令的功能描述"
+    rule: "用一句话描述构建命令做什么"
+    examples:
+      ue: "UBT 编译（编辑器未运行时）"
+      node: "TypeScript 编译 + Webpack 打包"
+      rust: "Release 构建"
+      python: "构建分发包"
+    priority: auto
+
+  TEST_COMMAND:
+    description: "测试命令"
+    rule: "用户提供 or 从测试框架推断"
+    examples:
+      ue: 'mcp__{{BUILD_TOOL}}__editor(action="execute_command", command="Automation RunTests Test.")'
+      node: "npm test"
+      rust: "cargo test"
+      python: "pytest"
+    priority: required
+
+  TEST_DESC:
+    description: "测试命令的功能描述"
+    rule: "用一句话描述测试命令做什么"
+    examples:
+      ue: "项目框架 Automation Spec 测试"
+      node: "vitest 运行全部测试"
+      rust: "cargo test 运行全部测试"
+      python: "pytest 运行全部测试"
+    priority: auto
+
+  VCS_STATUS:
+    description: "版本控制状态查看命令"
+    rule: "检测 VCS 类型 → .git/ → 'git status', git 命令存在 → 'git status'"
+    default: "git status"
+    priority: auto
+
+  VCS_COMMIT:
+    description: "版本控制提交命令"
+    rule: "检测 VCS 类型 → .git/ → 'git commit', git 命令存在 → 'git commit'"
+    default: "git commit <files> -m '<message>'"
+    priority: auto
+
+  SOURCE_LAYOUT:
+    description: "源码目录树（ASCII 格式）"
+    rule: "从 Glob 结果生成缩进树状图"
+    examples:
+      ue: |
+        {{SOURCE_DIR}}/{Module}/
+        ├── Public/        # 公开头文件 (.h)
+        ├── Private/       # 实现文件 (.cpp)
+        └── {Module}{{BUILD_CONFIG}}
+      node: |
+        src/
+        ├── components/    # React 组件
+        ├── hooks/         # 自定义 hooks
+        ├── utils/         # 工具函数
+        └── index.ts       # 入口
+    priority: required
+
+  SOURCE_PATH_PATTERN:
+    description: "源码文件 glob 匹配模式"
+    rule: "从源码语言和目录结构确定"
+    examples:
+      ue: "{{SOURCE_DIR}}/**/*.{h,cpp,Build.cs,cs}"
+      node: "src/**/*.{ts,tsx,js,jsx}"
+      python: "src/**/*.py"
+      rust: "src/**/*.rs"
+    priority: required
+
+  CODING_RULES:
+    description: "项目编码规范（从 coding-standards-templates 加载）"
+    rule: "根据语言匹配编码规范模板，生成具体的规则列表"
+    priority: required
+
+  FRAMEWORK_NAME:
+    description: "主要框架名称（用于 Agent 工具适配决策）"
+    rule: "从项目配置推断：{{PROJECT_CONFIG}}→Unreal Engine, package.json react→React, Cargo.toml axum→Axum"
+    priority: auto
+    note: "当前模板中未直接使用此占位符。保留供未来扩展——如 agent 工具适配逻辑中使用"
+
+  DATE:
+    description: "当前日期"
+    rule: "YYYY-MM-DD 格式的今天日期"
+    priority: auto
+
+# 替换优先级规则：
+# 1. required → 必须替换，否则 init_report.verdict = partial
+# 2. auto → 自动推断，若失败使用 default 值
+# 3. manual → 若用户未提供则保持占位符，记录到 missing_placeholders
+
+# --- 框架适配占位符（由 Agent 工具体系适配阶段处理） ---
+# 这些占位符不在标准 14 个中，而是根据项目模式 (keep-mcp / remove-mcp)
+# 在 init-agent 阶段四 4.4 "Agent 工具体系适配"中处理
+
+framework_adaptations:
+  remove_mcp:
+    description: "非 MCP 项目（web/mobile/cli/library 等）的框架占位符替换"
+    replacements:
+      TEMPLATE_ROOT_PATH: "."
+      BUILD_TOOL: "Bash"
+      MCP_TOOL_NAME: "无"
+      BUILD_MODE: "full_build|incremental"
+      BUILD_MODE_ENUM: "enum[passed, failed, blocked]"
+      HOT_RELOAD: "HMR"
+      HOT_RELOAD_CMD: "npm run dev"
+      HOT_RELOAD_STATUS: "检查 dev server 状态"
+      PLATFORM: "cross-platform"
+      FULL_BUILD: "Full Build"
+      FULL_BUILD_CMD: "npm run build"
+      FULL_BUILD_DESC: "生产构建（Bash 执行）"
+      BUILD_STATUS_CHECK: "检查构建工具可用性"
+      BUILD_CONFIG: "package.json"
+      BUILD_CONFIG_SHORT: "json"
+      BUILD_DEPENDENCY_SECTION: "dependencies/devDependencies"
+      PUBLIC_DEPS: "dependencies"
+      PRIVATE_DEPS: "devDependencies"
+      PROJECT_CONFIG: "package.json"
+      PROJECT_CONFIG_SHORT: "json"
+      PLUGIN_CONFIG: "无（非插件项目）"
+      TARGET_CONFIG: "无（非编译目标项目）"
+      SOURCE_DIR: "src"
+      TEST_FRAMEWORK: "vitest"
+      TEST_FRAMEWORK_INCLUDE: "node_modules 中的测试依赖"
+      TEST_GUARD_START: "// 测试文件"
+      TEST_GUARD_END: "// 测试文件结束"
+      TEST_IMPLEMENT_MACRO: "describe/it"
+      TEST_FLAGS: "无"
+      TEST_PARAMS: "无"
+      TEST_ASSERT_TRUE: "expect("
+      TEST_ASSERT_EQUAL: "expect("
+      EXTERNAL_API_SEARCH: "Grep node_modules 或 npm docs"
+      EXTERNAL_HEADER_READ: "Read node_modules"
+      EXTERNAL_SOURCE_SEARCH: "Grep node_modules"
+      FIND_SYMBOL_TOOL: "Grep"
+      READ_HEADER_TOOL: "Read"
+      SEARCH_SOURCE_TOOL: "Grep"
+      NAMING_CONVENTION_PREFIXES: "无强制前缀"
+      MEMORY_ANNOTATION: "无"
+      EXPOSE_ANNOTATION: "export"
+      BASE_CLASS: "Object"
+      BOILERPLATE_MACRO: "无"
+      GENERATED_FILE_PATTERNS: "*.js.map\n*.d.ts.map"
+      LOG_MACRO: "console.log"
+      DEFAULT_LOG_CATEGORY: "console"
+      SAFE_CAST: "as"
+      THREAD_SAFETY_MECHANISM: "Promise/async-await"
+      SYNC_PRIMITIVE: "Mutex"
+      ASYNC_TASK: "Promise"
+      DYNAMIC_ARRAY: "Array"
+      STRING_TYPE: "string"
+      ASSOCIATIVE_CONTAINER: "Map"
+      VECTOR_TYPE: "{x,y}"
+      STRING_BUILDER: "模板字符串"
+      LARGE_GENERATED_FILES: "*.map\n*.d.ts"
+      GENERATED_HEADER: "无（TypeScript 不需要生成头文件）"
+      HEADER_EXT: ".ts"
+      SOURCE_EXT: ".ts"
+
+  keep_mcp:
+    description: "MCP 项目（UE 等）的框架占位符替换——保持原始模板值"
+    note: "keep_mcp 项目保留 TEMP 模板中的原始值，init-agent 不替换这些占位符"

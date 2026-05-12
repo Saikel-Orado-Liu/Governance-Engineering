@@ -1,0 +1,146 @@
+# 项目结构检测模式
+# 每个模式定义：识别信号、源码目录、构建配置、测试框架、VCS 检测
+
+patterns:
+  cpp-ue:
+    name: "C++ Unreal Engine"
+    signals:
+      - "*{{PROJECT_CONFIG}}"
+      - "*{{BUILD_CONFIG}}"
+      - '{{SOURCE_DIR}}/**/Public/'
+      - '{{SOURCE_DIR}}/**/Private/'
+    source_dirs: ["{{SOURCE_DIR}}/**/Public/", "{{SOURCE_DIR}}/**/Private/"]
+    build_config: "*{{BUILD_CONFIG}}"
+    test_framework: "Automation Spec (FAutomationTestBase)"
+    vcs_default: "perforce or git"
+    coding_template: "cpp-ue.yaml"
+    agent_tools: "keep-mcp"
+    module_pattern: "{{SOURCE_DIR}}/{ModuleName}/"
+
+  typescript-react:
+    name: "TypeScript React"
+    signals:
+      - "package.json"
+      - "tsconfig.json"
+      - '"react" in dependencies'
+    source_dirs: ["src/", "app/", "components/"]
+    build_config: "package.json (scripts.build)"
+    test_framework: "vitest or jest"
+    vcs_default: "git"
+    coding_template: "typescript-react.yaml"
+    agent_tools: "remove-mcp"
+    module_pattern: "src/{feature}/"
+
+  typescript-node:
+    name: "TypeScript Node.js"
+    signals:
+      - "package.json"
+      - "tsconfig.json"
+      - 'no "react" in dependencies'
+    source_dirs: ["src/", "lib/"]
+    build_config: "package.json (scripts.build)"
+    test_framework: "vitest or jest"
+    vcs_default: "git"
+    coding_template: "typescript-react.yaml"
+    agent_tools: "remove-mcp"
+    module_pattern: "src/{module}/"
+
+  python:
+    name: "Python"
+    signals:
+      - "pyproject.toml"
+      - "setup.py"
+      - "setup.cfg"
+      - "requirements.txt"
+      - "Pipfile"
+    source_dirs: ["src/", "<package_name>/", "app/"]
+    build_config: "pyproject.toml or setup.py"
+    test_framework: "pytest"
+    vcs_default: "git"
+    coding_template: "python.yaml"
+    agent_tools: "remove-mcp"
+    module_pattern: "{package_name}/{subpackage}/"
+
+  rust:
+    name: "Rust"
+    signals:
+      - "Cargo.toml"
+      - "src/main.rs"
+      - "src/lib.rs"
+    source_dirs: ["src/"]
+    build_config: "Cargo.toml"
+    test_framework: "cargo test"
+    vcs_default: "git"
+    coding_template: "rust.yaml"
+    agent_tools: "remove-mcp"
+    module_pattern: "src/{module}/"
+
+  go:
+    name: "Go"
+    signals:
+      - "go.mod"
+      - "go.sum"
+    source_dirs: ["cmd/", "pkg/", "internal/"]
+    build_config: "go.mod"
+    test_framework: "go test"
+    vcs_default: "git"
+    coding_template: null
+    agent_tools: "remove-mcp"
+    module_pattern: "{cmd,pkg}/{name}/"
+
+  java-gradle:
+    name: "Java Gradle"
+    signals:
+      - "build.gradle"
+      - "build.gradle.kts"
+      - "settings.gradle"
+    source_dirs: ["src/main/java/", "src/main/kotlin/"]
+    build_config: "build.gradle"
+    test_framework: "JUnit 5"
+    vcs_default: "git"
+    coding_template: null
+    agent_tools: "remove-mcp"
+    module_pattern: "src/main/java/{package}/"
+
+  java-maven:
+    name: "Java Maven"
+    signals:
+      - "pom.xml"
+      - "src/main/java/"
+    source_dirs: ["src/main/java/"]
+    build_config: "pom.xml"
+    test_framework: "JUnit 5"
+    vcs_default: "git"
+    coding_template: null
+    agent_tools: "remove-mcp"
+    module_pattern: "src/main/java/{package}/"
+
+  csharp-dotnet:
+    name: "C# .NET"
+    signals:
+      - "*.sln"
+      - "*.csproj"
+    source_dirs: ["src/"]
+    build_config: "*.csproj"
+    test_framework: "xUnit or NUnit"
+    vcs_default: "git"
+    coding_template: null
+    agent_tools: "remove-mcp"
+    module_pattern: "src/{ProjectName}/"
+
+  generic:
+    name: "通用/未识别"
+    signals: []
+    source_dirs: ["."]
+    build_config: null
+    test_framework: null
+    vcs_default: "git"
+    coding_template: null
+    agent_tools: "remove-mcp"
+    module_pattern: "."
+
+# 检测逻辑：
+# 1. 按 signals 数量降序匹配，首个匹配数 ≥1 的胜出
+# 2. 多模式同时匹配时，选择 signals 匹配数最多的
+# 3. 全部不匹配时使用 generic
+# 4. coding_template=null 的模式使用通用编码规范占位符

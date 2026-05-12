@@ -1,0 +1,8 @@
+# 架构决策记录索引
+# 由 Summarize Agent 自动维护。空的初始状态。
+
+decisions:
+  - id: ADR-001
+    title: "SQLite 跨线程连接配置（check_same_thread=False + WAL）"
+    status: accepted
+    date: "2026-05-12"

@@ -1,0 +1,13 @@
+# integrate — 数值积分模块
+
+module: integrate
+path: src/scicomp/integrate/
+status: stub
+
+dependencies:
+  - numpy
+  - scipy
+
+public_interface: []
+
+functions: []

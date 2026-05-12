@@ -1,0 +1,31 @@
+# TypeScript 编码规范检查清单（分层）
+# L1: 强制（阻塞流水线） / L2: 推荐（审查标记） / L3: 建议（简洁性）
+
+standards:
+  l1:
+    - rule: "strict 模式开启（strict: true）"
+      check: "tsconfig.json strict 字段"
+    - rule: "禁止 any — 用 unknown 或具体类型"
+      check: "grep any 类型标注"
+    - rule: "异步操作必须有 try/catch 或 Promise.catch"
+      check: "未处理的 Promise"
+    - rule: "用户输入必须正确转义（XSS 防护）"
+      check: "HTML 输出中的用户数据"
+
+  l2:
+    - rule: "函数/方法返回类型显式标注（公共函数）"
+      check: "导出函数缺少返回类型"
+    - rule: "优先 type 而非 interface"
+      check: "可用 type 替代的 interface"
+    - rule: "导入顺序: Node.js 内置 → 第三方 → 项目模块 → 类型"
+      check: "import 分组"
+    - rule: "禁止循环导入"
+      check: "import 依赖图"
+
+  l3:
+    - rule: "使用 as const 断言字面量类型"
+      check: "字面量类型推断"
+    - rule: "可选链 (?.) 和空值合并 (??) 优先"
+      check: "&& 短路替代"
+    - rule: "模板字符串替代字符串拼接"
+      check: "字符串拼接操作"

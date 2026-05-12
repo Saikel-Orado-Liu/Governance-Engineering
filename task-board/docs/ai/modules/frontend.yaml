@@ -1,0 +1,43 @@
+# 模块卡片：frontend
+# 由 Summarize Agent 自动维护。
+
+name: frontend
+path: frontend/src/
+language: TypeScript 5.6
+framework: React 18 + Vite 6
+status: active
+
+description: >
+  React SPA 前端。提供三列（todo/in_progress/done）原生 HTML5 DnD 拖拽看板视图，
+  单 Board.tsx 组件管理三态渲染 + 乐观更新 + 加载骨架屏 + 错误重试。
+
+dependencies:
+  - react: "^18.3.1"
+  - react-dom: "^18.3.1"
+
+dev_dependencies:
+  - typescript: "~5.6.2"
+  - vite: "^6.0.1"
+  - vitest: "^2.1.8"
+  - eslint: "^9.15.0"
+  - "@testing-library/react": "^16.3.2"
+  - "@testing-library/jest-dom": "^6.9.1"
+  - jsdom: "^29.1.1"
+
+public_interface:
+  - main entry: "frontend/src/main.tsx"
+  - root component: "frontend/src/App.tsx" (挂载 Board)
+  - type definitions: "frontend/src/types/task.ts" (Task, TaskStatus, TaskPriority, BoardColumn, TASK_STATUSES, STATUS_LABELS, sort_order field)
+  - API client: "frontend/src/api/tasks.ts" (fetchTasks GET, updateTaskStatus PATCH /{id}/status, updateTaskReorder PATCH /{id}/reorder, fetchBoard GET /api/boards)
+  - Board: "frontend/src/components/Board.tsx" (原生 HTML5 DnD 三列看板 + 同列拖拽排序, getBoundingClientRect 中点检测插入位置, data-status 属性替代内联箭头函数, 同列同位置 no-op 不触发 API)
+
+constraints:
+  - "前端 API client (api/tasks.ts) 请求/响应结构必须与 backend/src/schemas/tasks.py 的 TaskResponse schema 对齐"
+  - "组件样式使用 CSS Modules（.module.css），Vite 原生编译，不依赖 CSS-in-JS 运行时库"
+  - "无后端 Mock 数据时需确保 mock 响应结构与 TaskResponse 一致"
+
+known_issues:
+  - "同列拖拽使用 getBoundingClientRect 中点检测，在极窄列或零高度列场景下可能定位不准确"
+  - "拖拽仅限单看板三列，跨看板（cross-board）拖拽需扩展 Board.tsx 的列数据源和 sort_order 作用域"
+
+last_updated: "2026-05-13"

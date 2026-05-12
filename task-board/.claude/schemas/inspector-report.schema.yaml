@@ -1,0 +1,54 @@
+# inspector_report — 独立代码审查结果
+# 生产者: inspector-agent → 消费者: Team Lead (决策) / summarize-agent (知识沉淀)
+# 传递方式: Team Lead 提取裸 YAML → 决策是否重新 Fork(developer-agent)
+
+overall:
+  type: enum[approved, changes_requested, rejected, blocked]
+  required: true
+  description: >
+    approved=可直接进入summarize;
+    changes_requested=可修复问题,建议developer修复后重审;
+    rejected=严重问题,需Team Lead介入;
+    blocked=无法执行审查(如编辑器未启动)
+
+review_static:
+  type: object
+  required: true
+  fields:
+    total_issues: integer
+    issues: [{file, severity: critical|major|minor, rule, problem, fix}]
+
+review_build:
+  type: object
+  required: true
+  fields:
+    status: enum[passed, failed, blocked, skipped]
+    mode: enum[passed, failed, blocked]
+    errors: [string]
+    warnings: [string]
+
+review_runtime:
+  type: object
+  required: true
+  fields:
+    risks: [{file, risk: gc|tick|constructor|thread, fix}]
+
+simplify_suggestions:
+  type: array
+  required: true
+  description: 简洁性建议列表。全部为 suggested，不实际修改代码。由 Team Lead 决定是否交给 developer-agent 执行
+  items: {file, type: duplicate|abstract|naming|structure, what, why}
+
+summary:
+  type: object
+  required: true
+  fields:
+    critical: integer
+    major: integer
+    minor: integer
+    build: passed|failed|skipped|N_errors|N_warnings
+    runtime_risks: integer
+    simplifications_suggested: integer
+
+# 传递链
+# inspector_report → Team Lead 审查 → Fork(developer-agent) 修复 或 Fork(summarize-agent)

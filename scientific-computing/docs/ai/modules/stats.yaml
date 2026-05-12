@@ -1,0 +1,17 @@
+# stats — 统计分布模块
+
+module: stats
+path: src/scicomp/stats/
+status: stub
+
+dependencies:
+  - numpy
+  - scipy
+
+public_interface: []
+
+precision:
+  max_relative_error: 1e-10
+  reference: scipy.stats
+
+functions: []

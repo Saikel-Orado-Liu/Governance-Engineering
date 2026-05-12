@@ -1,0 +1,40 @@
+# 模块卡片：backend
+# 由 Summarize Agent 自动维护。
+
+name: backend
+path: backend/src/
+language: Python 3.11+
+framework: FastAPI >=0.115
+status: active
+
+description: >
+  FastAPI API 服务。提供任务 CRUD、看板列管理、状态流转、数据持久化（SQLite）功能。
+
+dependencies:
+  - fastapi>=0.115.0
+  - uvicorn[standard]>=0.32.0
+  - pydantic>=2.10.0
+  - sqlite-utils>=3.38.0
+
+dev_dependencies:
+  - pytest>=8.3.0
+  - httpx>=0.28.0
+  - ruff>=0.8.0
+  - bandit>=1.7.0
+
+public_interface:
+  - main entry: "backend.src.main" (FastAPI app + lifespan + router mount)
+  - database layer: "backend.src.database" (get_db, get_connection, close_db, _ensure_tasks_schema, _add_sort_order_column)
+  - schema models: "backend.src.schemas.tasks" (TaskCreate, TaskResponse, TaskStatusUpdate, BoardColumn, TaskPriority, TaskStatus, TaskReorder)
+  - CRUD routers: "backend.src.routers.tasks" (GET/POST/PUT/DELETE /tasks + PATCH /{task_id}/status + PATCH /{task_id}/reorder + get_task_or_404)
+  - board router: "backend.src.routers.boards" (GET /api/boards — 按 status 分组返回三列, 按 sort_order ASC 排序)
+
+constraints:
+  - "SQLite 连接必须设置 check_same_thread=False + WAL 模式以支持 FastAPI 异步线程池并发访问"
+  - "生产部署需限制 Uvicorn workers=1（单进程），多进程需每个进程独立 DB 连接"
+  - "数据库连接生命周期由 FastAPI lifespan 管理，非请求内手动管理"
+
+known_issues:
+  - "sort_order 是列内独立 0..N-1 编号，跨列操作后自动重新编号。无全局唯一约束，跨列移动时必须显式设置目标 sort_order"
+
+last_updated: "2026-05-13"

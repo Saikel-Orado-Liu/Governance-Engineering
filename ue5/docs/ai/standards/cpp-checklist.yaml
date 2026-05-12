@@ -1,0 +1,17 @@
+# C++ 审查分层规范索引
+# 由 refactor-agent 和 inspector-agent 引用。按需加载。
+
+layers:
+  L1_basic:
+    - 命名规范: 类/方法/变量的 U/A/F/I/E/T/b 前缀
+    - 头文件: #pragma once, generated.h 最后, 前向声明
+    - 日志: UE_LOG 替代 printf/cout, 禁止 LogTemp
+  L2_module:
+    - 模块依赖: .Build.cs 显式声明, PublicDependencyModuleNames vs Private
+    - 导出宏: <MODULE>_API 标注公开接口
+    - 循环依赖: 禁止模块间循环引用
+  L3_runtime:
+    - GC 安全: UObject 指针 UPROPERTY() 保护
+    - Tick 陷阱: 禁止 LoadObject/SpawnActor/Cast<T>
+    - 线程安全: 跨线程访问用 FCriticalSection 或 AsyncTask
+    - RTTI/异常: 禁止 dynamic_cast<UObject>, typeid, try/catch/throw

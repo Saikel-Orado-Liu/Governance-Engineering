@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"G:\\\\Test\\\\TEMP\" 2>/dev/null || echo \"PATH_NOT_FOUND\")",
+      "Read(//g/Test/TEMP/**)",
+      "Bash(pip install *)",
+      "Bash(python -m ruff check src/ tests/)",
+      "Bash(python -m mypy src/ tests/)",
+      "Bash(python -m pytest tests/test_linalg.py --tb=short -v)",
+      "Bash(python -m mypy src/scicomp/linalg/)",
+      "Bash(python -m pytest tests/test_linalg.py --tb=short --quiet)",
+      "Bash(pytest tests/test_linalg.py -v)",
+      "Bash(python -m pytest tests/test_linalg.py -v)",
+      "Bash(d:\\\\Projects\\\\governance-engineering\\\\scientific-computing\\\\.venv\\\\Scripts\\\\python.exe -m pip install -e \"d:\\\\Projects\\\\governance-engineering\\\\scientific-computing[dev]\")",
+      "Bash(\"/d/Projects/governance-engineering/scientific-computing/.venv/Scripts/python.exe\" -m pip install -e \"d:/Projects/governance-engineering/scientific-computing[dev]\")",
+      "Bash(\"/d/Projects/governance-engineering/scientific-computing/.venv/Scripts/python.exe\" -m pytest \"d:/Projects/governance-engineering/scientific-computing/tests/test_linalg.py\" -v)"
+    ]
+  }
+}

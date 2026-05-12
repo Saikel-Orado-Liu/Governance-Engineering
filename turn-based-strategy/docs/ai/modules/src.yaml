@@ -1,0 +1,28 @@
+# Module Card: src
+# 游戏主程序模块 — 单一模块架构
+
+module: src
+path: "src/"
+type: application
+language: TypeScript 5.6
+framework: Vite 6 + Canvas 2D
+
+dependencies:
+  external: []
+  internal: []
+
+public_interface:
+  - "main.ts"           # 游戏入口，初始化 Canvas 和游戏循环
+  - "style.css"         # 全局样式
+
+exports:
+  - "main.ts"
+
+constraints:
+  - "无外部运行时依赖"
+  - "纯 Canvas 2D 渲染，无 DOM 框架"
+  - "单入口 HTML 文件 (index.html)"
+
+known_issues: []
+
+last_updated: "2026-05-11"

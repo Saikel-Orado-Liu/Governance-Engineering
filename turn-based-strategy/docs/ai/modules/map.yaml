@@ -1,0 +1,44 @@
+# Module Card: map
+# 8x8 网格地图系统 — 回合制策略游戏棋盘
+
+module: map
+path: "src/map/"
+type: feature
+language: TypeScript 5.6
+framework: Canvas 2D
+
+dependencies:
+  external: []
+  internal:
+    - "src/main.ts"           # 导入 MapGenerator + MapRenderer 并在入口实例化
+
+public_interface:
+  - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
+  - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
+
+exports:
+  - "MapGenerator.generate()"  # 返回 MapGrid 实例
+  - "MapRenderer.render()"     # 在 Canvas 上绘制地图
+
+components:
+  - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
+  - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
+  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ BFS (0,0)→(7,7) 可达性保证
+  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线
+  - "__tests__/MapGrid.test.ts": # 13 项 vitest 测试（通行/移动力/边界/生成/路径保证）
+
+constraints:
+  - "固定 8x8 网格，不可在运行时 resize"
+  - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
+  - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
+  - "BFS 路径保证最多重试 100 次，超出视为无法生成"
+
+known_issues: []
+
+lessons_learned:
+  - "移动力成本与通行性分离设计（isPassable 为 boolean gate，getMoveCost 为数值计算）"
+  - "TileType 使用 const enum 避免运行时查找，TILE_PROPERTIES 作为 Record 映射成本"
+  - "BFS 路径保证是独立于 MapGenerator 的可测试功能点"
+  - "地图渲染器无状态设计：每次 render() 从 MapGrid 快照绘制，不与游戏状态耦合"
+
+last_updated: "2026-05-12"

@@ -1,0 +1,11 @@
+# 命名规范 (L1)
+
+type: standard
+level: L1
+
+rules:
+  - "类/类型/接口: PascalCase，接口不加 I 前缀"
+  - "函数/方法/变量: camelCase"
+  - "常量: UPPER_SNAKE_CASE"
+  - "文件命名与默认导出内容一致"
+  - "测试文件: <module>.test.ts"

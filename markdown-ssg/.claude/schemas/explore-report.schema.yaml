@@ -1,0 +1,52 @@
+# explore_report — 外部 API / 框架搜索结果
+# 生产者: explore-agent → 消费者: plan-agent
+# 传递方式: Team Lead 提取裸 YAML → 注入 plan-agent Fork prompt
+
+query:
+  type: string
+  required: true
+  description: 搜索目标
+
+search_layers:
+  type: array[0-3]
+  required: true
+  description: 实际执行的搜索层。0=项目源码, 1=知识库, 2=框架/外部头文件, 3=框架/外部源码
+
+plan_handoff:
+  type: object
+  required: true
+  description: 供 plan-agent 直接整合的关键发现
+  fields:
+    key_files: [{path, summary}]
+    key_symbols: [{symbol, declared_in, signature}]
+    external_apis: [{class, header, key_methods, source}]
+    cross_module_deps: [{from, to, type}]
+
+files_found:
+  type: array
+  description: 项目文件中发现的匹配项
+  items: {path, summary, symbols: [string]}
+
+symbols_found:
+  type: array
+  description: 外部符号搜索结果
+  items: {symbol, declared_in, referenced_by: [string]}
+
+external_apis:
+  type: array
+  description: 外部 API 完整签名
+  items: {class, header, key_methods: [string], source: search_external|read_header}
+
+dependencies:
+  type: array
+  description: 跨模块依赖关系
+  items: {from, to, type: public|private}
+
+architecture_summary:
+  type: string
+  required: true
+  description: 单句模块级统计摘要
+
+# 传递链
+# explore_report.plan_handoff → plan-agent prompt (核心数据)
+# explore_report → Fork(plan-agent) at standard tasks

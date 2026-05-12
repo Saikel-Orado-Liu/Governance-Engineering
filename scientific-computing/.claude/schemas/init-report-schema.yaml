@@ -1,0 +1,61 @@
+# init_report — 项目初始化结果
+# 生产者: init-agent → 消费者: Team Lead
+# 传递方式: Team Lead 提取裸 YAML → 展示 + 处理残留占位符
+
+verdict:
+  type: enum[complete, partial, blocked]
+  required: true
+  description: complete=全部占位符替换完成; partial=有残留占位符需手动处理; blocked=模板路径不存在或无项目结构
+
+project:
+  type: object
+  required: true
+  fields:
+    name: string
+    type: string
+    language: string
+    framework: string
+    modules: [string]
+    vcs: string
+
+scan:
+  type: object
+  required: true
+  fields:
+    files_found: integer
+    modules_discovered: integer
+    patterns_matched: string
+
+generated:
+  type: object
+  required: true
+  fields:
+    files_created: integer
+    files_updated: integer
+    files_skipped: integer
+
+placeholders:
+  type: object
+  required: true
+  fields:
+    total: integer
+    replaced: integer
+    remaining: integer
+
+verification:
+  type: object
+  required: true
+  fields:
+    structure_check: enum[passed, issues_found]
+    placeholder_check: enum[passed, failed]
+    validate_script: enum[passed, failed, not_found]
+
+missing_placeholders:
+  type: array
+  required: false
+  items: {file, line, placeholder, reason}
+
+manual_steps:
+  type: array
+  required: false
+  description: verdict=partial 时需手动完成的操作

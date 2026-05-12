@@ -1,0 +1,13 @@
+# interp — 插值与拟合模块
+
+module: interp
+path: src/scicomp/interp/
+status: stub
+
+dependencies:
+  - numpy
+  - scipy
+
+public_interface: []
+
+functions: []

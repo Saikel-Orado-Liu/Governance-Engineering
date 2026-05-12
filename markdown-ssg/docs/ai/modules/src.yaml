@@ -1,0 +1,25 @@
+# src — CLI 入口和核心逻辑
+
+name: src
+path: src/
+type: application
+language: TypeScript 5.6
+description: >
+  Markdown 静态站点生成器的 CLI 入口和核心逻辑。
+  通过 src/index.ts 暴露 CLI 接口。
+
+public_interface:
+  - "CLI 命令: md-ssg build <src> <out>, md-ssg serve"
+
+dependencies:
+  lexer: "src/lexer.ts — 两阶段 Markdown 词法分析器"
+
+dependents: []
+
+constraints:
+  - "ES2022 target, ESNext module"
+  - "strict 模式开启"
+
+known_issues: []
+
+last_updated: "2026-05-12"

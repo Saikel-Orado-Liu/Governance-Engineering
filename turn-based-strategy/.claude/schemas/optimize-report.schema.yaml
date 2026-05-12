@@ -1,0 +1,46 @@
+# optimize_report — 方案评估结果
+# 生产者: optimize-agent → 消费者: Team Lead → AskUserQuestion → confirm-agent
+
+user_intent:
+  type: string
+  required: true
+
+constraints:
+  type: array
+  required: true
+
+alternatives:
+  type: array[2-4]
+  required: true
+  items:
+    id: enum[A, B, C, D]
+    name: string
+    approach: string
+    files_affected: [string]
+    estimated_loc: integer
+    scores:
+      performance: integer[1-5]
+      maintainability: integer[1-5]
+      ue_convention: integer[1-5]
+      simplicity: integer[1-5]
+      extensibility: integer[1-5]
+      consistency: integer[1-5]
+      risk: integer[1-5]
+    pros: [string]
+    cons: [string]
+    best_for: string
+
+recommendation:
+  type: object
+  required: true
+  fields:
+    ranked: [enum[A, B, C, D]]
+    rationale: string
+    weighted_for: string
+
+downstream_hint:
+  type: object
+  required: true
+  fields:
+    complexity: enum[simple, standard]
+    auto_routing: string

@@ -1,0 +1,6 @@
+# 上次同步状态
+# 由 sync-agent 自动维护。首次运行时使用 HEAD~10 作为起点。
+
+last_sync_commit: null
+last_sync_date: null
+synced_files: 0

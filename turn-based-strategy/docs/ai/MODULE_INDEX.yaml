@@ -1,0 +1,23 @@
+# Module Index — Turn-Based Strategy
+# 自动生成，由 summarize-agent 维护
+
+modules:
+  src:
+    path: "src/"
+    type: "application"
+    description: "游戏主程序入口和核心逻辑"
+    card: "docs/ai/modules/src.yaml"
+    last_updated: "2026-05-11"
+  map:
+    path: "src/map/"
+    type: "feature"
+    description: "8x8 网格地图系统，含数据模型、随机生成、Canvas 渲染、路径保证"
+    card: "docs/ai/modules/map.yaml"
+    last_updated: "2026-05-12"
+
+standards:
+  - "docs/ai/standards/architecture.yaml"
+  - "docs/ai/standards/naming.yaml"
+
+decisions:
+  - "docs/ai/decisions/ADR-001.yaml"

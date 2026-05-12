@@ -1,0 +1,96 @@
+# Agent 间通信 Schema 注册表
+# 唯一权威来源。所有 Agent 定义和 Skill 引用此文件中的 Schema。
+# 修改 Schema 时只需更新对应的 .schema.yaml 文件。
+
+schemas:
+  confirm_result:
+    file: confirm-result.schema.yaml
+    producer: confirm-agent
+    consumers: [plan-agent, developer-agent]
+    direction: downstream
+    notes: "simple→developer-agent; standard→plan-agent"
+
+  explore_report:
+    file: explore-report.schema.yaml
+    producer: explore-agent
+    consumers: [plan-agent]
+    direction: downstream
+    notes: "仅 standard 路径使用。plan-agent 的 search_phase=integrated 时整合"
+
+  plan_result:
+    file: plan-result.schema.yaml
+    producer: plan-agent
+    consumers: [developer-agent]
+    direction: downstream
+    notes: "仅 standard 路径。steps[] 逐条执行+acceptance 验收"
+
+  developer_result:
+    file: developer-result.schema.yaml
+    producer: developer-agent
+    consumers: [inspector-agent, summarize-agent]
+    direction: downstream
+    notes: "所有路径。≥3文件或.h变更或LOC>50或新算法→inspector-agent; 全部→summarize-agent"
+
+  inspector_report:
+    file: inspector-report.schema.yaml
+    producer: inspector-agent
+    consumers: [Team Lead, summarize-agent]
+    direction: downstream
+    notes: "Team Lead 决策: approved→summarize/test; changes_requested→developer修复; rejected→developer修复或升级。inspector 只读无 Edit/Write/Bash"
+
+  test_report:
+    file: test-report.schema.yaml
+    producer: test-agent
+    consumers: [summarize-agent]
+    direction: downstream
+    notes: "仅 standard 路径且触发条件满足。inspector 通过后→test-agent→summarize; 纯内部重构/≤20LOC 跳过"
+
+  summarize_report:
+    file: summarize-report.schema.yaml
+    producer: summarize-agent
+    consumers: [commit-agent]
+    direction: downstream
+    notes: "所有路径。knowledge_updates 中的文件列表提供给 commit-agent"
+
+  commit_report:
+    file: commit-report.schema.yaml
+    producer: commit-agent
+    consumers: [Team Lead]
+    direction: terminal
+    notes: "流水线终点。Team Lead 汇报给用户"
+
+# --- 离线手册触发（不在自动流水线中） ---
+
+  sync_report:
+    file: sync-report.schema.yaml
+    producer: sync-agent
+    consumers: [Team Lead]
+    direction: terminal
+    notes: "手动 /sync 或 Cron 触发。检测人类 VCS 变更→更新知识库。冲突需 AskUserQuestion"
+
+  refactor_report:
+    file: refactor-report.schema.yaml
+    producer: refactor-agent
+    consumers: [Team Lead]
+    direction: terminal
+    notes: "手动 /refactor 触发。低风险自动执行，中高风险生成审批提案。opus 模型"
+
+  optimize_report:
+    file: optimize-report.schema.yaml
+    producer: optimize-agent
+    consumers: [Team Lead, confirm-agent]
+    direction: terminal
+    notes: "手动 /optimize 触发。用户选方案后→Fork(confirm-agent)→标准流水线。opus 模型"
+
+  init_report:
+    file: init-report-schema.yaml
+    producer: init-agent
+    consumers: [Team Lead]
+    direction: terminal
+    notes: "手动 /init 触发。扫描项目→加载模板→替换占位符→生成配置。opus 模型。schema 位于 skills/init/assets/"
+
+# YAML 传递铁律
+# 1. 传递时提取裸 YAML（去掉 ``` 包裹）
+# 2. 展示时保留 ```yaml 代码块
+# 3. 字段名必须 snake_case，根键必须匹配 Schema 定义
+# 4. 仅注入下游需要的数据（Fork prompt 最小化）

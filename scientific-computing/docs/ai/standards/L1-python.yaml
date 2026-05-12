@@ -1,0 +1,21 @@
+# L1: 项目级规范
+
+## 技术栈
+
+- Python 3.11+
+- numpy>=2.1.0, scipy>=1.14.0
+- 纯 Python 实现，无框架依赖
+
+## 工具链
+
+- 构建: pip install -e ".[dev]"
+- 测试: pytest
+- Linter: ruff（line-length=100）
+- 类型检查: mypy --strict
+- 代码风格: PEP 8 + ruff
+
+## 架构模式
+
+- 纯调度者模式：主对话永不执行任务，100% Fork SubAgent
+- 模块独立：每个模块可独立开发和测试
+- 与 NumPy/SciPy API 风格对齐

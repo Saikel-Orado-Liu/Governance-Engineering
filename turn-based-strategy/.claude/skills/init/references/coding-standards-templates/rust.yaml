@@ -1,0 +1,35 @@
+# Rust 编码规范模板
+
+rules:
+  style:
+    - "遵循 rustfmt 默认配置"
+    - "4 空格缩进"
+    - "每行最多 100 字符"
+    - "使用 rust-analyzer 进行实时检查"
+
+  code_quality:
+    - "优先 &str / &[T] 而非 String / Vec<T> 作为函数参数"
+    - "使用 Result<T, E> 而非 panic!"
+    - "错误类型实现 std::error::Error"
+    - "优先使用 ? 运算符传播错误"
+    - "使用 derive 宏而非手动实现常见 trait"
+    - "使用 const fn 标注编译时可求值函数"
+
+  ownership:
+    - "优先借用（&T, &mut T）而非转移所有权"
+    - "避免不必要的 .clone()"
+    - "大对象传参用引用"
+    - "生命周期标注尽量让编译器推断"
+
+  testing:
+    - "使用 #[cfg(test)] mod tests"
+    - "使用 #[test] 标注测试函数"
+    - "文档测试用 /// 注释中的 ``` 块"
+    - "集成测试放在 tests/ 目录"
+
+  forbidden:
+    - "禁止 unsafe 除非有充分理由并在注释中说明"
+    - "禁止 unwrap() 在生产代码中 — 用 expect() 或 ?"
+    - "禁止未使用的变量/导入（用 _ 前缀或 #[allow]）"
+    - "禁止过长的函数（>80 行考虑拆分）"
+    - "禁止 use * 通配符导入"

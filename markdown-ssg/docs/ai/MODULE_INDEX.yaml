@@ -1,0 +1,13 @@
+# AI 知识库模块索引
+# 由 init-agent 自动生成，summarize-agent 在每次任务后更新。
+
+modules:
+  - name: src
+    path: src/
+    type: application
+    description: "CLI 入口和核心逻辑 — Markdown 静态站点生成器"
+    card: docs/ai/modules/src.yaml
+
+standards:
+  - file: docs/ai/standards/ts-checklist.yaml
+    description: "TypeScript 编码规范检查清单（L1/L2/L3 分层）"

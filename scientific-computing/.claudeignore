@@ -1,0 +1,37 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.*
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Type checking
+.mypy_cache/

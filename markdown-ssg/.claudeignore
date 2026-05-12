@@ -1,0 +1,22 @@
+# Build artifacts
+dist/
+node_modules/
+coverage/
+
+# IDE files
+.vs/
+.idea/
+.vscode/
+*.sln.DotSettings.user
+
+# Environment
+.env
+.env.*
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/

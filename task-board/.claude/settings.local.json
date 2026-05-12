@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python .claude/skills/init/scripts/validate_init.py \"d:/Projects/governance-engineering/task-board\")",
+      "Bash(python -c \"import sqlite_utils; print\\(sqlite_utils.__version__\\)\")",
+      "Bash(pip list *)",
+      "Bash(./.venv/Scripts/python.exe -c \"import sqlite_utils; print\\(sqlite_utils.__version__\\)\")",
+      "Bash(./.venv/Scripts/pip.exe list *)",
+      "Bash(./.venv/Scripts/python.exe -c ' *)",
+      "Bash(./.venv/Scripts/python.exe -c \"import py_compile; py_compile.compile\\('src/database.py', doraise=True\\); py_compile.compile\\('src/schemas/tasks.py', doraise=True\\); py_compile.compile\\('src/routers/tasks.py', doraise=True\\); py_compile.compile\\('src/main.py', doraise=True\\); print\\('All modules compile successfully'\\)\")",
+      "Bash(./.venv/Scripts/ruff.exe check *)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/ -v)",
+      "Bash(ruff check *)",
+      "Bash(python -m ruff check src/ tests/)",
+      "Bash(python -m pytest)",
+      "Bash(pip install *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(npx vitest *)",
+      "Bash(npm test *)",
+      "Bash(pytest)",
+      "Bash(python -m ruff check backend/seed.py)",
+      "Bash(python backend/seed.py)",
+      "Bash(npx tsc *)",
+      "Bash(python -m ruff check src/)",
+      "Bash(python -c \"import ruff; print\\(ruff.__file__\\)\")",
+      "Bash(python -m ruff check \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\src\")",
+      "Bash(python -m pytest \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\tests\")",
+      "Bash(python -m pytest \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\tests\" -v)"
+    ]
+  }
+}

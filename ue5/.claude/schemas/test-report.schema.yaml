@@ -1,0 +1,50 @@
+# test_report — 自动化测试结果
+# 生产者: test-agent → 消费者: summarize-agent / Team Lead
+# 传递方式: Team Lead 提取裸 YAML → 注入 summarize-agent Fork prompt
+
+verdict:
+  type: enum[passed, partial, failed, not_run, skipped, build_failed, blocked]
+  required: true
+  description: passed=全部测试通过; partial=部分通过; failed=有失败; not_run=编译通过未运行; skipped=无需测试; build_failed=编译失败; blocked=无法执行
+
+coverage:
+  type: object
+  required: false
+  description: 仅 verdict 非 skipped/blocked 时填充
+  fields:
+    files_tested: integer
+    methods_tested: integer
+    tests_generated: integer
+    tests_passed: integer
+    tests_failed: integer
+
+test_files:
+  type: array
+  required: false
+  items: {file, class, methods: [string]}
+
+build:
+  type: object
+  required: false
+  fields:
+    status: enum[passed, failed]
+    mode: enum[ubt, live_coding]
+    fix_cycles: integer
+
+results:
+  type: array
+  required: false
+  items: {test, status: passed|failed, duration_ms: integer, error}
+
+inspector_regressions:
+  type: array
+  required: false
+  description: inspector 发现的问题是否被测试覆盖
+  items: {issue, test, covered: boolean}
+
+notes:
+  type: string
+  required: false
+
+# 传递链
+# test_report → Fork(summarize-agent) — 测试结果纳入知识沉淀

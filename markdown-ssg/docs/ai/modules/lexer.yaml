@@ -1,0 +1,35 @@
+# lexer — Markdown 词法分析器
+
+name: lexer
+path: src/lexer.ts
+type: module
+language: TypeScript 5.6
+description: >
+  两阶段 Markdown 词法分析器。Phase 1 按行扫描识别块级 token
+  （HEADING, PARAGRAPH, BLANK_LINE, CODE_BLOCK, UNORDERED_LIST），
+  Phase 2 在特定块级 token 的内容中扫描内联 token
+  （BOLD, ITALIC, CODE_INLINE, LINK, IMAGE）。
+  输出按 (line, column, raw.length) 排序的扁平 Token[] 数组。
+
+public_interface:
+  - "export enum TokenType { HEADING, PARAGRAPH, BLANK_LINE, BOLD, ITALIC, CODE_INLINE, CODE_BLOCK, UNORDERED_LIST, LINK, IMAGE }"
+  - "export interface Token { readonly type: TokenType; readonly raw: string; readonly line: number; readonly column: number; }"
+  - "export function tokenize(input: string): Token[]"
+
+dependencies: {}
+
+dependents:
+  - "src/index.ts（CLI 入口，待接入）"
+
+constraints:
+  - "两阶段解析：行级→行内，行内解析只扫描 PARAGRAPH / HEADING / UNORDERED_LIST"
+  - "IMPORTANT: IMAGE 必须在 LINK 之前匹配（共享 [ 语法前缀）"
+  - "IMPORTANT: ITALIC 必须在 BOLD 之后匹配（共享 * 语法前缀）"
+  - "最终排序规则：(line asc, column asc, raw.length desc)"
+  - "支持反斜杠转义（isEscaped 检测）"
+  - "未闭合的代码块（``` 无结尾）视作到文件末尾"
+  - "行号 1-indexed"
+
+known_issues: []
+
+last_updated: "2026-05-12"

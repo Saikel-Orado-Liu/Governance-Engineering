@@ -1,0 +1,35 @@
+# L3: API 级规范
+
+## 函数签名
+
+- 所有公共函数含完整 type hints
+- 使用 Google 风格 docstring
+- 参数名小写+下划线
+
+## 错误处理
+
+- 输入验证：类型错误 → TypeError，值错误 → ValueError
+- 数值不稳定 → 自定义 NumericalWarning
+- 不使用裸 except:
+
+## 数值精度
+
+- linalg: 与 NumPy 相对误差 ≤ 1e-12
+- stats: 与 SciPy 相对误差 ≤ 1e-10
+- interp/integrate: 与 SciPy 相对误差 ≤ 1e-10
+
+## 文档字符串格式
+
+```
+"""Short description.
+
+Args:
+    param: Description.
+
+Returns:
+    Description of return value.
+
+Raises:
+    ValueError: When input is invalid.
+"""
+```

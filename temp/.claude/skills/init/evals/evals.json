@@ -1,0 +1,23 @@
+{
+  "skill_name": "init",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/init — 初始化这个 项目框架 C++ 项目。项目名称 Test，单模块，引擎版本 5.7，依赖 Core/CoreUObject/Engine/RHI。构建用 UBT，VCS 用 Git。源码在 {{SOURCE_DIR}}/Test/ 下。",
+      "expected_output": "init_report.verdict=complete, 生成 CLAUDE.md 含 UE 5.7 C++20 描述, 编码规范为 cpp-ue, agent 工具保留 mcp__{{BUILD_TOOL}}, 占位符全部替换",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "/init — 初始化这个 TypeScript React 项目。package.json 中有 react 18 和 typescript 5。源码在 src/ 下，用 vitest 测试，npm run build 构建。git 版本控制。",
+      "expected_output": "init_report.verdict=complete, 生成 CLAUDE.md 含 TypeScript React 描述, 编码规范为 typescript-react, agent 工具移除 mcp (用 Bash+npm), VCS 为 git",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "/init — 初始化一个新的空项目目录。还没有任何代码文件，只有 README.md。",
+      "expected_output": "init_report.verdict=partial, 匹配 generic 模式, missing_placeholders 非空, 列出需手动提供的项目信息",
+      "files": []
+    }
+  ]
+}

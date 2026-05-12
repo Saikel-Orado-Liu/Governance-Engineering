@@ -1,0 +1,50 @@
+# TypeScript / React 编码规范模板
+
+rules:
+  naming:
+    - "组件: PascalCase（如 UserProfile.tsx）"
+    - "hooks: use 前缀 PascalCase（如 useAuth.ts）"
+    - "工具函数: camelCase（如 formatDate.ts）"
+    - "常量: UPPER_SNAKE_CASE"
+    - "类型/接口: PascalCase, 接口不加 I 前缀"
+    - "文件命名与默认导出一致"
+
+  typescript:
+    - "严格模式开启（strict: true）"
+    - "禁止 any — 用 unknown 或具体类型"
+    - "优先 type 而非 interface（除非需要声明合并）"
+    - "使用 as const 断言字面量类型"
+    - "返回值类型显式标注（公共函数）"
+
+  react:
+    - "函数组件 + hooks，禁止 class 组件"
+    - "一个组件一个文件"
+    - "props 类型定义在组件文件内（或 types.ts）"
+    - "禁止在 render 中创建内联函数/对象（用 useCallback/useMemo）"
+    - "useEffect 必须有依赖数组和清理函数"
+    - "禁止直接修改 state（用 setState 回调）"
+
+  imports:
+    - "导入顺序: React → 第三方库 → 项目模块 → 类型"
+    - "禁止循环导入"
+    - "优先具名导出"
+
+  style:
+    - "使用 2 空格缩进，禁用 tab"
+    - "优先 const，需要重新赋值时用 let，禁用 var"
+    - "async/await 替代原始 Promise"
+    - "模板字符串替代字符串拼接"
+    - "可选链 (?.) 和空值合并 (??) 优先于 && 短路"
+
+  testing:
+    - "测试文件放在 __tests__/ 或 .test.ts 同目录"
+    - "组件测试用 @testing-library/react"
+    - "一个 describe 块对应一个组件/函数"
+    - "优先测试用户行为而非实现细节"
+
+  forbidden:
+    - "禁止 console.log 提交（用 logger 工具）"
+    - "禁止未处理的 Promise"
+    - "禁止在条件语句中使用 hooks"
+    - "禁止直接操作 DOM（除非在 useEffect 内）"
+    - "禁止使用 index 作为 key"

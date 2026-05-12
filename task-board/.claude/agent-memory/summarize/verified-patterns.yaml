@@ -1,0 +1,45 @@
+# Verified Patterns
+# 由 Summarize Agent 自动维护。
+
+patterns:
+  - pattern_id: P-001
+    date: "2026-05-12"
+    name: "FastAPI + sqlite-utils CRUD 集成模式"
+    description: >
+      使用 FastAPI lifespan (asynccontextmanager) 管理 SQLite 连接生命周期，
+      sqlite-utils Table API (create/insert/update/get/delete/rows_where) 实现参数化 CRUD，
+      配合 check_same_thread=False + WAL 解决并发线程安全问题。
+    context: >
+      适用于 FastAPI Python 后端需要轻量 SQLite 持久化且使用 sqlite-utils 库的场景。
+      生产部署需单进程（Uvicorn workers=1），多进程需每个进程独立连接。
+    verified_count: 1
+    last_used: "2026-05-12"
+
+  - pattern_id: P-002
+    date: "2026-05-12"
+    name: ":memory: SQLite + dependency_overrides 测试隔离模式"
+    description: >
+      测试使用 :memory: 内存 SQLite 数据库，通过 FastAPI dependency_overrides 机制
+      将 get_db 替换为返回内存连接的测试用 get_test_db，实现测试隔离。
+      每个测试函数创建独立内存 DB + 独立表结构，避免测试间数据污染。
+    context: >
+      适用于 FastAPI + SQLite 项目的单元测试。内存 DB 速度快、无需清理文件，
+      dependency_overrides 是 FastAPI 官方推荐的依赖注入替换方式。
+    verified_count: 1
+    last_used: "2026-05-12"
+
+  - pattern_id: P-003
+    date: "2026-05-13"
+    name: "原生 HTML5 DnD + 单组件扁平化看板模式"
+    description: >
+      使用原生 HTML5 Drag and Drop API（无外部拖拽库）实现三列看板拖拽。
+      单 Board.tsx 组件内联三态渲染（加载骨架屏/错误重试/正常三列），
+      useState + useCallback + useEffect 自包含管理状态和乐观更新。
+      onDrop 回调用 setColumns 乐观更新 + updateTaskStatus().catch(() => load())
+      回退全量重新加载。CSS 优先级色条使用 Record<TaskPriority, string> 查找表。
+    context: >
+      适用于 React 18 SPA 中仅需跨列移动（无需同列排序）的看板场景。
+      拖拽逻辑简单时原生 HTML5 DnD 优于第三方拖拽库，可消除依赖体积
+      并减少组件层级。失败回退策略适用于低频操作场景。
+    verified_count: 1
+    last_used: "2026-05-13"

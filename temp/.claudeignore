@@ -1,0 +1,39 @@
+# Build artifacts
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/
+
+# IDE files
+.vs/
+*.sln.DotSettings.user
+.idea/
+.vscode/
+
+# UE generated
+*.gen.cpp
+*.generated.h
+
+# Environment
+.env
+.env.*
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Large generated content
+*.pak
+*.utoc
+*.ucas
+
+# Platform-specific
+*.dll
+*.lib
+*.exp
+*.pdb

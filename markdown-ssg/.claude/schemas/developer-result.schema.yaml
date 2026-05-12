@@ -1,0 +1,62 @@
+# developer_result — 代码生成阶段输出
+# 生产者: developer-agent → 消费者: inspector-agent / summarize-agent / Team Lead
+# 传递方式: Team Lead 提取裸 YAML → 注入下游 Fork prompt
+
+verdict:
+  type: enum[complete, escalate, blocked]
+  required: true
+  description: complete=成功; escalate=需Team Lead介入; blocked=无法执行
+
+input_type:
+  type: enum[simple, standard]
+  required: true
+  description: 任务来源路径
+
+plan_adherence:
+  type: enum[full, partial]
+  required: false
+  description: 仅 standard 路径，对照 plan_result.steps[] 验收
+
+generate:
+  type: object
+  required: true
+  fields:
+    files_created: [{path, reason}]
+    files_changed: [{path, change, lines}]
+    total_loc: integer
+    project_sync: [{file, action}]
+
+self_review:
+  type: object
+  required: true
+  fields:
+    static_analysis: enum[passed, issues_found_and_fixed]
+    issues_found: integer
+    issues_fixed: integer
+
+build:
+  type: object
+  required: true
+  fields:
+    status: enum[passed, passed_with_warnings, failed, blocked]
+    mode: enum[ubt, live_coding]
+    editor_status: enum[connected, not_connected]
+
+fix_cycles:
+  type: integer[0-3]
+  required: true
+  description: 修复循环次数。3次仍失败则 escalate
+
+# escalate 时的额外字段
+context:
+  type: object
+  required: false
+  fields:
+    changes_made: string
+    issues_remaining: string
+    build_status: string
+    files: [{path, change}]
+
+# 传递链
+# developer_result → Fork(inspector-agent) 当 ≥3文件 或 .h变更 或 LOC>50 或 新算法
+# developer_result → Fork(summarize-agent) 所有路径

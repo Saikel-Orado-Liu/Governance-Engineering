@@ -1,0 +1,34 @@
+# summarize_report — 知识沉淀结果
+# 生产者: summarize-agent → 消费者: commit-agent / Team Lead
+# 传递方式: Team Lead 提取裸 YAML → Fork(commit-agent)
+
+task:
+  type: string
+  required: true
+  description: 任务名称
+
+knowledge_updates:
+  type: array
+  required: false
+  description: 知识库文件更新
+  items: {file, change}
+
+memory_updates:
+  type: array
+  required: false
+  description: 共享记忆文件更新
+  items: {file, entries: integer}
+
+lessons:
+  type: array
+  required: false
+  description: 新提取的经验教训
+  items: {id: string, title: string, category: gc|naming|build|include|lifecycle|logic}
+
+next_actions:
+  type: array
+  required: false
+  description: 建议的后续操作
+
+# 传递链
+# summarize_report → Fork(commit-agent) — 提交知识库变更

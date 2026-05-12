@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"G:/Test/TEMP\" 2>&1 || echo \"TEMPLATE_PATH_NOT_FOUND\")",
+      "Read(//g/Test/TEMP/**)",
+      "Bash(python \"d:/Projects/governance-engineering/markdown-ssg/.claude/skills/init/scripts/validate_init.py\" \"d:/Projects/governance-engineering/markdown-ssg\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(ls -la \"d:\\\\Projects\\\\governance-engineering\\\\markdown-ssg\\\\\" | head -20)",
+      "Read(//d/Projects/governance-engineering/**)"
+    ]
+  }
+}

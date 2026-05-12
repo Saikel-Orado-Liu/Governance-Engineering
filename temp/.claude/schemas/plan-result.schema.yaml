@@ -1,0 +1,66 @@
+# plan_result — 架构设计输出
+# 生产者: plan-agent → 消费者: developer-agent
+# 传递方式: Team Lead 提取裸 YAML → 注入 developer-agent Fork prompt
+
+task:
+  type: string
+  required: true
+  description: 任务名称
+
+requirement:
+  type: string
+  required: true
+  description: 需求引用，来自 confirm_result.requirement
+
+search_phase:
+  type: enum[independent, integrated]
+  required: true
+  description: independent=自己搜索完成; integrated=整合了 explore_report
+
+references:
+  type: object
+  required: true
+  fields:
+    files: [string]
+    symbols: [string]
+    engine_apis: [string]
+    missing_info: [string]  # 未能确认的信息→implement阶段需注意
+
+architecture_rationale:
+  type: object
+  required: false  # simplicity_tier=standard&total_steps≤3时可省略
+  fields:
+    considered: [string]  # 至少2个备选方案
+    chosen: string
+
+risk_assessment:
+  type: array
+  required: true
+  items: {risk, impact: low|medium|high, likelihood: low|medium|high, mitigation}
+  notes: "仅列出 impact≥medium 且 likelihood≥medium 的风险"
+
+affected_modules:
+  type: array
+  required: true
+  items: {name, impact: low|medium|high, action: modify|create|delete}
+
+steps:
+  type: array
+  required: true
+  items: {id, action, files: [string], acceptance: [string], complexity: small|large}
+
+total_steps:
+  type: integer
+  required: true
+
+estimated_total_loc:
+  type: integer
+  required: true
+
+downstream:
+  type: literal["Fork(developer-agent)"]
+  required: true
+  description: v3 固定值，无 Agent Team
+
+# 传递链
+# plan_result → Fork(developer-agent) at standard tasks

@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: task-board-backend
+Version: 0.1.0
+Summary: Task Board API Server
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.32.0
+Requires-Dist: pydantic>=2.10.0
+Requires-Dist: sqlite-utils>=3.38.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.0; extra == "dev"
+Requires-Dist: httpx>=0.28.0; extra == "dev"
+Requires-Dist: ruff>=0.8.0; extra == "dev"
+Requires-Dist: bandit>=1.7.0; extra == "dev"

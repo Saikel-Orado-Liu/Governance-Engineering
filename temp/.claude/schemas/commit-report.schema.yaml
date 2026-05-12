@@ -1,0 +1,36 @@
+# commit_report — VCS 提交结果
+# 生产者: commit-agent → 消费者: Team Lead (汇报)
+# 传递方式: Team Lead 提取裸 YAML → 汇报给用户
+
+status:
+  type: enum[committed, skipped, blocked]
+  required: true
+  description: committed=成功提交; skipped=静默跳过(非workspace); blocked=阻止提交(文件过多)
+
+mode:
+  type: enum[auto, manual]
+  required: true
+  description: auto=流水线自动([AI]标记); manual=用户手动(/commit命令)
+
+message:
+  type: string
+  required: false
+  description: 提交消息。committed 时必填。格式: [AI] <type>: <description>
+
+files_committed:
+  type: integer
+  required: false
+  description: 成功提交的文件数
+
+files_skipped:
+  type: integer
+  required: false
+  description: 白名单过滤跳过的文件数
+
+reason:
+  type: string
+  required: false
+  description: skipped 或 blocked 时的原因
+
+# 传递链
+# commit_report → Team Lead → 汇报用户
