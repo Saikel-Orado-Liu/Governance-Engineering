@@ -1,0 +1,30 @@
+# 模块卡片：backend-boards-router
+# 由 Summarize Agent 自动维护。
+
+name: backend-boards-router
+path: backend/src/routers/boards.py
+language: Python 3.11+
+framework: FastAPI >=0.115
+status: active
+
+description: >
+  看板路由模块。按任务 status（todo/in_progress/done）分组返回三列数据，
+  每列内部按 sort_order ASC 排序。
+
+public_interface:
+  - "router — APIRouter(prefix=\"/boards\", tags=[\"boards\"])"
+  - "GET /boards — 返回 { columns: [{ status, tasks: [] }] }，三列按 sort_order ASC 排序"
+
+internal_dependencies:
+  - database — get_db 连接
+  - schemas/tasks — BoardColumn, TaskResponse
+  - auth — get_current_user Depends
+
+design_constraints:
+  - "返回数据结构固定为三列（todo/in_progress/done），不支持动态列"
+  - "列内排序由 sort_order ASC 控制，非创建时间"
+
+known_issues:
+  - "仅支持预定义三列，不支持自定义列或列 CRUD"
+
+last_updated: "2026-05-13"

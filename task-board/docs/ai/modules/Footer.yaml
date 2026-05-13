@@ -1,0 +1,25 @@
+# 模块卡片：Footer
+# 由 Summarize Agent 自动维护。
+
+name: Footer
+path: frontend/src/components/Footer.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  应用底部栏。版权信息显示。
+
+public_interface:
+  - "Footer() — 默认导出函数组件"
+  - "静态展示组件，无 props"
+
+internal_dependencies: []
+
+design_constraints:
+  - "sticky bottom 定位或文档流底部"
+  - "纯展示组件，无交互逻辑"
+
+known_issues: []
+
+last_updated: "2026-05-13"

@@ -1,0 +1,29 @@
+# 模块卡片：backend-config
+# 由 Summarize Agent 自动维护。
+
+name: backend-config
+path: backend/src/config.py
+language: Python 3.11+
+framework: Pydantic >=2.10
+status: active
+
+description: >
+  应用配置模块。基于 pydantic-settings 的 BaseSettings，从 .env 文件
+  和环境变量加载配置。提供类型安全的全局配置对象。
+
+public_interface:
+  - "Settings — BaseSettings 数据类"
+  - "字段: DB_PATH (str, 默认 \"tasks.db\"), SECRET_KEY (str), LOG_LEVEL (str, 默认 \"INFO\"), API_PREFIX (str, 默认 \"/api\"), CORS_ORIGINS (str, 默认 \"*\")"
+  - "settings — 全局单例 Settings 实例"
+
+internal_dependencies:
+  - pydantic-settings — BaseSettings, Field
+
+design_constraints:
+  - "支持 .env 文件和环境变量两种来源"
+  - "环境变量优先级高于 .env 文件"
+  - "CORS_ORIGINS 在生产环境应设为具体域名而非通配符"
+
+known_issues: []
+
+last_updated: "2026-05-13"

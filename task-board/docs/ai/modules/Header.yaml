@@ -1,0 +1,29 @@
+# 模块卡片：Header
+# 由 Summarize Agent 自动维护。
+
+name: Header
+path: frontend/src/components/Header.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  应用顶部导航栏。包含项目标题、用户登录状态菜单、主题切换按钮。
+  粘性定位（sticky top），始终位于视口顶部。
+
+public_interface:
+  - "Header() — 默认导出函数组件"
+  - "集成 AuthContext 获取登录态"
+  - "集成 ThemeContext 切换亮/暗主题"
+
+internal_dependencies:
+  - AuthContext — 用户登录状态
+  - ThemeContext — 主题切换
+
+design_constraints:
+  - "sticky top 定位，不占用文档流空间"
+  - "依赖 ThemeContext 和 AuthContext Provider 存在"
+
+known_issues: []
+
+last_updated: "2026-05-13"

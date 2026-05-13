@@ -1,0 +1,32 @@
+# 模块卡片：i18n
+# 由 Summarize Agent 自动维护。
+
+name: i18n
+path: frontend/src/i18n/
+language: TypeScript 5.6
+framework: react-intl 7
+status: active
+
+description: >
+  国际化模块。基于 react-intl 实现中英文双语支持。通过 navigator.language
+  自动检测浏览器语言，手动切换持久化到 localStorage。语言数据结构存储在
+  en-US.ts 和 zh-CN.ts 文件中。
+
+public_interface:
+  - "IntlProvider — react-intl Provider，包裹应用根组件"
+  - "messages — { en-US, zh-CN } 语言包"
+  - "locale — 当前语言标识"
+  - "setLocale(locale) — 语言切换函数"
+  - "使用: intl.formatMessage({ id }) / <FormattedMessage id={id} />"
+
+internal_dependencies:
+  - react-intl — 核心国际化库
+
+design_constraints:
+  - "语言包文件按 locale 分离（en-US.ts / zh-CN.ts），避免单文件膨胀"
+  - "自动检测：navigator.language 匹配，不匹配时默认 en-US"
+  - "手动选择持久化到 localStorage key='locale'"
+
+known_issues: []
+
+last_updated: "2026-05-13"

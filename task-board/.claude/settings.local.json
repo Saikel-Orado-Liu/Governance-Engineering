@@ -28,7 +28,27 @@
       "Bash(python -c \"import ruff; print\\(ruff.__file__\\)\")",
       "Bash(python -m ruff check \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\src\")",
       "Bash(python -m pytest \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\tests\")",
-      "Bash(python -m pytest \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\tests\" -v)"
+      "Bash(python -m pytest \"d:\\\\Projects\\\\governance-engineering\\\\task-board\\\\backend\\\\tests\" -v)",
+      "Bash(python -m ruff --version)",
+      "Bash(python -m pytest --version)",
+      "Bash(python -m ruff check src/main.py)",
+      "Bash(ls .venv/Scripts/ruff*)",
+      "Bash(ls .venv/bin/ruff*)",
+      "Bash(pip show *)",
+      "Bash(which ruff *)",
+      "Bash(python -c \"import tasks_router; print\\('ok'\\)\")",
+      "Bash(python -c \"from src.routers.tasks import router; print\\('import ok'\\)\")",
+      "Bash(python -m ruff check src/routers/tasks.py)",
+      "Bash(python -m pytest tests/test_tasks.py -v)",
+      "Bash(bandit -r src/ -ll)",
+      "Bash(python -m bandit -r d:/Projects/governance-engineering/task-board/backend/src/ -ll)",
+      "Bash(python -m pytest src/ -x -q)",
+      "Bash(python -m pytest tests/ -x -q)",
+      "Bash(python -c \"from src.auth import _create_token, create_access_token, create_refresh_token, hash_password, verify_password; print\\('auth.py imports OK'\\)\")",
+      "Bash(python -m pytest tests/ -x -q -k \"not test_refresh_success\")",
+      "Bash(cd /d/Projects/governance-engineering\\\\task-board/frontend && npm test -- --run 2>&1)",
+      "Read(//d/Projects/governance-engineeringtask-board/**)",
+      "Bash(python -m ruff check src/ --no-fix)"
     ]
   }
 }

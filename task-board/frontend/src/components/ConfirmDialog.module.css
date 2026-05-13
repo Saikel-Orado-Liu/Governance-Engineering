@@ -1,0 +1,73 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--card-bg, #fff);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  width: 360px;
+  max-width: 90vw;
+  transition: background var(--transition-slow);
+}
+
+.title {
+  font-size: var(--font-base);
+  font-weight: var(--font-semibold);
+  color: var(--text, #1e293b);
+  margin: 0 0 8px;
+  transition: color var(--transition-slow);
+}
+
+.message {
+  font-size: 14px;
+  color: var(--text-secondary, #555);
+  margin: 0 0 20px;
+  line-height: 1.5;
+  transition: color var(--transition-slow);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn {
+  padding: 8px 20px;
+  background: var(--border, #e0e0e0);
+  color: var(--text, #333);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-normal), color var(--transition-slow);
+}
+
+.cancelBtn:hover {
+  background: var(--hover-bg, #d0d0d0);
+}
+
+.confirmBtn {
+  padding: 8px 20px;
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.confirmBtn:hover {
+  filter: brightness(0.85);
+}

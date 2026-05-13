@@ -1,0 +1,27 @@
+# 模块卡片：backend-schemas
+# 由 Summarize Agent 自动维护。
+
+name: backend-schemas
+path: backend/src/schemas/
+language: Python 3.11+
+framework: Pydantic >=2.10
+status: active
+
+description: >
+  Pydantic 请求/响应模型定义。分 tasks.py（任务相关）和 users.py（用户认证相关）
+  两个文件。提供类型安全的数据验证和序列化。
+
+public_interface:
+  - "schemas/tasks.py: TaskCreate (title+, description-, status-, priority-, assignee-), TaskResponse (含 id/created_at/updated_at/user_id), TaskStatusUpdate, TaskUpdate, BoardColumn (status+tasks), TaskPriority (enum), TaskStatus (enum), TaskReorder (task_id+target_index)"
+  - "schemas/users.py: UserCreate (username+password), UserResponse (id+username), TokenResponse (access_token+refresh_token+token_type), RefreshRequest (refresh_token)"
+
+internal_dependencies:
+  - Pydantic — BaseModel, Field, ConfigDict
+
+design_constraints:
+  - "TaskResponse 必须与前端 tasks.ts 类型定义对齐"
+  - "所有响应模型使用 model_config = ConfigDict(from_attributes=True) 支持 ORM 模式"
+
+known_issues: []
+
+last_updated: "2026-05-13"

@@ -6,7 +6,10 @@ Requires-Python: >=3.11
 Requires-Dist: fastapi>=0.115.0
 Requires-Dist: uvicorn[standard]>=0.32.0
 Requires-Dist: pydantic>=2.10.0
+Requires-Dist: pydantic-settings>=2.7.0
 Requires-Dist: sqlite-utils>=3.38.0
+Requires-Dist: structlog>=24.4.0
+Requires-Dist: python-jose[cryptography]>=3.3.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.3.0; extra == "dev"
 Requires-Dist: httpx>=0.28.0; extra == "dev"

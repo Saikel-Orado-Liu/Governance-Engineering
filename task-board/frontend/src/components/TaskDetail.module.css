@@ -1,0 +1,155 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.panel {
+  width: 400px;
+  max-width: 90vw;
+  height: 100%;
+  background: var(--card-bg, #fff);
+  box-shadow: var(--shadow-left-panel);
+  padding: 24px;
+  overflow-y: auto;
+  position: relative;
+  transform: translateX(0);
+  transition: transform var(--transition-slow) ease, background var(--transition-slow);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: var(--font-2xl);
+  cursor: pointer;
+  color: var(--text-secondary, #666);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  transition: background var(--transition-normal), color var(--transition-slow);
+}
+
+.closeBtn:hover {
+  background: var(--hover-bg, #f0f0f0);
+  color: var(--text, #333);
+}
+
+.priorityBar {
+  font-size: var(--font-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-bottom: 16px;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.priorityLow {
+  background: color-mix(in srgb, var(--color-priority-low) 15%, transparent);
+  color: var(--color-priority-low);
+  border-left-color: var(--color-priority-low);
+}
+
+.priorityMedium {
+  background: color-mix(in srgb, var(--color-priority-medium) 15%, transparent);
+  color: var(--color-priority-medium);
+  border-left-color: var(--color-priority-medium);
+}
+
+.priorityHigh {
+  background: color-mix(in srgb, var(--color-priority-high) 15%, transparent);
+  color: var(--color-priority-high);
+  border-left-color: var(--color-priority-high);
+}
+
+.title {
+  font-size: var(--font-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text, #1a1a2e);
+  margin: 0 0 12px;
+  transition: color var(--transition-slow);
+}
+
+.description {
+  font-size: var(--font-sm);
+  color: var(--text-secondary, #555);
+  line-height: 1.6;
+  margin: 0 0 24px;
+  white-space: pre-wrap;
+  transition: color var(--transition-slow);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.metaItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-sm);
+  color: var(--text, #333);
+  transition: color var(--transition-slow);
+}
+
+.metaLabel {
+  color: var(--text-secondary, #888);
+  font-weight: var(--font-medium);
+  transition: color var(--transition-slow);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid var(--border, #eee);
+  padding-top: 20px;
+  transition: border-color var(--transition-slow);
+}
+
+.editBtn,
+.deleteBtn {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.editBtn {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.editBtn:hover {
+  filter: brightness(0.85);
+}
+
+.deleteBtn {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+}
+
+.deleteBtn:hover {
+  background: color-mix(in srgb, var(--color-danger) 20%, transparent);
+}

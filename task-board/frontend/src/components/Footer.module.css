@@ -1,0 +1,40 @@
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  transition: border-color var(--transition-slow);
+}
+
+.footerInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.copyright {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.links {
+  display: flex;
+  gap: 12px;
+}
+
+.link {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-normal);
+}
+
+.link:hover {
+  color: var(--text);
+}

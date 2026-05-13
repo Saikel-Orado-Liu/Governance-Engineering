@@ -13,12 +13,20 @@ export interface Task {
   updated_at: string;
 }
 
-export const TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done'];
+export const TASK_STATUSES = ['todo', 'in_progress', 'done'] as const;
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: 'To Do',
   in_progress: 'In Progress',
   done: 'Done',
+};
+
+export const TASK_PRIORITIES = ['low', 'medium', 'high'] as const;
+
+export const PRIORITY_LABELS: Record<TaskPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
 };
 
 export type BoardColumn = {

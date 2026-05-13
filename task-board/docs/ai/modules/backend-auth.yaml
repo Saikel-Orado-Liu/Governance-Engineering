@@ -1,0 +1,33 @@
+# 模块卡片：backend-auth-router
+# 由 Summarize Agent 自动维护。
+
+name: backend-auth-router
+path: backend/src/routers/auth.py
+language: Python 3.11+
+framework: FastAPI >=0.115
+status: active
+
+description: >
+  认证路由模块。用户注册、登录、令牌刷新。配合 auth.py（JWT 签发/验证）
+  和 schemas/users.py 实现完整的双令牌认证流程。
+
+public_interface:
+  - "router — APIRouter(prefix=\"/auth\", tags=[\"auth\"])"
+  - "POST /auth/register — 用户注册，返回 access token + refresh token"
+  - "POST /auth/login — 用户登录，返回双令牌"
+  - "POST /auth/refresh — 刷新 access token（需 refresh token + token_type 验证）"
+
+internal_dependencies:
+  - auth — create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+  - database — get_db 连接
+  - schemas/users — UserCreate, UserResponse, TokenResponse, RefreshRequest
+
+design_constraints:
+  - "token_type 验证防止 access token 误用于 refresh 端点"
+  - "密码使用 PBKDF2-SHA256 600K 迭代哈希存储"
+  - "refresh token 7 天有效期，access token 15 分钟有效期"
+
+known_issues:
+  - "无 refresh token 吊销机制（令牌签发后直至过期始终有效）"
+
+last_updated: "2026-05-13"

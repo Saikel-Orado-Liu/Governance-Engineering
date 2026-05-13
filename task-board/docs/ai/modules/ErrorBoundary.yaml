@@ -1,0 +1,29 @@
+# 模块卡片：ErrorBoundary
+# 由 Summarize Agent 自动维护。
+
+name: ErrorBoundary
+path: frontend/src/components/ErrorBoundary.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  React class 组件错误边界。componentDidCatch 捕获渲染错误，
+  getDerivedStateFromError 状态重置。用户级重试按钮恢复渲染。
+  毛玻璃效果（backdrop-filter）+ 错误消息卡片展示。
+
+public_interface:
+  - "ErrorBoundary({ children }) — 默认导出 class 组件"
+  - "Props: children (ReactNode)"
+  - "内部状态: hasError (boolean)"
+  - "方法: getDerivedStateFromError, componentDidCatch, handleRetry"
+
+internal_dependencies: []
+
+design_constraints:
+  - "必须使用 class 组件（而非函数组件+hooks）—— React error boundary API (componentDidCatch/getDerivedStateFromError) 仅在 class 组件中可用。这是 React 框架强制的例外"
+  - "必须作为 React 组件树顶层包裹使用"
+
+known_issues: []
+
+last_updated: "2026-05-13"

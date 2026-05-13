@@ -1,0 +1,112 @@
+/* ── Auth Pages (Login / Register) ─────────────────────────────────────── */
+
+.authPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--card-bg) 100%);
+}
+
+.authContainer {
+  max-width: 400px;
+  width: 100%;
+  margin: 80px auto;
+  padding: 32px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+}
+
+.title {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+  margin-top: 4px;
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.submitBtn:disabled {
+  filter: brightness(0.85);
+  cursor: not-allowed;
+}
+
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.link {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: var(--font-sm);
+  transition: background var(--transition-normal);
+}
+
+.link:hover {
+  background: var(--hover-bg);
+}
+
+@media (max-width: 767px) {
+  .authContainer {
+    margin-top: 40px;
+    margin-bottom: 40px;
+  }
+}

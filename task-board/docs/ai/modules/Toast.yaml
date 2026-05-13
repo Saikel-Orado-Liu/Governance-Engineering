@@ -1,0 +1,27 @@
+# 模块卡片：Toast
+# 由 Summarize Agent 自动维护。
+
+name: Toast
+path: frontend/src/components/Toast.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  轻量通知组件。4 秒自动消失 + onClose useCallback 稳定引用防计时器重置。
+  滑入+淡出动画，右下角固定定位。通过 key prop 变更触发 React 重新挂载
+  以重置计时器。
+
+public_interface:
+  - "Toast({ message, onClose, type? }) — 默认导出"
+  - "Props: message (string), onClose (() => void), type (\"success\"|\"error\", 可选)"
+
+internal_dependencies: []
+
+design_constraints:
+  - "通过 key 变更触发 React 重新挂载（而非内部 timer 管理），避免计时器竞态"
+  - "onClose 回调必须使用 useCallback 稳定引用，防止 Toast 非必要重渲染"
+
+known_issues: []
+
+last_updated: "2026-05-13"

@@ -14,7 +14,10 @@ dependencies:
   - fastapi>=0.115.0
   - uvicorn[standard]>=0.32.0
   - pydantic>=2.10.0
+  - pydantic-settings>=2.7.0
   - sqlite-utils>=3.38.0
+  - structlog>=24.4.0
+  - python-jose[cryptography]>=3.3.0
 
 dev_dependencies:
   - pytest>=8.3.0
@@ -25,9 +28,17 @@ dev_dependencies:
 public_interface:
   - main entry: "backend.src.main" (FastAPI app + lifespan + router mount)
   - database layer: "backend.src.database" (get_db, get_connection, close_db, _ensure_tasks_schema, _add_sort_order_column)
-  - schema models: "backend.src.schemas.tasks" (TaskCreate, TaskResponse, TaskStatusUpdate, BoardColumn, TaskPriority, TaskStatus, TaskReorder)
-  - CRUD routers: "backend.src.routers.tasks" (GET/POST/PUT/DELETE /tasks + PATCH /{task_id}/status + PATCH /{task_id}/reorder + get_task_or_404)
+  - schema models: "backend.src.schemas.tasks" (TaskCreate, TaskResponse, TaskStatusUpdate, TaskUpdate, BoardColumn, TaskPriority, TaskStatus, TaskReorder)
+  - CRUD routers: "backend.src.routers.tasks" (GET /tasks 带 offset/limit 分页参数 + X-Total-Count 响应头, POST/PATCH/DELETE /tasks, PATCH /{task_id}/status, PATCH /{task_id}/reorder, get_task_or_404, _verify_ownership)
   - board router: "backend.src.routers.boards" (GET /api/boards — 按 status 分组返回三列, 按 sort_order ASC 排序)
+  - config: "backend.src.config" (Settings BaseSettings — 从 .env 和环境变量加载 DB_PATH, LOG_LEVEL, API_PREFIX, SECRET_KEY, CORS_ORIGINS)
+  - logging: "backend.src.logger" (setup_logging — structlog JSON 日志配置, 按 LOG_LEVEL 过滤级别)
+  - exception handlers: "backend.src.exceptions" (add_exception_handlers — 注册 HTTPException/RequestValidationError/Exception 三层全局 JSON 错误处理器, 含 request_id)
+  - request_id middleware: "backend.src.middleware.request_id" (RequestIDMiddleware — UUID v4 request ID 注入 request.state + X-Request-ID 响应头)
+  - JWT auth: "backend.src.auth" (create_access_token/create_refresh_token — 基于 python-jose HS256 签发; decode_token 验证; hash_password/verify_password — PBKDF2-SHA256 600K 迭代; get_current_user — FastAPI Depends 从 Bearer token 提取用户)
+  - auth router: "backend.src.routers.auth" (POST /api/auth/register 注册 + POST /api/auth/login 登录返回 access+refresh token 双令牌 + POST /api/auth/refresh 用 refresh token 换新令牌, token_type 验证防止 access token 误用于 refresh)
+  - user/user schemas: "backend.src.schemas.users" (UserCreate, UserResponse, TokenResponse, RefreshRequest — Pydantic 请求/响应模型)
+  - database migration: "backend.src.database" (_ensure_users_schema 创建 users 表 + username 唯一索引; _add_user_id_to_tasks 给 tasks 表加 user_id 列默认 1; _seed_default_admin 首次启动自动创建 admin/admin123 账户)
 
 constraints:
   - "SQLite 连接必须设置 check_same_thread=False + WAL 模式以支持 FastAPI 异步线程池并发访问"

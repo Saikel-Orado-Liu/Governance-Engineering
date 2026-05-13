@@ -1,0 +1,36 @@
+# 模块卡片：AuthContext
+# 由 Summarize Agent 自动维护。
+
+name: AuthContext
+path: frontend/src/contexts/AuthContext.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  认证上下文 Provider。管理用户登录/注册状态、token 存储与自动刷新。
+  通过 React Context 全局提供 user、login、register、logout 方法。
+  401 响应时自动调用 refresh token 静默续期。
+
+public_interface:
+  - "AuthProvider({ children }) — Context Provider 组件"
+  - "useAuth() — hook 返回 { user, login, register, logout, loading, error }"
+  - "AuthContext — React.createContext 导出"
+  - "login(username, password) — 调用 POST /api/auth/login"
+  - "register(username, password) — 调用 POST /api/auth/register"
+  - "logout() — 清除 localStorage token"
+
+internal_dependencies:
+  - api/client — JWT 注入与自动刷新
+  - api/auth — 登录/注册/刷新 API 调用
+  - localStorage — token 持久化存储
+
+design_constraints:
+  - "access token 15 分钟有效，refresh token 7 天有效"
+  - "token 存储在 localStorage，非 httpOnly cookie（XSS 攻击面需留意）"
+  - "401 自动刷新使用锁机制防并发刷新竞态"
+
+known_issues:
+  - "localStorage token 存储非 httpOnly，XSS 攻击可窃取 token"
+
+last_updated: "2026-05-13"

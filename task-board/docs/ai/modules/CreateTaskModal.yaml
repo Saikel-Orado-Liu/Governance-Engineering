@@ -1,0 +1,33 @@
+# 模块卡片：CreateTaskModal
+# 由 Summarize Agent 自动维护。
+
+name: CreateTaskModal
+path: frontend/src/components/CreateTaskModal.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  自包含模态框组件，支持 mode="create"|"edit" 两种模式。内部管理表单状态、
+  优先级选择、验证逻辑、API 调用和 loading/error 状态。edit 模式下通过 task prop
+  预填表单后调用 updateTask。交互：Esc 键 + 遮罩层关闭 + stopPropagation
+  防事件冲突 + useEffect keydown 清理。
+
+public_interface:
+  - "CreateTaskModal({ isOpen, onClose, mode, task? }) — 默认导出"
+  - "Props: isOpen (boolean), onClose (() => void), mode (\"create\"|\"edit\"), task (Task | null, edit 模式预填)"
+  - "表单字段: title, description, status, priority, assignee"
+  - "验证规则: title 必填非空"
+
+internal_dependencies:
+  - api/tasks — createTask, updateTask
+  - types/task — Task, TaskPriority, TaskStatus
+
+design_constraints:
+  - "自包含设计：父组件仅通过 isOpen boolean + onClose callback 控制显示/隐藏"
+  - "edit 模式必须通过 task prop 传递完整 Task 对象用于预填"
+  - "操作成功后调用 onClose 通知父组件，父组件自行 load() 全量刷新"
+
+known_issues: []
+
+last_updated: "2026-05-13"

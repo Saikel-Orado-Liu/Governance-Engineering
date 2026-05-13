@@ -1,0 +1,46 @@
+# 模块卡片：Board
+# 由 Summarize Agent 自动维护。
+
+name: Board
+path: frontend/src/components/Board.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  三列看板主组件（todo/in_progress/done）。原生 HTML5 DnD 拖拽（无外部库）、
+  深拷贝快照乐观更新回滚、双数据模式（fetchBoard/fetchTasks）、客户端文本搜索、
+  加载骨架屏/错误重试/空列表三态渲染。便利贴拟物卡片（CSS nth-child 交替旋转 +
+  ::before 高光条 + 阴影）+ cork 软木板背景。CreateTaskModal/ConfirmDialog/TaskDetail
+  子组件集成控制。
+
+public_interface:
+  - "Board() — 默认导出函数组件，无 props，完全自包含"
+  - "state: columns (BoardColumn[]), filter (FilterParams), showCreateModal (boolean), editTarget (Task|null), deleteTarget (Task|null), detailTask (Task|null)"
+  - "handleDragStart/handleDragOver/handleDrop — HTML5 DnD 事件处理器"
+  - "handleSameColumnDrop/handleCrossColumnDrop — 同列/跨列拖拽逻辑"
+  - "displayColumns — useMemo 客户端文本搜索过滤结果"
+  - "load() — 根据 filter 状态选择 fetchBoard 或 fetchTasks 加载数据"
+
+internal_dependencies:
+  - CreateTaskModal — 创建/编辑任务入口
+  - ConfirmDialog — 删除任务确认
+  - TaskDetail — 任务详情侧滑面板
+  - Toast — 操作结果轻量通知
+  - FilterBar — 搜索过滤受控组件
+  - api/tasks — fetchBoard, createTask, updateTask, deleteTask, updateTaskStatus, updateTaskReorder
+  - types/task — TaskStatus, BoardColumn, Task, FilterParams
+
+design_constraints:
+  - "双数据模式：无过滤时用 fetchBoard 返回 sort_order ASC 排序；有过滤时用 fetchTasks 返回 created_at 降序"
+  - "同列同位置拖拽 no-op 不触发 API 调用"
+  - "拖拽快照使用 JSON.parse(JSON.stringify()) 深拷贝，要求 Task 为纯数据对象"
+  - "拖拽操作后通过 setTimeout(0) 复位 hasDragged ref，防止拖拽后误触 onClick"
+  - "编辑/删除 API 成功后调用 load() 全量刷新保证一致性"
+
+known_issues:
+  - "同列拖拽使用 getBoundingClientRect 中点检测，极窄列或零高度列场景可能定位不准确"
+  - "JSON.parse(JSON.stringify()) 深拷贝不适用于含 Date/Map/Set/函数的对象"
+  - "双数据模式排序不一致：过滤拖拽重排后清除过滤，sort_order 可能与视觉顺序不匹配"
+
+last_updated: "2026-05-13"

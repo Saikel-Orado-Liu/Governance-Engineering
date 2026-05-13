@@ -1,4 +1,91 @@
 # 技术债务清单
 # 由 refactor-agent 自动维护。首次扫描后自动填充。
 
-entries: []
+entries:
+  - id: RF-1
+    title: 缓存 get_task_or_404 结果消除 4 次冗余 DB 读取
+    category: performance
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "request-scoped 字典缓存 get_task_or_404 返回值，同一请求内重复调用命中缓存，消除冗余 DB 查询"
+
+  - id: RF-2
+    title: reorder_task executemany 批量 UPDATE 替代 N 次独立写
+    category: performance
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "executemany 批量 UPDATE 事务替代逐条 UPDATE + commit，减少 N-1 次往返和事务开销"
+
+  - id: RF-3
+    title: 消除模块间循环依赖（原 RF-7）
+    category: architecture
+    severity: high
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "通过提取公共依赖或重构接口方向，消除 backend 模块间的循环依赖链"
+
+  - id: RF-4
+    title: handleDrop 拖拽放置逻辑（原 RF-8）
+    category: logic
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "实现或重构 Board 组件中的 handleDrop 拖拽放置逻辑，确保状态正确更新"
+
+  - id: RF-5
+    title: Board 组件拆分（原 RF-3）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "将大型 Board 组件按职责拆分为更小的子组件，提升可维护性"
+
+  - id: RF-6
+    title: useTaskForm 表单 hook 提取（原 RF-4）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "提取 CreateTaskModal 中的表单状态与验证逻辑为可复用的 useTaskForm hook"
+
+  - id: RF-7
+    title: useAuthService 认证 hook 提取（原 RF-5）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "提取认证相关逻辑为 useAuthService hook，统一 token 管理与登录态"
+
+  - id: RF-8
+    title: API 客户端统一化（JWT token 自动注入、401 拦截、错误标准化）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "提取 frontend/src/api/client.ts 基础 HTTP 客户端类，封装 JWT Authorization header 自动注入、401 响应全局重定向、网络错误统一格式化"
+
+  - id: RF-9
+    title: 后端基础设施模块化（config/exceptions/logger/middleware 分层）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "将 main.py 中的配置加载/异常定义/日志设置/中间件注册拆分为独立模块 config.py / exceptions.py / logger.py / middleware/，消除单文件膨胀"
+
+  - id: RF-10
+    title: 前端 UI 组件体系提取（ErrorBoundary/Footer/Header/Toast 等通用组件）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "从 Board.tsx 和 App.tsx 提取 ErrorBoundary/FilterBar/Footer/Header/Pagination/Toast/TaskDetail 等独立组件，每个组件自包含 CSS Module + 类型定义，父组件仅控制开闭"
+
+  - id: RF-11
+    title: 前端认证体系集成（auth module + ProtectedRoute + 认证上下文）
+    category: refactor
+    severity: medium
+    status: resolved
+    resolved_date: "2026-05-13"
+    resolution: "搭建前后端认证全链路：backend auth.py + routers/auth.py + password.py + schemas/users.py + middleware 认证中间件，frontend ProtectedRoute + AuthContext + useAuth hook + 登录页面，JWT token 全链路流转"

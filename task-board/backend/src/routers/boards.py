@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 import sqlite_utils
 
+from src.auth import get_current_user
 from src.database import get_db
 from src.schemas.tasks import BoardColumn, TaskResponse, TaskStatus
 
@@ -20,9 +21,16 @@ _LABELS = {
 @router.get("")
 def get_board(
     db: sqlite_utils.Database = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> list[BoardColumn]:
-    """Get all tasks grouped by status columns (todo / in_progress / done)."""
-    tasks = list(db["tasks"].rows_where(order_by="sort_order asc, id desc"))
+    """Get all tasks for the current user, grouped by status columns."""
+    tasks = list(
+        db["tasks"].rows_where(
+            where="user_id = :user_id",
+            where_args={"user_id": current_user["id"]},
+            order_by="sort_order asc, id desc",
+        )
+    )
 
     columns: list[BoardColumn] = []
     for status in TaskStatus:

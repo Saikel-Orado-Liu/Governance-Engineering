@@ -1,0 +1,28 @@
+# 模块卡片：FilterBar
+# 由 Summarize Agent 自动维护。
+
+name: FilterBar
+path: frontend/src/components/FilterBar.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  搜索过滤栏组件。三个下拉控件：状态（全部/TASK_STATUSES）+ 优先级（全部/TASK_PRIORITIES）
+  + 文本搜索输入框 + 清除按钮（有过滤时显示）。纯受控组件模式，无内部状态。
+  CSS Modules 样式分离。
+
+public_interface:
+  - "FilterBar({ status, priority, search, onStatusChange, onPriorityChange, onSearchChange, onClear }) — 默认导出"
+  - "Props: status (TaskStatus | ''), priority (TaskPriority | ''), search (string), onStatusChange/onPriorityChange/onSearchChange/onClear (回调)"
+
+internal_dependencies:
+  - types/task — TaskStatus, TaskPriority, TASK_STATUSES, TASK_PRIORITIES
+
+design_constraints:
+  - "纯受控组件：所有状态由父组件管理，FilterBar 只触发回调"
+  - "清除按钮仅在任一过滤条件激活时显示"
+
+known_issues: []
+
+last_updated: "2026-05-13"

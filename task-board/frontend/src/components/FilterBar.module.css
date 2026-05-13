@@ -1,0 +1,45 @@
+.filterBar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.select,
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border, #ccc);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--card-bg, #fff);
+  color: var(--text, #333);
+  min-width: 150px;
+  transition: border-color var(--transition-normal), background var(--transition-slow), color var(--transition-slow);
+}
+
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.clearBtn {
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  border: 1px solid var(--border, #ccc);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal);
+}
+
+.clearBtn:hover {
+  background: var(--hover-bg, #f0f0f0);
+  color: var(--text, #333);
+  border-color: var(--text, #333);
+}

@@ -1,0 +1,31 @@
+# 模块卡片：TaskDetail
+# 由 Summarize Agent 自动维护。
+
+name: TaskDetail
+path: frontend/src/components/TaskDetail.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  任务详情侧滑面板。从右侧滑入，CSS transform translateX 动画 + 遮罩层。
+  显示优先级色条/标题/描述/状态/优先级/创建时间/更新时间。编辑/删除操作按钮。
+  受控组件模式：open=false 或 task=null 时返回 null 不渲染。
+
+public_interface:
+  - "TaskDetail({ task, open, onClose, onEdit, onDelete }) — 默认导出"
+  - "Props: task (Task | null), open (boolean), onClose (() => void), onEdit ((task: Task) => void), onDelete ((task: Task) => void)"
+  - "交互: Esc 键 + 遮罩层点击关闭 + stopPropagation 防事件冲突"
+
+internal_dependencies:
+  - types/task — Task
+  - ConfirmDialog — 删除确认
+
+design_constraints:
+  - "受控组件：父组件控制 open 和 task，TaskDetail 只负责展示"
+  - "open=false 或 task=null 时返回 null 不渲染，避免空状态 DOM 残留"
+  - "编辑/删除操作通过回调上抛给父组件处理"
+
+known_issues: []
+
+last_updated: "2026-05-13"

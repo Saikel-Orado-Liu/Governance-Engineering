@@ -7,6 +7,7 @@ modules:
     language: Python 3.11+
     framework: FastAPI >=0.115
     description: FastAPI API 服务——任务 CRUD、状态流转、数据持久化
+    card: docs/ai/modules/backend.yaml
     status: active
 
   - name: frontend
@@ -14,4 +15,157 @@ modules:
     language: TypeScript 5.6
     framework: React 18 + Vite 6
     description: React SPA 前端——看板视图、拖拽排序、任务管理界面
+    card: docs/ai/modules/frontend.yaml
+    status: active
+
+  - name: Board
+    path: frontend/src/components/Board.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 三列看板主组件——原生 HTML5 DnD 拖拽、乐观更新、双数据模式
+    card: docs/ai/modules/Board.yaml
+    status: active
+
+  - name: CreateTaskModal
+    path: frontend/src/components/CreateTaskModal.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 任务创建/编辑模态框——自包含表单、双模式支持
+    card: docs/ai/modules/CreateTaskModal.yaml
+    status: active
+
+  - name: ConfirmDialog
+    path: frontend/src/components/ConfirmDialog.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 通用确认弹窗——用于破坏性操作确认
+    card: docs/ai/modules/ConfirmDialog.yaml
+    status: active
+
+  - name: FilterBar
+    path: frontend/src/components/FilterBar.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 搜索过滤栏——状态/优先级/文本搜索三合一受控组件
+    card: docs/ai/modules/FilterBar.yaml
+    status: active
+
+  - name: TaskDetail
+    path: frontend/src/components/TaskDetail.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 任务详情侧滑面板——只读展示 + 编辑/删除操作入口
+    card: docs/ai/modules/TaskDetail.yaml
+    status: active
+
+  - name: Toast
+    path: frontend/src/components/Toast.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 轻量通知组件——4秒自动消失、滑入淡出动画
+    card: docs/ai/modules/Toast.yaml
+    status: active
+
+  - name: ErrorBoundary
+    path: frontend/src/components/ErrorBoundary.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: React class 组件错误边界——渲染崩溃捕获与重试
+    card: docs/ai/modules/ErrorBoundary.yaml
+    status: active
+
+  - name: Pagination
+    path: frontend/src/components/Pagination.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 分页组件——页号导航、上一页/下一页
+    card: docs/ai/modules/Pagination.yaml
+    status: active
+
+  - name: Header
+    path: frontend/src/components/Header.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 应用顶部导航栏——标题、用户菜单、主题切换
+    card: docs/ai/modules/Header.yaml
+    status: active
+
+  - name: Footer
+    path: frontend/src/components/Footer.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 应用底部栏——版权信息、链接
+    card: docs/ai/modules/Footer.yaml
+    status: active
+
+  - name: AuthContext
+    path: frontend/src/contexts/AuthContext.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 认证上下文——登录/注册状态管理、token 存储与刷新
+    card: docs/ai/modules/AuthContext.yaml
+    status: active
+
+  - name: ThemeContext
+    path: frontend/src/contexts/ThemeContext.tsx
+    language: TypeScript 5.6
+    framework: React 18
+    description: 主题上下文——亮/暗/自动模式切换，CSS 变量驱动
+    card: docs/ai/modules/ThemeContext.yaml
+    status: active
+
+  - name: i18n
+    path: frontend/src/i18n/
+    language: TypeScript 5.6
+    framework: react-intl 7
+    description: 国际化模块——中英文双语，自动检测+手动切换
+    card: docs/ai/modules/i18n.yaml
+    status: active
+
+  - name: backend-tasks-router
+    path: backend/src/routers/tasks.py
+    language: Python 3.11+
+    framework: FastAPI >=0.115
+    description: 任务 CRUD 路由——增删改查、状态流转、排序、分页
+    card: docs/ai/modules/backend-tasks.yaml
+    status: active
+
+  - name: backend-boards-router
+    path: backend/src/routers/boards.py
+    language: Python 3.11+
+    framework: FastAPI >=0.115
+    description: 看板路由——按状态分组返回三列任务数据
+    card: docs/ai/modules/backend-boards.yaml
+    status: active
+
+  - name: backend-auth-router
+    path: backend/src/routers/auth.py
+    language: Python 3.11+
+    framework: FastAPI >=0.115
+    description: 认证路由——注册、登录、令牌刷新
+    card: docs/ai/modules/backend-auth.yaml
+    status: active
+
+  - name: backend-database
+    path: backend/src/database.py
+    language: Python 3.11+
+    framework: FastAPI >=0.115
+    description: 数据库层——SQLite 连接管理、Schema 迁移、WAL 模式
+    card: docs/ai/modules/backend-database.yaml
+    status: active
+
+  - name: backend-schemas
+    path: backend/src/schemas/
+    language: Python 3.11+
+    framework: Pydantic >=2.10
+    description: Pydantic 请求/响应模型——任务、用户、认证
+    card: docs/ai/modules/backend-schemas.yaml
+    status: active
+
+  - name: backend-config
+    path: backend/src/config.py
+    language: Python 3.11+
+    framework: Pydantic >=2.10
+    description: 应用配置——环境变量加载、类型安全配置模型
+    card: docs/ai/modules/backend-config.yaml
     status: active

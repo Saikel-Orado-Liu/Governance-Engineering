@@ -54,6 +54,13 @@ class TaskReorder(BaseModel):
     sort_order: int = Field(ge=0)
 
 
+class TaskMove(BaseModel):
+    """Request model for moving a task to a new status and position atomically."""
+
+    status: TaskStatus
+    sort_order: int = Field(ge=0)
+
+
 class TaskResponse(BaseModel):
     """Response model representing a task."""
 
@@ -63,6 +70,7 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     priority: TaskPriority
     sort_order: int = 0
+    user_id: int = 0
     created_at: datetime
     updated_at: datetime
 

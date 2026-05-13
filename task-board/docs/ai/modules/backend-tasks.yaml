@@ -1,0 +1,40 @@
+# 模块卡片：backend-tasks-router
+# 由 Summarize Agent 自动维护。
+
+name: backend-tasks-router
+path: backend/src/routers/tasks.py
+language: Python 3.11+
+framework: FastAPI >=0.115
+status: active
+
+description: >
+  任务 CRUD 路由模块。提供任务的增删改查、状态流转、列内排序、分页列表。
+  包含 get_task_or_404 通用查找函数（带 request-scoped 缓存消除冗余 DB 读取）。
+
+public_interface:
+  - "router — APIRouter(prefix=\"/tasks\", tags=[\"tasks\"])"
+  - "GET /tasks — 列表查询，支持 status/priority/search 过滤 + offset/limit 分页，返回 X-Total-Count 响应头"
+  - "POST /tasks — 创建任务"
+  - "GET /{task_id} — 获取单个任务"
+  - "PATCH /{task_id} — 更新任务字段"
+  - "DELETE /{task_id} — 删除任务"
+  - "PATCH /{task_id}/status — 状态流转"
+  - "PATCH /{task_id}/reorder — 列内排序重排（executemany 批量 UPDATE）"
+  - "get_task_or_404(task_id, db) — 查找任务或抛 404（带 request-scoped 缓存）"
+  - "_verify_ownership(task, user_id) — 验证任务归属"
+
+internal_dependencies:
+  - database — get_db 连接
+  - schemas/tasks — TaskCreate, TaskResponse, TaskStatusUpdate, TaskUpdate, TaskReorder
+  - auth — get_current_user Depends
+
+design_constraints:
+  - "所有端点需认证（除特殊标注）"
+  - "sort_order 为列内独立 0..N-1 编号，无全局唯一约束"
+  - "跨列重排需显式设置目标 sort_order"
+  - "get_task_or_404 使用 request-scoped 字典缓存，同一请求内重复调用避免冗余 DB 查询"
+
+known_issues:
+  - "sort_order 列内独立编号，跨列移动后需显式重新编号"
+
+last_updated: "2026-05-13"

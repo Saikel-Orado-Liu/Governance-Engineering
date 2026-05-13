@@ -1,0 +1,26 @@
+# 模块卡片：ConfirmDialog
+# 由 Summarize Agent 自动维护。
+
+name: ConfirmDialog
+path: frontend/src/components/ConfirmDialog.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  通用确认弹窗组件，用于破坏性操作（如删除任务）确认。
+  遮罩 + Esc + stopPropagation 关闭机制。确认按钮红色、取消按钮灰色。
+
+public_interface:
+  - "ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) — 默认导出"
+  - "Props: isOpen (boolean), title (string), message (string), onConfirm (() => void), onCancel (() => void)"
+
+internal_dependencies: []
+
+design_constraints:
+  - "自包含设计：父组件仅通过 isOpen boolean + onConfirm/onCancel callback 控制"
+  - "确认按钮视觉强调为红色，暗示破坏性操作"
+
+known_issues: []
+
+last_updated: "2026-05-13"

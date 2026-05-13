@@ -1,0 +1,127 @@
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  transition: background var(--transition-slow), border-color var(--transition-slow);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 100%;
+}
+
+/* ── Logo ───────────────────────────────────────────────────────────────── */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoText {
+  font-size: var(--font-lg);
+  font-weight: var(--font-bold);
+  color: var(--accent-text);
+  background: var(--accent);
+  padding: 2px 12px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+  transition: background var(--transition-slow), color var(--transition-slow);
+  white-space: nowrap;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-base);
+  font-weight: var(--font-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-normal), border-color var(--transition-normal);
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.actionBtn:hover {
+  background: var(--hover-bg);
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.username {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: background var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal);
+  white-space: nowrap;
+}
+
+.logoutBtn:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+  border-color: var(--text);
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .logoText {
+    font-size: var(--font-base);
+    padding: 2px 8px;
+  }
+
+  .actions {
+    gap: 4px;
+  }
+
+  .actionBtn {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-sm);
+  }
+
+  .username {
+    display: none;
+  }
+
+  .logoutBtn {
+    padding: 4px 10px;
+    font-size: var(--font-xs);
+  }
+}

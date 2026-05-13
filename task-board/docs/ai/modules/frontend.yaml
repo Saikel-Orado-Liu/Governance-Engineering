@@ -8,12 +8,24 @@ framework: React 18 + Vite 6
 status: active
 
 description: >
-  React SPA 前端。提供三列（todo/in_progress/done）原生 HTML5 DnD 拖拽看板视图，
-  单 Board.tsx 组件管理三态渲染 + 乐观更新 + 加载骨架屏 + 错误重试。
+  React SPA 前端。提供三列（todo/in_progress/done）原生 HTML5 DnD 拖拽看板视图
+  + 任务创建 Modal（CreateTaskModal）+ 搜索过滤栏（FilterBar）+ 任务详情侧滑面板
+  （TaskDetail）。单 Board.tsx 组件管理三态渲染 + 乐观更新（深拷贝快照回滚）
+  + 双数据模式（fetchBoard/fetchTasks）+ 客户端文本搜索 + 加载骨架屏 + 错误重试
+  + 模态框/侧滑面板打开/关闭控制。便利贴拟物卡片（CSS nth-child 交替旋转 + ::before
+  高光条 + 阴影）+ cork 软木板纹理背景（CSS repeating-linear-gradient 无图片资产）
+  + 全局 Header/Footer 粘性布局 + 响应式 CSS Grid 三列/二列/单列 + 移动端底部导航栏
+  + FAB + 毛玻璃效果（backdrop-filter）+ 弹入动画（scale+translateY）。集中式 CSS 变量设计系统
+  （frontend/src/styles/global.css，:root+[data-theme] 定义亮/暗完整色板/阴影/过渡/圆角/间距/字号标尺 + cork 软木板纹理），组件 CSS Module 全部通过 var() 引用不硬编码。ThemeContext 系统主题感知
+  （auto 跟随 prefers-color-scheme + manual localStorage 覆盖）。IntlProvider
+  中英文国际化（navigator.language 自动检测 + 手动切换持久化）。Auth 集成
+  （登录/注册/受保护路由）。
 
 dependencies:
   - react: "^18.3.1"
   - react-dom: "^18.3.1"
+  - react-intl: "^7.1.6"
+  - react-router-dom: "^7.1.1"
 
 dev_dependencies:
   - typescript: "~5.6.2"
@@ -27,17 +39,29 @@ dev_dependencies:
 public_interface:
   - main entry: "frontend/src/main.tsx"
   - root component: "frontend/src/App.tsx" (挂载 Board)
-  - type definitions: "frontend/src/types/task.ts" (Task, TaskStatus, TaskPriority, BoardColumn, TASK_STATUSES, STATUS_LABELS, sort_order field)
-  - API client: "frontend/src/api/tasks.ts" (fetchTasks GET, updateTaskStatus PATCH /{id}/status, updateTaskReorder PATCH /{id}/reorder, fetchBoard GET /api/boards)
-  - Board: "frontend/src/components/Board.tsx" (原生 HTML5 DnD 三列看板 + 同列拖拽排序, getBoundingClientRect 中点检测插入位置, data-status 属性替代内联箭头函数, 同列同位置 no-op 不触发 API)
+  - type definitions: "frontend/src/types/task.ts" (Task, TaskStatus, TaskPriority, BoardColumn, TASK_STATUSES, STATUS_LABELS, TASK_PRIORITIES, PRIORITY_LABELS, sort_order field, as const literal tuple assertions)
+  - fetch client: "frontend/src/api/client.ts" (setAccessToken/setRefreshCallback 管理 JWT token; client.get/post/patch/delete 统一封装 JWT Bearer 注入 + 401 自动刷新重放; client.paginatedGet<T>(url) 扩展方法返回 {data: T, total: number} 从 X-Total-Count 响应头解析总数 — DRY 封装避免每个分页端点重复处理响应头)
+  - API client: "frontend/src/api/tasks.ts" (fetchTasks GET /api/tasks?status=&priority=&search=&offset=&limit= 支持 offset/limit 分页参数，返回 {tasks, total} 替代裸数组; createTask POST /tasks; updateTask PATCH /{id}; deleteTask DELETE /{id}; updateTaskStatus PATCH /{id}/status; updateTaskReorder PATCH /{id}/reorder; fetchBoard GET /api/boards; FilterParams 类型导出: {status?: TaskStatus; priority?: TaskPriority; search?: string; offset?: number; limit?: number})
+  - Board: "frontend/src/components/Board.tsx" (原生 HTML5 DnD 三列看板 + 同列/跨列拖拽排序, getBoundingClientRect 中点检测插入位置, data-status 属性替代内联箭头函数, 同列同位置 no-op 不触发 API, JSON.parse(JSON.stringify) 深拷贝快照 + setColumns(snapshot) 瞬时内存恢复替代 catch→load() 全量重载, showCreateModal state + header/createBtn 控制 CreateTaskModal 打开/关闭; 编辑/删除: editTarget/deleteTarget/toastMessage states 管理操作状态, edit 打开 CreateTaskModal mode="edit", delete 打开 ConfirmDialog → 确认后调用 deleteTask → Toast 反馈; 操作按钮 div hover 显示; 编辑/删除 API 成功后均调用 load() 全量刷新保证一致性; 双数据模式: filter为空→fetchBoard(sort_order ASC) / 有filter→fetchTasks(created_at降序), useCallback 依赖 filter.status/filter.priority 自动触发重载; displayColumns useMemo 客户端文本搜索: title+description toLowerCase().includes() 模糊匹配; hasDragged ref + setTimeout(0): onDragStart 设 true, onDragEnd setTimeout(0) 复位, onClick 检查后跳过 — 防止拖拽后误触打开详情面板; filter state {status, priority, search} + FilterBar 集成; detailTask state + TaskDetail 侧滑面板集成)
+  - FilterBar: "frontend/src/components/FilterBar.tsx" (搜索过滤栏组件 — 三个下拉: 状态(全部/TASK_STATUSES) + 优先级(全部/TASK_PRIORITIES) + 文本搜索输入框 + 清除按钮(有过滤时显示); 受控组件模式: props status/priority/search + onStatusChange/onPriorityChange/onSearchChange/onClear 回调, 纯展示无状态; CSS Modules 样式分离)
+  - TaskDetail: "frontend/src/components/TaskDetail.tsx" (任务详情侧滑面板 — 从右侧滑入, CSS transform translateX 动画 + 遮罩层; 显示优先级色条/标题/描述/状态/优先级/创建时间/更新时间; 编辑/删除操作按钮; Esc 键 + 遮罩层点击关闭 + stopPropagation 防事件冲突; 受控组件模式: props task+open+onClose+onEdit+onDelete; open=false 或 task=null 时返回 null 不渲染; 编辑按钮触发 Board 的 CreateTaskModal mode="edit", 删除按钮触发 ConfirmDialog)
+  - CreateTaskModal: "frontend/src/components/CreateTaskModal.tsx" (自包含 Modal — 内部管理表单状态/优先级选择/验证/API 调用/loading+error 态; 支持 mode="create"|"edit" 两种模式，edit 模式下通过 task prop 预填表单并调用 updateTask; 父组件仅通过 boolean + onClose 控制开闭; Esc 键 + 遮罩层关闭 + stopPropagation 防事件冲突)
+  - Toast: "frontend/src/components/Toast.tsx" (轻量通知组件 — 4 秒自动消失 + onClose useCallback 稳定引用防计时器重置; 滑入+淡出动画; 右下角固定定位; 通过 Board.tsx 的 toastMessage/toastKey state 控制显示内容和 key 变更触发 React 重新挂载)
+  - ConfirmDialog: "frontend/src/components/ConfirmDialog.tsx" (通用确认弹窗组件 — 遮罩+Esc+stopPropagation 关闭; 确认红色/取消灰色按钮; onConfirm/onCancel callback 驱动; 用于删除等破坏性操作确认; 父组件通过 isOpen boolean + onConfirm/onCancel props 控制)
+  - ErrorBoundary: "frontend/src/components/ErrorBoundary.tsx" (React class component error boundary — componentDidCatch 捕获渲染错误, getDerivedStateFromError 状态重置, 用户级重试按钮恢复渲染)
 
 constraints:
   - "前端 API client (api/tasks.ts) 请求/响应结构必须与 backend/src/schemas/tasks.py 的 TaskResponse schema 对齐"
   - "组件样式使用 CSS Modules（.module.css），Vite 原生编译，不依赖 CSS-in-JS 运行时库"
   - "无后端 Mock 数据时需确保 mock 响应结构与 TaskResponse 一致"
+  - "ErrorBoundary 必须使用 class 组件（而非 React 函数组件+hooks）因为 React 的 error boundary API (componentDidCatch/getDerivedStateFromError) 仅在 class 组件中可用。项目编码规范关于 '禁止 class 组件' 的规则不适用于此。这是 React 框架强制的例外。"
+  - "CSS 设计变量集中在 frontend/src/styles/global.css 的 :root 和 [data-theme] 中定义，组件 CSS Module 通过 var() 引用，禁止硬编码颜色/阴影/过渡值。亮暗主题切换由 data-theme 属性驱动，global.css 的选择器规则自动应用对应覆盖值。"
 
 known_issues:
   - "同列拖拽使用 getBoundingClientRect 中点检测，在极窄列或零高度列场景下可能定位不准确"
   - "拖拽仅限单看板三列，跨看板（cross-board）拖拽需扩展 Board.tsx 的列数据源和 sort_order 作用域"
+  - "JSON.parse(JSON.stringify) 深拷贝快照仅适用于纯数据对象。Task 若引入 Date/Map/Set/函数等非序列化字段，需改用 structuredClone() 或专用深拷贝库"
+  - "双数据模式排序不一致：无过滤时 fetchBoard 返回 sort_order ASC 排序，有过滤时 fetchTasks 返回 created_at 降序。用户在过滤状态下拖拽重排后清除过滤，sort_order 可能与期望的视觉顺序不匹配"
+  - "客户端文本搜索仅在服务端过滤结果上执行。如 fetchTasks?status=todo 返回 5 条，客户端搜索只能在这 5 条内匹配。需要全量搜索需改为服务端搜索"
 
 last_updated: "2026-05-13"

@@ -1,0 +1,26 @@
+# 模块卡片：Pagination
+# 由 Summarize Agent 自动维护。
+
+name: Pagination
+path: frontend/src/components/Pagination.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  分页组件。页号导航、上一页/下一页按钮、当前页高亮。
+  支持页码省略显示（大数量场景）。
+
+public_interface:
+  - "Pagination({ currentPage, totalPages, onPageChange }) — 默认导出"
+  - "Props: currentPage (number), totalPages (number), onPageChange ((page: number) => void)"
+
+internal_dependencies: []
+
+design_constraints:
+  - "受控组件：父组件管理 currentPage 和 totalPages"
+  - "总页数 ≤1 时隐藏不渲染"
+
+known_issues: []
+
+last_updated: "2026-05-13"

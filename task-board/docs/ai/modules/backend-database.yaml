@@ -1,0 +1,38 @@
+# 模块卡片：backend-database
+# 由 Summarize Agent 自动维护。
+
+name: backend-database
+path: backend/src/database.py
+language: Python 3.11+
+framework: FastAPI >=0.115
+status: active
+
+description: >
+  数据库层模块。管理 SQLite 连接的生命周期（FastAPI lifespan）、
+  Schema 自动迁移（创建表、加列）、WAL 模式启用、种子数据初始化。
+  提供 get_db 依赖注入函数供路由使用。
+
+public_interface:
+  - "get_db() — FastAPI Depends 生成器，返回 sqlite-utils Database 实例"
+  - "get_connection() — FastAPI Depends 生成器，返回原生 sqlite3.Connection"
+  - "close_db() — 关闭连接"
+  - "_ensure_tasks_schema(db) — 确保 tasks 表存在"
+  - "_add_sort_order_column(db) — 添加 sort_order 列迁移"
+  - "_ensure_users_schema(db) — 确保 users 表存在（含 username 唯一索引）"
+  - "_add_user_id_to_tasks(db) — 给 tasks 表加 user_id 列（默认 1）"
+  - "_seed_default_admin(db) — 首次启动自动创建 admin/admin123 账户"
+
+internal_dependencies:
+  - sqlite-utils — Table API 操作
+  - config — Settings 获取 DB_PATH
+
+design_constraints:
+  - "SQLite 连接必须设置 check_same_thread=False + WAL 模式"
+  - "连接生命周期由 FastAPI lifespan 管理，非请求内手动管理"
+  - "生产部署需限制 Uvicorn workers=1（单进程）"
+
+known_issues:
+  - "WAL 模式在极端崩溃场景下可能遗留 .wal/.shm 文件需手动清理"
+  - "不适用于多进程部署，每个进程需独立 DB 连接"
+
+last_updated: "2026-05-13"

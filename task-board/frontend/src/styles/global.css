@@ -1,0 +1,220 @@
+/* ── CSS Custom Properties ──────────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --hover-bg: #f1f5f9;
+  --accent: #fbbf24;
+  --accent-text: #92400e;
+
+  /* Font sizes */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-base: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Layout */
+  --max-width: 1200px;
+
+  /* Animation curves */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Font weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --focus-ring: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  --shadow-left-panel: -4px 0 16px rgba(0, 0, 0, 0.15);
+
+  /* Transition durations */
+  --transition-fast: 0.15s;
+  --transition-normal: 0.2s;
+  --transition-slow: 0.3s;
+
+  /* Semantic interaction colors */
+  --color-primary: #3b82f6;
+  --color-danger: #e53e3e;
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-priority-low: #4caf50;
+  --color-priority-medium: #ff9800;
+  --color-priority-high: #f44336;
+
+  /* Cork board texture — repeating grid */
+  --cork-bg: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 32px,
+      rgba(0, 0, 0, 0.03) 32px,
+      rgba(0, 0, 0, 0.03) 33px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 32px,
+      rgba(0, 0, 0, 0.03) 32px,
+      rgba(0, 0, 0, 0.03) 33px
+    );
+}
+
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+  --hover-bg: #334155;
+  --accent: #f59e0b;
+  --accent-text: #fef3c7;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.5);
+  --focus-ring: 0 0 0 2px rgba(96, 165, 250, 0.3);
+  --shadow-left-panel: -4px 0 16px rgba(0, 0, 0, 0.4);
+
+  /* Semantic interaction colors — dark mode brighter overrides */
+  --color-primary: #60a5fa;
+  --color-danger: #f87171;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-priority-low: #34d399;
+  --color-priority-medium: #fbbf24;
+  --color-priority-high: #f87171;
+
+  --cork-bg: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 32px,
+      rgba(255, 255, 255, 0.03) 32px,
+      rgba(255, 255, 255, 0.03) 33px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 32px,
+      rgba(255, 255, 255, 0.03) 32px,
+      rgba(255, 255, 255, 0.03) 33px
+    );
+}
+
+/* ── Base Styles ────────────────────────────────────────────────────────── */
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--font-base);
+  line-height: 1.6;
+  background: var(--bg);
+  color: var(--text);
+  transition: background var(--transition-slow), color var(--transition-slow);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ── App Layout ─────────────────────────────────────────────────────────── */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: var(--font-lg);
+  color: var(--text-secondary);
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes toastSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ── Responsive Container ──────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .app-main {
+    padding-bottom: 64px;
+  }
+}

@@ -1,0 +1,50 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-slow), border-color var(--transition-slow);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text, #1a1a1a);
+  margin: 0 0 1rem;
+  transition: color var(--transition-slow);
+}
+
+.message {
+  font-size: 1rem;
+  color: var(--text-secondary, #666);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+  transition: color var(--transition-slow);
+}
+
+.retryButton {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.retryButton:hover {
+  filter: brightness(0.85);
+}

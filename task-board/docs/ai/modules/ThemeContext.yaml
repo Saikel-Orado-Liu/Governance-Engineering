@@ -1,0 +1,31 @@
+# 模块卡片：ThemeContext
+# 由 Summarize Agent 自动维护。
+
+name: ThemeContext
+path: frontend/src/contexts/ThemeContext.tsx
+language: TypeScript 5.6
+framework: React 18
+status: active
+
+description: >
+  主题上下文 Provider。支持亮色（light）、暗色（dark）、自动（auto）三种模式。
+  auto 模式跟随系统 prefers-color-scheme。选择持久化到 localStorage。
+  通过设置 document.documentElement 的 data-theme 属性驱动 CSS 变量切换。
+
+public_interface:
+  - "ThemeProvider({ children }) — Context Provider 组件"
+  - "useTheme() — hook 返回 { theme, setTheme, resolvedTheme }"
+  - "theme: \"light\"|\"dark\"|\"auto\" — 用户选择模式"
+  - "resolvedTheme: \"light\"|\"dark\" — 实际生效模式（auto 模式计算后）"
+
+internal_dependencies:
+  - styles/global.css — CSS 自定义属性在 :root + [data-theme] 中定义
+
+design_constraints:
+  - "通过 data-theme attribute 驱动 CSS，无需 JS 运行时主题"
+  - "auto 模式使用 window.matchMedia('(prefers-color-scheme: dark)') 监听系统变化"
+  - "选择持久化到 localStorage key='theme'"
+
+known_issues: []
+
+last_updated: "2026-05-13"
