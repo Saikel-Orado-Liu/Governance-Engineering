@@ -1,0 +1,41 @@
+# ast-build — AST 构建器（buildAST）
+
+name: ast-build
+path: src/ast-build.ts
+type: module
+language: TypeScript 5.6
+description: >
+  Token[] → DocumentNode 层级 AST 转换器。接收 lexer 输出的扁平 Token 数组，
+  按行/列排序后遍历，对每种 TokenType 调用对应的处理函数（buildHeadingNode,
+  processParagraphToken, processUnorderedListToken, buildCodeBlockNode）。
+  包含连续段落合并（mergeParagraphNodes）和标题标记剥离逻辑。
+
+public_interface:
+  - "export function buildAST(tokens: Token[]): DocumentNode"
+
+dependencies:
+  lexer: "src/lexer.ts — Token/TokenType 类型定义"
+  ast: "src/ast.ts — AST 节点类型定义"
+  ast-inline: "src/ast-inline.ts — buildInlineChildren + appendListItem"
+
+dependents:
+  - "src/parser.ts — 作为薄代理层包装 buildAST"
+  - "src/cli.ts — 直接在 buildAll 中调用 buildAST"
+  - "src/index.ts — 在 convertFile 中调用 buildAST"
+
+constraints:
+  - "Token 输入按 (line asc, column asc, raw.length desc) 预排序"
+  - "内联 token 按行索引到 Map<number, Token[]>，仅在处理器需要时惰性访问"
+  - "processParagraphToken 检测 --- > 1. - 等块级特征从 PARAGRAPH 转化"
+  - "连续段落合并（mergeParagraphNodes）在最终 children 数组上执行"
+  - "Heading content 剥离 # 标记后所有空格/tab（CommonMark §4.2）"
+  - "Fenced code block 提取 fence 长度后解析 lang"
+  - "Indented code block 行消毒：tab→1 字符移除，4 空格→4 字符移除"
+  - "5 个预编译正则常量：RE_HASH_MARKERS, RE_LEADING_WS, RE_HRULE, RE_OLIST, RE_FENCE_CLOSE"
+
+known_issues:
+  - id: "IR-001"
+    description: "从 ast.ts 拆分后继承原 IR-001（缺少 Setext heading / Blockquote / Ordered list 专属 TokenType）"
+    mitigation: "同 ast.ts — 在 processParagraphToken 中检测 raw 文本特征"
+
+last_updated: "2026-05-14"

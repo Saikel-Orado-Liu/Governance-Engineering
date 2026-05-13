@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tokenize } from '../src/lexer.js';
-import { buildAST } from '../src/ast.js';
+import { buildAST } from '../src/ast-build.js';
 import type {
   DocumentNode,
   HeadingNode,

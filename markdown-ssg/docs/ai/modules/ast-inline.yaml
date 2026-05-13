@@ -1,0 +1,31 @@
+# ast-inline — AST 内联子节点构建器
+
+name: ast-inline
+path: src/ast-inline.ts
+type: module
+language: TypeScript 5.6
+description: >
+  从文本段和重叠的内联 token 构建 InlineNode[] 子节点数组。
+  核心算法：预排序的线性扫描（非递归排序），按 column 范围匹配 token 确定嵌套关系。
+  深度保护上限 10 层（defense in depth）。
+
+public_interface:
+  - "export { buildInlineChildren, appendListItem }"
+
+dependencies:
+  lexer: "src/lexer.ts — Token/TokenType 类型定义"
+  ast: "src/ast.ts — 内联节点类型（InlineNode, BoldNode, ItalicNode 等）"
+
+dependents:
+  - "src/ast-build.ts — buildHeadingNode, processParagraphToken, processUnorderedListToken 调用"
+
+constraints:
+  - "Token 必须按 column 升序预排序（调用方保证，ast-build.ts 在 buildAST 入口处理）"
+  - "递归深度上限 10（depth > 10 → 返回空数组）"
+  - "IMAGE 必须在 LINK 之前匹配（共享 [ 语法前缀）"
+  - "BOLD 必须在 ITALIC 之前匹配（共享 * 语法前缀）"
+  - "LINK 和 IMAGE 的内联文本不走递归内联解析（单 text node）"
+
+known_issues: []
+
+last_updated: "2026-05-14"

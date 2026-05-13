@@ -30,3 +30,36 @@ patterns:
       适合中小规模标记语言处理工具。
     verified_count: 1
     last_used: "2026-05-14"
+
+  - pattern_id: P-003
+    date: "2026-05-14"
+    name: "布局回退链（显式完全压制隐式）"
+    description: >
+      模板/布局选择使用降序优先级链：
+      显式全局参数 → per-file 元数据 → 内置默认值。
+      关键语义是"完全压制"而非"叠加覆盖"：当高级选项被设置时，
+      低级选项不再被读取或评估。
+      实现方式：条件判断中使用
+      `if (!highPriorityOption && lowPriorityOption)` 模式。
+    context: >
+      需要多级配置覆盖的场景，其中某些配置来源（如 CLI 参数）
+      应完全取代而非覆盖其他来源（如文件内元数据）。
+      适用于 CLI 工具、配置系统、主题系统等。
+    verified_count: 1
+    last_used: "2026-05-14"
+
+  - pattern_id: P-004
+    date: "2026-05-14"
+    name: "CommonMark 合规性测试运行器"
+    description: >
+      以 JSON 数组格式存储 CommonMark 规范测试用例
+      （{description, section, markdown, html} 四字段），
+      通过 vitest 动态读取并按 section 分组生成 describe/it 块。
+      afterAll 中聚合输出 stdout 合规报告（per-section 通过率 + 总计）。
+      已知缺口记录在 known_issues 而非标注 expected failure。
+    context: >
+      需要对标记语言解析器进行系统化规范验证的场景。
+      适合用例结构简单（markdown→html 映射）、
+      需要非开发者可维护性的项目。
+    verified_count: 1
+    last_used: "2026-05-14"

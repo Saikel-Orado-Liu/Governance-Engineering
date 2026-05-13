@@ -3,7 +3,7 @@
 // Thin facade over buildAST that accepts a Token array and returns a
 // hierarchical DocumentNode AST.
 
-import { buildAST } from './ast.js';
+import { buildAST } from './ast-build.js';
 import type { DocumentNode } from './ast.js';
 import type { Token } from './lexer.js';
 

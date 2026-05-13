@@ -28,10 +28,10 @@ afterAll(() => {
 // buildAll
 // ===========================================================================
 describe('buildAll', () => {
-  it('builds a single .md file to .html', () => {
+  it('builds a single .md file to .html', async () => {
     writeFileSync(join(srcDir, 'hello.md'), '# Hello\n\nWorld', 'utf-8');
 
-    const results = buildAll(srcDir, outDir);
+    const results = await buildAll(srcDir, outDir);
 
     expect(results).toHaveLength(1);
     expect(results[0].file).toBe('hello.html');
@@ -46,22 +46,22 @@ describe('buildAll', () => {
     expect(content).toContain('<title>hello</title>');
   });
 
-  it('handles empty source directory (no .md files)', () => {
+  it('handles empty source directory (no .md files)', async () => {
     const emptySrc = join(tmpDir, 'empty-src');
     mkdirSync(emptySrc, { recursive: true });
     const emptyOut = join(tmpDir, 'empty-out');
     mkdirSync(emptyOut, { recursive: true });
 
-    const results = buildAll(emptySrc, emptyOut);
+    const results = await buildAll(emptySrc, emptyOut);
     expect(results).toHaveLength(0);
   });
 
-  it('preserves subdirectory structure', () => {
+  it('preserves subdirectory structure', async () => {
     const subSrc = join(srcDir, 'sub');
     mkdirSync(subSrc, { recursive: true });
     writeFileSync(join(subSrc, 'nested.md'), '# Nested', 'utf-8');
 
-    buildAll(srcDir, outDir);
+    await buildAll(srcDir, outDir);
 
     const htmlPath = join(outDir, 'sub', 'nested.html');
     expect(existsSync(htmlPath)).toBe(true);
@@ -69,17 +69,17 @@ describe('buildAll', () => {
     expect(content).toContain('<h1>Nested</h1>');
   });
 
-  it('skips non-.md files', () => {
+  it('skips non-.md files', async () => {
     writeFileSync(join(srcDir, 'readme.txt'), 'Not markdown', 'utf-8');
 
-    const results = buildAll(srcDir, outDir);
+    const results = await buildAll(srcDir, outDir);
     // Should only have .md results, not .txt
     const mdResults = results.filter((r) => r.file.endsWith('.html'));
     expect(mdResults.length).toBeGreaterThan(0);
     expect(existsSync(join(outDir, 'readme.txt'))).toBe(false);
   });
 
-  it('uses custom template', () => {
+  it('uses custom template', async () => {
     const customSrc = join(tmpDir, 'custom-src');
     const customOut = join(tmpDir, 'custom-out');
     mkdirSync(customSrc, { recursive: true });
@@ -87,26 +87,26 @@ describe('buildAll', () => {
     writeFileSync(join(customSrc, 'page.md'), '# Page', 'utf-8');
 
     const customTemplate = '<html>{{content}}</html>';
-    buildAll(customSrc, customOut, customTemplate, '');
+    await buildAll(customSrc, customOut, customTemplate, '');
 
     const content = readFileSync(join(customOut, 'page.html'), 'utf-8');
     expect(content).toBe('<html><h1>Page</h1></html>');
   });
 
-  it('injects CSS content via {{style}}', () => {
+  it('injects CSS content via {{style}}', async () => {
     const cssSrc = join(tmpDir, 'css-src');
     const cssOut = join(tmpDir, 'css-out');
     mkdirSync(cssSrc, { recursive: true });
     mkdirSync(cssOut, { recursive: true });
     writeFileSync(join(cssSrc, 'page.md'), '# Title', 'utf-8');
 
-    buildAll(cssSrc, cssOut, '{{style}}', 'body { color: red; }');
+    await buildAll(cssSrc, cssOut, '{{style}}', 'body { color: red; }');
 
     const content = readFileSync(join(cssOut, 'page.html'), 'utf-8');
     expect(content).toBe('body { color: red; }');
   });
 
-  it('uses layout from frontmatter when layout file exists', () => {
+  it('uses layout from frontmatter when layout file exists', async () => {
     const layoutSrc = join(tmpDir, 'layout-src');
     const layoutOut = join(tmpDir, 'layout-out');
     const layoutDir = join(tmpDir, 'layouts');
@@ -124,7 +124,7 @@ describe('buildAll', () => {
     const originalCwd = process.cwd();
     process.chdir(tmpDir);
     try {
-      buildAll(layoutSrc, layoutOut);
+      await buildAll(layoutSrc, layoutOut);
       const content = readFileSync(join(layoutOut, 'post.html'), 'utf-8');
       expect(content).toBe('<div class="blog"><h1>Post</h1></div>');
     } finally {
@@ -132,7 +132,7 @@ describe('buildAll', () => {
     }
   });
 
-  it('falls back to templateStr when layout file does not exist', () => {
+  it('falls back to templateStr when layout file does not exist', async () => {
     const fbSrc = join(tmpDir, 'fb-src');
     const fbOut = join(tmpDir, 'fb-out');
     mkdirSync(fbSrc, { recursive: true });
@@ -142,13 +142,13 @@ describe('buildAll', () => {
     writeFileSync(join(fbSrc, 'page.md'), '---\nlayout: nonexistent\n---\n# Fallback\n', 'utf-8');
 
     const fallbackTemplate = '<main>{{content}}</main>';
-    buildAll(fbSrc, fbOut, fallbackTemplate);
+    await buildAll(fbSrc, fbOut, fallbackTemplate);
 
     const content = readFileSync(join(fbOut, 'page.html'), 'utf-8');
     expect(content).toBe('<main><h1>Fallback</h1></main>');
   });
 
-  it('falls back to DEFAULT_TEMPLATE when no layout file and no templateStr', () => {
+  it('falls back to DEFAULT_TEMPLATE when no layout file and no templateStr', async () => {
     const defSrc = join(tmpDir, 'def-src');
     const defOut = join(tmpDir, 'def-out');
     mkdirSync(defSrc, { recursive: true });
@@ -159,7 +159,7 @@ describe('buildAll', () => {
     const originalCwd = process.cwd();
     process.chdir(tmpDir);
     try {
-      buildAll(defSrc, defOut);
+      await buildAll(defSrc, defOut);
       const content = readFileSync(join(defOut, 'page.html'), 'utf-8');
       expect(content).toContain('<!DOCTYPE html>');
       expect(content).toContain('<h1>Default</h1>');

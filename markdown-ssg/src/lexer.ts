@@ -1,5 +1,6 @@
 // Markdown SSG — Lexer/Tokenizer
 // Two-phase: line-level parsing → inline parsing
+// =============================================================================
 
 export enum TokenType {
   HEADING = 'HEADING',
@@ -21,6 +22,14 @@ export interface Token {
   readonly column: number;
 }
 
+// Pre-compiled regex constants for inline and fence matching
+const RE_FENCE_OPEN = /^(`+)/;
+const RE_IMAGE = /!\[([^\]]*)\]\(([^)]*)\)/g;
+const RE_LINK = /(?<!!)\[([^\]]*)\]\(([^)]*)\)/g;
+const RE_CODE_INLINE = /`([^`]*)`/g;
+const RE_BOLD = /\*\*(.+?)\*\*/g;
+const RE_ITALIC = /(?<!\*)\*(?!\*)(.+?)\*/g;
+
 /**
  * Check if a position in the text is escaped by an odd number of preceding
  * backslash characters.
@@ -36,15 +45,15 @@ function isEscaped(text: string, position: number): boolean {
 }
 
 /**
- * Phase 2: Scan a line's text for inline tokens (BOLD, ITALIC, CODE_INLINE,
+ * Scan a line's text for inline tokens (BOLD, ITALIC, CODE_INLINE,
  * LINK, IMAGE) using per-pattern regex matching.
  */
 function parseInline(text: string, lineNum: number): Token[] {
   const tokens: Token[] = [];
 
-  // Helper: run a regex on the full text and collect non-escaped matches
-  const collectMatches = (pattern: RegExp, type: TokenType): void => {
-    const re = new RegExp(pattern.source, 'g');
+  // Helper: run a global regex on the full text and collect non-escaped matches
+  const collectMatches = (re: RegExp, type: TokenType): void => {
+    re.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = re.exec(text)) !== null) {
       if (!isEscaped(text, match.index)) {
@@ -56,42 +65,31 @@ function parseInline(text: string, lineNum: number): Token[] {
   // Order matters: IMAGE before LINK (shared `[` syntax),
   // then CODE_INLINE, BOLD, ITALIC
   // IMAGE: ![alt](url)
-  collectMatches(/!\[([^\]]*)\]\(([^)]*)\)/, TokenType.IMAGE);
+  collectMatches(RE_IMAGE, TokenType.IMAGE);
   // LINK: [text](url) — not preceded by `!` (which would be IMAGE)
-  collectMatches(/(?<!!)\[([^\]]*)\]\(([^)]*)\)/, TokenType.LINK);
+  collectMatches(RE_LINK, TokenType.LINK);
   // CODE_INLINE: `code`
-  collectMatches(/`([^`]*)`/, TokenType.CODE_INLINE);
+  collectMatches(RE_CODE_INLINE, TokenType.CODE_INLINE);
   // BOLD: **text**
-  collectMatches(/\*\*(.+?)\*\*/, TokenType.BOLD);
+  collectMatches(RE_BOLD, TokenType.BOLD);
   // ITALIC: *text*  — opening * not preceded/followed by *
-  collectMatches(/(?<!\*)\*(?!\*)(.+?)\*/, TokenType.ITALIC);
+  collectMatches(RE_ITALIC, TokenType.ITALIC);
 
   return tokens;
 }
 
-/**
- * Tokenize a Markdown input string into a flat Token array.
- *
- * Phase 1 splits the text by lines and identifies block-level tokens:
- *   HEADING, PARAGRAPH, BLANK_LINE, CODE_BLOCK, UNORDERED_LIST.
- *
- * Phase 2 scans the content of PARAGRAPH, HEADING, and UNORDERED_LIST tokens
- * for inline tokens: BOLD, ITALIC, CODE_INLINE, LINK, IMAGE.
- *
- * The final array is sorted by (line asc, column asc, raw.length desc).
- */
-export function tokenize(input: string): Token[] {
-  if (input === '') return [];
+// =============================================================================
+// Phase 1: Block-level token scanning
+// =============================================================================
 
+/**
+ * Scan lines for block-level tokens (HEADING, PARAGRAPH, BLANK_LINE,
+ * CODE_BLOCK, UNORDERED_LIST).
+ */
+function scanBlockTokens(lines: string[]): Token[] {
   const tokens: Token[] = [];
-  const lines = input.split('\n');
-  // Remove trailing empty element caused by final newline
-  if (lines.length > 1 && lines[lines.length - 1] === '') {
-    lines.pop();
-  }
   let lineIdx = 0;
 
-  // ---- Phase 1: Line-level tokenization ----
   while (lineIdx < lines.length) {
     const rawLine = lines[lineIdx];
     const lineNum = lineIdx + 1; // 1-indexed
@@ -106,13 +104,13 @@ export function tokenize(input: string): Token[] {
     // Code block: opening fence ```…
     if (rawLine.startsWith('```')) {
       // Count opening fence backtick length (CommonMark §4.5)
-      const openingMatch = rawLine.match(/^(`+)/);
+      const openingMatch = rawLine.match(RE_FENCE_OPEN);
       const fenceLen = openingMatch ? openingMatch[1].length : 3;
       const blockLines: string[] = [rawLine];
       lineIdx++;
       while (lineIdx < lines.length) {
         // Closing fence requires backtick count >= opening fence length
-        const closeMatch = lines[lineIdx].match(/^(`+)/);
+        const closeMatch = lines[lineIdx].match(RE_FENCE_OPEN);
         if (closeMatch && closeMatch[1].length >= fenceLen) {
           // Include closing fence line
           blockLines.push(lines[lineIdx]);
@@ -192,9 +190,20 @@ export function tokenize(input: string): Token[] {
     lineIdx++;
   }
 
-  // ---- Phase 2: Inline tokenization ----
+  return tokens;
+}
+
+// =============================================================================
+// Phase 2: Inline token scanning
+// =============================================================================
+
+/**
+ * Scan block tokens for inline tokens (BOLD, ITALIC, CODE_INLINE, LINK, IMAGE)
+ * and sort the combined result by (line, column, -raw.length).
+ */
+function scanInlineTokens(blockTokens: Token[]): Token[] {
   const inlineTokens: Token[] = [];
-  for (const token of tokens) {
+  for (const token of blockTokens) {
     if (
       token.type === TokenType.PARAGRAPH ||
       token.type === TokenType.HEADING ||
@@ -204,14 +213,44 @@ export function tokenize(input: string): Token[] {
       inlineTokens.push(...found);
     }
   }
-  tokens.push(...inlineTokens);
 
-  // ---- Sort: line asc → column asc → raw.length desc ----
-  tokens.sort((a, b) => {
+  const all = blockTokens.concat(inlineTokens);
+
+  // Sort: line asc → column asc → raw.length desc
+  all.sort((a, b) => {
     if (a.line !== b.line) return a.line - b.line;
     if (a.column !== b.column) return a.column - b.column;
     return b.raw.length - a.raw.length;
   });
 
-  return tokens;
+  return all;
+}
+
+// =============================================================================
+// Public API
+// =============================================================================
+
+/**
+ * Tokenize a Markdown input string into a flat Token array.
+ *
+ * Phase 1 splits the text by lines and identifies block-level tokens:
+ *   HEADING, PARAGRAPH, BLANK_LINE, CODE_BLOCK, UNORDERED_LIST.
+ *
+ * Phase 2 scans the content of PARAGRAPH, HEADING, and UNORDERED_LIST tokens
+ * for inline tokens: BOLD, ITALIC, CODE_INLINE, LINK, IMAGE.
+ *
+ * The final array is sorted by (line asc, column asc, raw.length desc).
+ */
+export function tokenize(input: string): Token[] {
+  if (input === '') return [];
+
+  const lines = input.split('\n');
+  // Remove trailing empty element caused by final newline
+  if (lines.length > 1 && lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+
+  const blockTokens = scanBlockTokens(lines);
+  const allTokens = scanInlineTokens(blockTokens);
+  return allTokens;
 }

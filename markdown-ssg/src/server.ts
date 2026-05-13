@@ -1,5 +1,6 @@
 // Markdown SSG — Development Server
 // HTTP static server + file watcher + SSE live reload
+// =============================================================================
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFileSync, existsSync, watch, type FSWatcher } from 'node:fs';
@@ -57,38 +58,17 @@ function mimeType(path: string): string {
 }
 
 // =============================================================================
-// HTTP Server
+// Request Handler Factory
 // =============================================================================
 
 /**
- * Start a development HTTP server with file watching and live reload via SSE.
- *
- * @returns a handle to close the server and watcher
+ * Create an HTTP request handler for static file serving with SSE live reload.
  */
-export function startServer(options: ServerOptions): ServerHandle {
-  const { srcDir, outDir, port, template, css } = options;
-
-  // Validate directories
-  if (!existsSync(outDir)) {
-    throw new Error(`Output directory not found: ${outDir}`);
-  }
-
-  // ---- SSE client pool ----
-  const sseClients: ServerResponse[] = [];
-
-  function broadcastRefresh(): void {
-    const message = 'data: refresh\n\n';
-    for (let i = sseClients.length - 1; i >= 0; i--) {
-      try {
-        sseClients[i].write(message);
-      } catch {
-        sseClients.splice(i, 1);
-      }
-    }
-  }
-
-  // ---- HTTP server ----
-  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+function createRequestHandler(
+  outDir: string,
+  sseClients: ServerResponse[],
+): (req: IncomingMessage, res: ServerResponse) => void {
+  return (req: IncomingMessage, res: ServerResponse): void => {
     const url = req.url ?? '/';
 
     // SSE endpoint
@@ -162,7 +142,77 @@ export function startServer(options: ServerOptions): ServerHandle {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('500 Internal Server Error');
     }
-  });
+  };
+}
+
+// =============================================================================
+// File Watcher Factory
+// =============================================================================
+
+/**
+ * Create a file watcher on the source directory that triggers a rebuild
+ * when a .md file changes (debounced at 300ms).
+ */
+function createFileWatcher(
+  srcDir: string,
+  onRebuild: () => void,
+): FSWatcher | null {
+  let watchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    const watcher = watch(srcDir, { recursive: true }, (_eventType: string, filename: string | null) => {
+      if (!filename) return;
+      if (!filename.toLowerCase().endsWith('.md')) return;
+
+      if (watchTimer) clearTimeout(watchTimer);
+      watchTimer = setTimeout(() => {
+        console.log(`Change detected: ${filename}`);
+        onRebuild();
+      }, 300);
+    });
+
+    // Store timer ref on watcher for cleanup
+    (watcher as FSWatcher & { _timer: typeof watchTimer })._timer = watchTimer;
+    return watcher;
+  } catch (err) {
+    console.error('Failed to start file watcher:', err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
+
+// =============================================================================
+// Server Entry Point
+// =============================================================================
+
+/**
+ * Start a development HTTP server with file watching and live reload via SSE.
+ *
+ * @returns a handle to close the server and watcher
+ */
+export function startServer(options: ServerOptions): ServerHandle {
+  const { srcDir, outDir, port, template, css } = options;
+
+  // Validate directories
+  if (!existsSync(outDir)) {
+    throw new Error(`Output directory not found: ${outDir}`);
+  }
+
+  // ---- SSE client pool ----
+  const sseClients: ServerResponse[] = [];
+
+  function broadcastRefresh(): void {
+    const message = 'data: refresh\n\n';
+    for (let i = sseClients.length - 1; i >= 0; i--) {
+      try {
+        sseClients[i].write(message);
+      } catch {
+        sseClients.splice(i, 1);
+      }
+    }
+  }
+
+  // ---- HTTP server ----
+  const server = createServer(createRequestHandler(outDir, sseClients));
 
   server.listen(port, () => {
     console.log(`SSG server running at http://localhost:${port}`);
@@ -170,35 +220,19 @@ export function startServer(options: ServerOptions): ServerHandle {
   });
 
   // ---- File watcher ----
-  let watchTimer: ReturnType<typeof setTimeout> | null = null;
-  let watcher: FSWatcher | null;
-
-  try {
-    watcher = watch(srcDir, { recursive: true }, (_eventType: string, filename: string | null) => {
-      if (!filename) return;
-      if (!filename.toLowerCase().endsWith('.md')) return;
-
-      if (watchTimer) clearTimeout(watchTimer);
-      watchTimer = setTimeout(() => {
-        console.log(`Change detected: ${filename}`);
-        try {
-          buildAll(srcDir, outDir, template, css);
-          console.log('Rebuild complete, notifying clients...');
-          broadcastRefresh();
-        } catch (err) {
-          console.error('Rebuild error:', err instanceof Error ? err.message : String(err));
-        }
-      }, 300);
-    });
-  } catch (err) {
-    console.error('Failed to start file watcher:', err instanceof Error ? err.message : String(err));
-    watcher = null;
-  }
+  const watcher = createFileWatcher(srcDir, async () => {
+    try {
+      await buildAll(srcDir, outDir, template, css);
+      console.log('Rebuild complete, notifying clients...');
+      broadcastRefresh();
+    } catch (err) {
+      console.error('Rebuild error:', err instanceof Error ? err.message : String(err));
+    }
+  });
 
   // ---- Return handle ----
   return {
     close: () => {
-      if (watchTimer) clearTimeout(watchTimer);
       try { watcher?.close(); } catch { /* ignore */ }
       server.close();
     },

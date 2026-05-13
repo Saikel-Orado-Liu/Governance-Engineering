@@ -3,10 +3,11 @@
 import { readFileSync, writeFileSync, existsSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { tokenize } from './lexer.js';
-import { buildAST } from './ast.js';
+import { buildAST } from './ast-build.js';
 import { renderToHTML } from './renderer.js';
-import { renderTemplate, DEFAULT_TEMPLATE, resolveLayoutPath } from './template.js';
+import { renderTemplate, resolveEffectiveTemplate, resolveLayoutPath } from './template.js';
 import { parseFrontmatter } from './frontmatter.js';
+import { readFileOrExit } from './cli-helpers.js';
 
 // AST types
 export type {
@@ -31,7 +32,7 @@ export type {
 } from './ast.js';
 
 // AST builder
-export { buildAST } from './ast.js';
+export { buildAST } from './ast-build.js';
 
 // HTML renderer
 export { renderToHTML, escapeHtml } from './renderer.js';
@@ -67,15 +68,8 @@ export function convertFile(
   const rawContent = readFileSync(inputPath, 'utf-8');
 
   // Parse frontmatter and determine effective template
-  // --template / templateStr parameter takes priority over frontmatter.layout
   const { frontmatter, body } = parseFrontmatter(rawContent);
-  let effectiveTemplate = templateStr ?? DEFAULT_TEMPLATE;
-  if (!templateStr && frontmatter?.layout) {
-    const layoutContent = resolveLayoutPath(frontmatter.layout);
-    if (layoutContent !== null) {
-      effectiveTemplate = layoutContent;
-    }
-  }
+  const effectiveTemplate = resolveEffectiveTemplate(templateStr, frontmatter);
 
   const tokens = tokenize(body);
   const ast = buildAST(tokens);
@@ -128,12 +122,7 @@ export function main(): void {
   // Resolve template: --template has highest priority, then --layout
   let templateStr: string | undefined;
   if (templatePath) {
-    try {
-      templateStr = readFileSync(resolve(templatePath), 'utf-8');
-    } catch {
-      console.error(`Error: Cannot read template file: ${templatePath}`);
-      process.exit(1);
-    }
+    templateStr = readFileOrExit(templatePath, 'template');
   } else if (layoutName) {
     const layoutContent = resolveLayoutPath(layoutName);
     if (layoutContent === null) {
@@ -143,15 +132,7 @@ export function main(): void {
     templateStr = layoutContent;
   }
 
-  let cssContent: string | undefined;
-  if (cssPath) {
-    try {
-      cssContent = readFileSync(resolve(cssPath), 'utf-8');
-    } catch {
-      console.error(`Error: Cannot read CSS file: ${cssPath}`);
-      process.exit(1);
-    }
-  }
+  const cssContent = cssPath ? readFileOrExit(cssPath, 'CSS') : undefined;
 
   try {
     convertFile(input, output, templateStr, cssContent);

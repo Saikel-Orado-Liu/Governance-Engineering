@@ -2,14 +2,17 @@
 // Markdown SSG — CLI Entry Point
 // Commands: md-ssg build <src> <out> [--template <path>] [--css <path>]
 //           md-ssg serve <src> <out> [--port <port>]
+// =============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { tokenize } from './lexer.js';
-import { buildAST } from './ast.js';
+import { buildAST } from './ast-build.js';
 import { renderToHTML } from './renderer.js';
-import { renderTemplate, DEFAULT_TEMPLATE, resolveLayoutPath } from './template.js';
+import { renderTemplate, resolveEffectiveTemplate } from './template.js';
 import { parseFrontmatter } from './frontmatter.js';
+import { readFileOrExit } from './cli-helpers.js';
 
 // =============================================================================
 // CLI Args Parsing
@@ -81,16 +84,60 @@ interface FileResult {
   error?: string;
 }
 
+const CONCURRENCY = 4;
+
+/**
+ * Process a single markdown file and produce its HTML output.
+ */
+async function processOneFile(
+  mdPath: string,
+  srcDir: string,
+  outDir: string,
+  templateStr?: string,
+  cssContent?: string,
+): Promise<FileResult> {
+  const relPath = relative(srcDir, mdPath);
+  const htmlRelPath = relPath.replace(/\.md$/i, '.html');
+  const outPath = join(outDir, htmlRelPath);
+
+  const content = await readFile(mdPath, 'utf-8');
+
+  // Parse frontmatter and determine effective template
+  const { frontmatter, body } = parseFrontmatter(content);
+  const effectiveTemplate = resolveEffectiveTemplate(templateStr, frontmatter);
+
+  const tokens = tokenize(body);
+  const ast = buildAST(tokens);
+  const htmlContent = renderToHTML(ast);
+
+  // Ensure output directory exists
+  const outDirPath = join(outDir, dirname(htmlRelPath));
+  await mkdir(outDirPath, { recursive: true });
+
+  // Build title from filename (without .md extension)
+  const title = relativePathBasename(relPath).replace(/\.md$/i, '');
+
+  const finalHtml = renderTemplate(effectiveTemplate, {
+    title,
+    style: cssContent ?? '',
+    content: htmlContent,
+  });
+
+  await writeFile(outPath, finalHtml, 'utf-8');
+  return { file: htmlRelPath, status: 'ok' };
+}
+
 /**
  * Build all .md files from source directory to output directory.
+ * Files are processed in parallel batches (concurrency = {@link CONCURRENCY}).
  * Returns the list of processed files.
  */
-export function buildAll(
+export async function buildAll(
   srcDir: string,
   outDir: string,
   templateStr?: string,
   cssContent: string = '',
-): FileResult[] {
+): Promise<FileResult[]> {
   if (!existsSync(srcDir)) {
     throw new Error(`Source directory not found: ${srcDir}`);
   }
@@ -98,50 +145,21 @@ export function buildAll(
   const mdFiles = collectMdFiles(srcDir);
   const results: FileResult[] = [];
 
-  for (const mdPath of mdFiles) {
-    const relPath = relative(srcDir, mdPath);
-    const htmlRelPath = relPath.replace(/\.md$/i, '.html');
-    const outPath = join(outDir, htmlRelPath);
-
-    try {
-      const content = readFileSync(mdPath, 'utf-8');
-
-      // Parse frontmatter and determine effective template
-      // --template / templateStr parameter takes priority over frontmatter.layout
-      const { frontmatter, body } = parseFrontmatter(content);
-      let effectiveTemplate = templateStr ?? DEFAULT_TEMPLATE;
-      if (!templateStr && frontmatter?.layout) {
-        const layoutContent = resolveLayoutPath(frontmatter.layout);
-        if (layoutContent !== null) {
-          effectiveTemplate = layoutContent;
-        }
-      }
-
-      const tokens = tokenize(body);
-      const ast = buildAST(tokens);
-      const htmlContent = renderToHTML(ast);
-
-      // Ensure output directory exists
-      const outDirPath = join(outDir, dirname(htmlRelPath));
-      if (!existsSync(outDirPath)) {
-        mkdirSync(outDirPath, { recursive: true });
-      }
-
-      // Build title from filename (without .md extension)
-      const title = relativePathBasename(relPath).replace(/\.md$/i, '');
-
-      const finalHtml = renderTemplate(effectiveTemplate, {
-        title,
-        style: cssContent,
-        content: htmlContent,
-      });
-
-      writeFileSync(outPath, finalHtml, 'utf-8');
-      results.push({ file: htmlRelPath, status: 'ok' });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      results.push({ file: relPath, status: 'error', error: message });
-    }
+  // Process in parallel batches to limit concurrency
+  for (let i = 0; i < mdFiles.length; i += CONCURRENCY) {
+    const batch = mdFiles.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map((mdPath) =>
+        processOneFile(mdPath, srcDir, outDir, templateStr, cssContent).catch(
+          (err: unknown) => {
+            const relPath = relative(srcDir, mdPath);
+            const message = err instanceof Error ? err.message : String(err);
+            return { file: relPath, status: 'error' as const, error: message };
+          },
+        ),
+      ),
+    );
+    results.push(...batchResults);
   }
 
   return results;
@@ -204,28 +222,11 @@ async function main(): Promise<void> {
   if (parsed.command === 'build') {
     const { src, out, template: templatePath, css: cssPath } = parsed.opts;
 
-    let templateStr: string | undefined;
-    if (templatePath) {
-      try {
-        templateStr = readFileSync(resolve(templatePath), 'utf-8');
-      } catch {
-        console.error(`Error: Cannot read template file: ${templatePath}`);
-        process.exit(1);
-      }
-    }
-
-    let cssContent = '';
-    if (cssPath) {
-      try {
-        cssContent = readFileSync(resolve(cssPath), 'utf-8');
-      } catch {
-        console.error(`Error: Cannot read CSS file: ${cssPath}`);
-        process.exit(1);
-      }
-    }
+    const templateStr = templatePath ? readFileOrExit(templatePath, 'template') : undefined;
+    const cssContent = cssPath ? readFileOrExit(cssPath, 'CSS') : '';
 
     console.log(`Building from ${src} -> ${out}`);
-    const results = buildAll(src, out, templateStr, cssContent);
+    const results = await buildAll(src, out, templateStr, cssContent);
 
     let okCount = 0;
     let errorCount = 0;
@@ -243,28 +244,12 @@ async function main(): Promise<void> {
     // serve command
     const { src, out, port, template: templatePath, css: cssPath } = parsed.opts;
 
-    let templateStr: string | undefined;
-    if (templatePath) {
-      try {
-        templateStr = readFileSync(resolve(templatePath), 'utf-8');
-      } catch {
-        console.error(`Error: Cannot read template file: ${templatePath}`);
-        process.exit(1);
-      }
-    }
-    let cssContent = '';
-    if (cssPath) {
-      try {
-        cssContent = readFileSync(resolve(cssPath), 'utf-8');
-      } catch {
-        console.error(`Error: Cannot read CSS file: ${cssPath}`);
-        process.exit(1);
-      }
-    }
+    const templateStr = templatePath ? readFileOrExit(templatePath, 'template') : undefined;
+    const cssContent = cssPath ? readFileOrExit(cssPath, 'CSS') : '';
 
     // Initial build
     console.log(`Initial build: ${src} -> ${out}`);
-    buildAll(src, out, templateStr, cssContent);
+    await buildAll(src, out, templateStr, cssContent);
 
     // Start server with watcher
     const { startServer } = await import('./server.js');
