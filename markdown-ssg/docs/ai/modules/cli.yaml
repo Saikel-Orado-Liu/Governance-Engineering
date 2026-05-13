@@ -17,7 +17,8 @@ dependencies:
   lexer: "src/lexer.ts — 词法分析"
   ast: "src/ast.ts — AST 构建"
   renderer: "src/renderer.ts — HTML 渲染"
-  template: "src/template.ts — 模板包裹"
+  template: "src/template.ts — 模板包裹 + resolveLayoutPath 布局解析"
+  frontmatter: "src/frontmatter.ts — 解析 Markdown frontmatter 获取 per-file layout"
 
 dependents:
   - "src/server.ts — 导入 buildAll 做自动重建"
@@ -25,6 +26,7 @@ dependents:
 constraints:
   - "--template/--css 路径必须为 .html/.css 文件且在项目目录下"
   - "buildAll 在 server 自动重建时被调用"
+  - "布局回退链（优先级降序）：显式 templateStr 参数 → frontmatter.layout → DEFAULT_TEMPLATE"
 
 known_issues: []
 

@@ -9,7 +9,7 @@ description: >
   源文件变更时自动触发 buildAll 重建并通过 SSE 推送 reload 事件到浏览器。
 
 public_interface:
-  - "export interface ServerOptions { srcDir: string; outDir: string; port: number; template: string; css: string; }"
+  - "export interface ServerOptions { srcDir: string; outDir: string; port: number; template?: string; css: string; }"
   - "export function startServer(options: ServerOptions): void"
 
 dependencies:

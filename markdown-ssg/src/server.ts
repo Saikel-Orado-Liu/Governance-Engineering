@@ -14,7 +14,7 @@ export interface ServerOptions {
   srcDir: string;
   outDir: string;
   port: number;
-  template: string;
+  template?: string;
   css: string;
 }
 

@@ -1,0 +1,31 @@
+# frontmatter — YAML-like Frontmatter 解析器
+
+name: frontmatter
+path: src/frontmatter.ts
+type: module
+language: TypeScript 5.6
+description: >
+  YAML-like frontmatter 解析器。提取 Markdown 文件开头的 --- 分隔块，
+  仅解析 key: value 键值对（不支持嵌套 YAML、列表、多行值）。
+  零外部依赖。
+
+public_interface:
+  - "export function parseFrontmatter(content: string): { frontmatter: Record<string, string> | null; body: string }"
+
+dependencies: {}
+
+dependents:
+  - "src/index.ts — 在 convertFile/main() 中解析 frontmatter 获取 layout"
+  - "src/cli.ts — 在 buildAll() 中解析 frontmatter 获取 layout"
+
+constraints:
+  - "frontmatter 必须在文件开头（--- 必须是 content 的前 4 个字符）"
+  - "仅解析 key: value 格式（key: 后必须跟一个空格）"
+  - "非 key: value 行被静默忽略"
+  - "只有第一个 --- 块被解析为 frontmatter"
+  - "closing --- 缺失时回退为 null（整个 content 视为 body）"
+  - "空 frontmatter（--- 后紧跟 ---）返回 {} 而非 null"
+
+known_issues: []
+
+last_updated: "2026-05-14"

@@ -105,6 +105,68 @@ describe('buildAll', () => {
     const content = readFileSync(join(cssOut, 'page.html'), 'utf-8');
     expect(content).toBe('body { color: red; }');
   });
+
+  it('uses layout from frontmatter when layout file exists', () => {
+    const layoutSrc = join(tmpDir, 'layout-src');
+    const layoutOut = join(tmpDir, 'layout-out');
+    const layoutDir = join(tmpDir, 'layouts');
+    mkdirSync(layoutSrc, { recursive: true });
+    mkdirSync(layoutOut, { recursive: true });
+    mkdirSync(layoutDir, { recursive: true });
+
+    // Create a layout file
+    writeFileSync(join(layoutDir, 'blog.html'), '<div class="blog">{{content}}</div>', 'utf-8');
+
+    // Create a markdown file with frontmatter layout
+    writeFileSync(join(layoutSrc, 'post.md'), '---\nlayout: blog\n---\n# Post\n', 'utf-8');
+
+    // Temporarily change cwd so layout resolves to our temp dir
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      buildAll(layoutSrc, layoutOut);
+      const content = readFileSync(join(layoutOut, 'post.html'), 'utf-8');
+      expect(content).toBe('<div class="blog"><h1>Post</h1></div>');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
+  it('falls back to templateStr when layout file does not exist', () => {
+    const fbSrc = join(tmpDir, 'fb-src');
+    const fbOut = join(tmpDir, 'fb-out');
+    mkdirSync(fbSrc, { recursive: true });
+    mkdirSync(fbOut, { recursive: true });
+
+    // Frontmatter references a layout that does not exist
+    writeFileSync(join(fbSrc, 'page.md'), '---\nlayout: nonexistent\n---\n# Fallback\n', 'utf-8');
+
+    const fallbackTemplate = '<main>{{content}}</main>';
+    buildAll(fbSrc, fbOut, fallbackTemplate);
+
+    const content = readFileSync(join(fbOut, 'page.html'), 'utf-8');
+    expect(content).toBe('<main><h1>Fallback</h1></main>');
+  });
+
+  it('falls back to DEFAULT_TEMPLATE when no layout file and no templateStr', () => {
+    const defSrc = join(tmpDir, 'def-src');
+    const defOut = join(tmpDir, 'def-out');
+    mkdirSync(defSrc, { recursive: true });
+    mkdirSync(defOut, { recursive: true });
+
+    writeFileSync(join(defSrc, 'page.md'), '---\nlayout: missing\n---\n# Default\n', 'utf-8');
+
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      buildAll(defSrc, defOut);
+      const content = readFileSync(join(defOut, 'page.html'), 'utf-8');
+      expect(content).toContain('<!DOCTYPE html>');
+      expect(content).toContain('<h1>Default</h1>');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });
 
 // ===========================================================================
@@ -191,5 +253,48 @@ describe('convertFile', () => {
     const badOutput = join(convertTmpDir, 'nonexistent-dir', 'output.html');
 
     expect(() => convertFile(inputPath, badOutput)).toThrow();
+  });
+
+  it('accepts custom templateStr parameter', () => {
+    const inputPath = join(convertTmpDir, 'template-str.md');
+    writeFileSync(inputPath, '# Custom Template', 'utf-8');
+    const outputPath = join(convertTmpDir, 'template-str.html');
+
+    const customTemplate = '<article>{{content}}</article>';
+    convertFile(inputPath, outputPath, customTemplate);
+
+    const content = readFileSync(outputPath, 'utf-8');
+    expect(content).toBe('<article><h1>Custom Template</h1></article>');
+  });
+
+  it('accepts cssContent parameter', () => {
+    const inputPath = join(convertTmpDir, 'css-content.md');
+    writeFileSync(inputPath, '# Styled', 'utf-8');
+    const outputPath = join(convertTmpDir, 'css-content.html');
+
+    convertFile(inputPath, outputPath, '{{style}}', 'h1 { color: blue; }');
+
+    const content = readFileSync(outputPath, 'utf-8');
+    expect(content).toBe('h1 { color: blue; }');
+  });
+
+  it('uses frontmatter layout in convertFile when templateStr not provided', () => {
+    const layoutDir = join(tmpDir, 'layouts');
+    mkdirSync(layoutDir, { recursive: true });
+    writeFileSync(join(layoutDir, 'post.html'), '<main>{{content}}</main>', 'utf-8');
+
+    const inputPath = join(convertTmpDir, 'fm-layout.md');
+    writeFileSync(inputPath, '---\nlayout: post\n---\n# Layout Test\n', 'utf-8');
+    const outputPath = join(convertTmpDir, 'fm-layout.html');
+
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      convertFile(inputPath, outputPath);
+      const content = readFileSync(outputPath, 'utf-8');
+      expect(content).toBe('<main><h1>Layout Test</h1></main>');
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 });

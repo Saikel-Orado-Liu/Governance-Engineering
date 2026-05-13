@@ -8,7 +8,8 @@ import { join, relative, resolve } from 'node:path';
 import { tokenize } from './lexer.js';
 import { buildAST } from './ast.js';
 import { renderToHTML } from './renderer.js';
-import { renderTemplate, DEFAULT_TEMPLATE } from './template.js';
+import { renderTemplate, DEFAULT_TEMPLATE, resolveLayoutPath } from './template.js';
+import { parseFrontmatter } from './frontmatter.js';
 
 // =============================================================================
 // CLI Args Parsing
@@ -87,7 +88,7 @@ interface FileResult {
 export function buildAll(
   srcDir: string,
   outDir: string,
-  templateStr: string = DEFAULT_TEMPLATE,
+  templateStr?: string,
   cssContent: string = '',
 ): FileResult[] {
   if (!existsSync(srcDir)) {
@@ -104,7 +105,19 @@ export function buildAll(
 
     try {
       const content = readFileSync(mdPath, 'utf-8');
-      const tokens = tokenize(content);
+
+      // Parse frontmatter and determine effective template
+      // --template / templateStr parameter takes priority over frontmatter.layout
+      const { frontmatter, body } = parseFrontmatter(content);
+      let effectiveTemplate = templateStr ?? DEFAULT_TEMPLATE;
+      if (!templateStr && frontmatter?.layout) {
+        const layoutContent = resolveLayoutPath(frontmatter.layout);
+        if (layoutContent !== null) {
+          effectiveTemplate = layoutContent;
+        }
+      }
+
+      const tokens = tokenize(body);
       const ast = buildAST(tokens);
       const htmlContent = renderToHTML(ast);
 
@@ -117,7 +130,7 @@ export function buildAll(
       // Build title from filename (without .md extension)
       const title = relativePathBasename(relPath).replace(/\.md$/i, '');
 
-      const finalHtml = renderTemplate(templateStr, {
+      const finalHtml = renderTemplate(effectiveTemplate, {
         title,
         style: cssContent,
         content: htmlContent,
@@ -191,7 +204,7 @@ async function main(): Promise<void> {
   if (parsed.command === 'build') {
     const { src, out, template: templatePath, css: cssPath } = parsed.opts;
 
-    let templateStr = DEFAULT_TEMPLATE;
+    let templateStr: string | undefined;
     if (templatePath) {
       try {
         templateStr = readFileSync(resolve(templatePath), 'utf-8');
@@ -230,7 +243,7 @@ async function main(): Promise<void> {
     // serve command
     const { src, out, port, template: templatePath, css: cssPath } = parsed.opts;
 
-    let templateStr = DEFAULT_TEMPLATE;
+    let templateStr: string | undefined;
     if (templatePath) {
       try {
         templateStr = readFileSync(resolve(templatePath), 'utf-8');

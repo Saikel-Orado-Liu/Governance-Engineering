@@ -9,20 +9,24 @@ description: >
   内置 DEFAULT_TEMPLATE 提供 HTML5 文档骨架。
 
 public_interface:
-  - "export const DEFAULT_TEMPLATE: string — 默认 HTML5 文档模板"
+  - "export const DEFAULT_TEMPLATE: string — 默认 HTML5 文档模板（插槽: {{title}}, {{style}}, {{content}}, {{nav}}, {{header}}, {{footer}}）"
+  - "export function resolveLayoutPath(layoutName: string): string | null — 从 layouts/ 目录加载命名布局文件"
   - "export function renderTemplate(template: string, vars: Record<string, string>): string"
 
 dependencies:
   renderer: "src/renderer.js — 导入 escapeHtml 做模板值转义"
 
 dependents:
-  - "src/cli.ts — 调用 renderTemplate 包裹生成页面"
+  - "src/cli.ts — 调用 renderTemplate 包裹生成页面；由 cli 转调 resolveLayoutPath 解析 frontmatter layout"
+  - "src/index.ts — 调用 renderTemplate 包裹生成页面；调用 resolveLayoutPath 解析 --layout 参数"
 
 constraints:
   - "仅支持 {{var}} 语法（无节、无部分）"
-  - "所有插值自动通过 escapeHtml 转义"
-  - "不存在的变量替换为空字符串"
-  - "DEFAULT_TEMPLATE 插槽: {{title}}, {{style}}, {{content}}"
+  - "所有插值自动通过 escapeHtml 转义（{{content}} 除外——已预先渲染为 HTML）"
+  - "不存在的 {{key}} 替换为空字符串"
+  - "DEFAULT_TEMPLATE 插槽: {{title}}, {{style}}, {{content}}, {{nav}}, {{header}}, {{footer}}"
+  - "resolveLayoutPath 布局名必须匹配 /^[\w-]+$/ 正则（字母数字、连字符、下划线）以防路径遍历"
+  - "resolveLayoutPath 从 process.cwd()/layouts/{name}.html 读取布局文件"
 
 known_issues: []
 

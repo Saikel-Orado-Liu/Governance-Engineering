@@ -29,9 +29,9 @@ describe('renderTemplate', () => {
     expect(result).toBe('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 
-  it('preserves unknown {{key}} as-is', () => {
+  it('returns empty string for unknown {{key}}', () => {
     const result = renderTemplate('Hello {{unknown}} world', {});
-    expect(result).toBe('Hello {{unknown}} world');
+    expect(result).toBe('Hello  world');
   });
 
   it('renders empty string for missing value when key exists', () => {
@@ -48,6 +48,9 @@ describe('DEFAULT_TEMPLATE', () => {
     expect(DEFAULT_TEMPLATE).toContain('{{title}}');
     expect(DEFAULT_TEMPLATE).toContain('{{style}}');
     expect(DEFAULT_TEMPLATE).toContain('{{content}}');
+    expect(DEFAULT_TEMPLATE).toContain('{{nav}}');
+    expect(DEFAULT_TEMPLATE).toContain('{{header}}');
+    expect(DEFAULT_TEMPLATE).toContain('{{footer}}');
   });
 
   it('renders a complete HTML document', () => {
