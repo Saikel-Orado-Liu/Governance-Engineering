@@ -9,9 +9,12 @@ description: >
   通过 src/index.ts 暴露 CLI 接口。
 
 public_interface:
-  - "CLI 命令: md-ssg build <src> <out> [--template <path>] [--css <path>]"
-  - "CLI 命令: md-ssg serve <src> <out> [--port <port>]"
-  - "导出: buildAST, parse, renderToHTML, escapeHtml, renderTemplate, DEFAULT_TEMPLATE"
+  - "CLI 命令 (index.ts): markdown-ssg <input.md> [--output <path>] [--watch] — 单文件模式（bin 注册入口）"
+  - "CLI 命令 (cli.ts): node dist/cli.js build <src> <out> [--template <path>] [--css <path>] — 目录模式（无 bin 注册）"
+  - "CLI 命令 (cli.ts): node dist/cli.js serve <src> <out> [--port <port>] — 开发服务器模式"
+  - "导出函数: buildAST, parse, renderToHTML, escapeHtml, renderTemplate, DEFAULT_TEMPLATE"
+  - "导出函数: convertFile(inputPath, outputPath?): string — 单文件 Markdown→HTML 转换"
+  - "导出函数: main(): void — 单文件 CLI 参数解析入口"
   - "导出类型: 全部 15 种 ASTNode discriminated union"
 
 dependencies:
@@ -28,7 +31,10 @@ constraints:
   - "ES2022 target, ESNext module"
   - "strict 模式开启"
   - "AST 作为 lexer 与 renderer 之间的接口边界"
-  - "CLI 接受 --template/--css 路径参数，需白名单校验防路径遍历"
+  - "index.ts 使用 DEFAULT_TEMPLATE，不支持自定义模板（单文件模式简化设计）"
+  - "bin 配置指向 index.js（单文件模式）；目录模式需通过 node dist/cli.js 直接调用"
+  - "双 CLI 入口并存：index.ts(单文件) 与 cli.ts(目录模式)，各有独立参数解析和 main()"
+  - "cli.ts 接受 --template/--css 路径参数，需白名单校验防路径遍历"
 
 known_issues: []
 

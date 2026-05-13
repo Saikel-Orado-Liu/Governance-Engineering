@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "md-ssg": "./dist/cli.js"
+    "markdown-ssg": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

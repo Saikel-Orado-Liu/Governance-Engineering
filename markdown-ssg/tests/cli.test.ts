@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { buildAll } from '../src/cli.js';
+import { convertFile } from '../src/index.js';
 
 // ===========================================================================
 // Setup: temporary directories
@@ -103,5 +104,92 @@ describe('buildAll', () => {
 
     const content = readFileSync(join(cssOut, 'page.html'), 'utf-8');
     expect(content).toBe('body { color: red; }');
+  });
+});
+
+// ===========================================================================
+// convertFile
+// ===========================================================================
+describe('convertFile', () => {
+  let convertTmpDir: string;
+
+  beforeAll(() => {
+    convertTmpDir = mkdtempSync(join(tmpdir(), 'ssg-convert-'));
+  });
+
+  afterAll(() => {
+    rmSync(convertTmpDir, { recursive: true, force: true });
+  });
+
+  it('converts a single .md file to .html', () => {
+    const inputPath = join(convertTmpDir, 'hello.md');
+    writeFileSync(inputPath, '# Hello World\n\nThis is a sample markdown file.', 'utf-8');
+
+    convertFile(inputPath);
+
+    const htmlPath = join(convertTmpDir, 'hello.html');
+    expect(existsSync(htmlPath)).toBe(true);
+    const content = readFileSync(htmlPath, 'utf-8');
+    expect(content).toContain('<!DOCTYPE html>');
+    expect(content).toContain('<h1>Hello World</h1>');
+    expect(content).toContain('<p>This is a sample markdown file.</p>');
+  });
+
+  it('writes to specified output path', () => {
+    const inputPath = join(convertTmpDir, 'custom-output.md');
+    writeFileSync(inputPath, '# Output Test', 'utf-8');
+    const outputPath = join(convertTmpDir, 'custom.html');
+
+    convertFile(inputPath, outputPath);
+
+    expect(existsSync(outputPath)).toBe(true);
+    const content = readFileSync(outputPath, 'utf-8');
+    expect(content).toContain('<h1>Output Test</h1>');
+  });
+
+  it('throws error for nonexistent input file', () => {
+    expect(() => convertFile('/nonexistent')).toThrow('File not found: /nonexistent');
+  });
+
+  it('converts empty markdown to valid HTML', () => {
+    const inputPath = join(convertTmpDir, 'empty.md');
+    writeFileSync(inputPath, '', 'utf-8');
+
+    const result = convertFile(inputPath);
+
+    expect(result).toContain('<!DOCTYPE html>');
+    expect(result).toContain('<body>');
+  });
+
+  it('handles .MD uppercase extension (case-insensitive regex)', () => {
+    const inputPath = join(convertTmpDir, 'CASE_TEST.MD');
+    writeFileSync(inputPath, '# Case Test', 'utf-8');
+
+    convertFile(inputPath);
+
+    const htmlPath = join(convertTmpDir, 'CASE_TEST.html');
+    expect(existsSync(htmlPath)).toBe(true);
+    const content = readFileSync(htmlPath, 'utf-8');
+    expect(content).toContain('<h1>Case Test</h1>');
+  });
+
+  it('returns the generated HTML string matching written content', () => {
+    const inputPath = join(convertTmpDir, 'return-check.md');
+    writeFileSync(inputPath, '# Return Value', 'utf-8');
+
+    const result = convertFile(inputPath);
+
+    const htmlPath = join(convertTmpDir, 'return-check.html');
+    const fileContent = readFileSync(htmlPath, 'utf-8');
+    expect(result).toBe(fileContent);
+    expect(result).toContain('<h1>Return Value</h1>');
+  });
+
+  it('throws error when output directory does not exist', () => {
+    const inputPath = join(convertTmpDir, 'no-dir.md');
+    writeFileSync(inputPath, '# Test', 'utf-8');
+    const badOutput = join(convertTmpDir, 'nonexistent-dir', 'output.html');
+
+    expect(() => convertFile(inputPath, badOutput)).toThrow();
   });
 });
