@@ -105,14 +105,20 @@ export function tokenize(input: string): Token[] {
 
     // Code block: opening fence ```…
     if (rawLine.startsWith('```')) {
+      // Count opening fence backtick length (CommonMark §4.5)
+      const openingMatch = rawLine.match(/^(`+)/);
+      const fenceLen = openingMatch ? openingMatch[1].length : 3;
       const blockLines: string[] = [rawLine];
       lineIdx++;
-      while (lineIdx < lines.length && !lines[lineIdx].startsWith('```')) {
-        blockLines.push(lines[lineIdx]);
-        lineIdx++;
-      }
-      if (lineIdx < lines.length) {
-        // Include closing fence
+      while (lineIdx < lines.length) {
+        // Closing fence requires backtick count >= opening fence length
+        const closeMatch = lines[lineIdx].match(/^(`+)/);
+        if (closeMatch && closeMatch[1].length >= fenceLen) {
+          // Include closing fence line
+          blockLines.push(lines[lineIdx]);
+          lineIdx++;
+          break;
+        }
         blockLines.push(lines[lineIdx]);
         lineIdx++;
       }
@@ -126,8 +132,33 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
+    // Indented code block (4 spaces or tab)
+    // Only triggers at start of document or after a blank line
+    if ((rawLine.startsWith('    ') || rawLine.startsWith('\t')) &&
+        (tokens.length === 0 || tokens[tokens.length - 1].type === TokenType.BLANK_LINE)) {
+      const blockLines: string[] = [rawLine];
+      lineIdx++;
+      while (lineIdx < lines.length) {
+        const nextLine = lines[lineIdx];
+        if (nextLine.startsWith('    ') || nextLine.startsWith('\t') || nextLine.trim() === '') {
+          blockLines.push(nextLine);
+          lineIdx++;
+        } else {
+          break;
+        }
+      }
+      tokens.push({
+        type: TokenType.CODE_BLOCK,
+        raw: blockLines.join('\n'),
+        line: lineNum,
+        column: 0,
+      });
+      continue;
+    }
+
     // Heading: # … ######
-    if (rawLine.startsWith('#')) {
+    // CommonMark §4.2: requires space/tab/EOL after # markers, rejects 7+ #
+    if (/^#{1,6}(?:[ \t]|$)/.test(rawLine)) {
       // Count leading `#` characters to determine level (1-6)
       tokens.push({
         type: TokenType.HEADING,
@@ -139,8 +170,8 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Unordered list: "- " or "* " at line start
-    if (rawLine.startsWith('- ') || rawLine.startsWith('* ')) {
+    // Unordered list: "- ", "* ", or "+ " at line start
+    if (rawLine.startsWith('- ') || rawLine.startsWith('* ') || rawLine.startsWith('+ ')) {
       tokens.push({
         type: TokenType.UNORDERED_LIST,
         raw: rawLine,

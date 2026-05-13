@@ -1,0 +1,36 @@
+[
+  { "description": "ATX heading level 1", "section": "4.2", "markdown": "# Heading", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading level 2", "section": "4.2", "markdown": "## Heading", "html": "<h2>Heading</h2>" },
+  { "description": "ATX heading level 3", "section": "4.2", "markdown": "### Heading", "html": "<h3>Heading</h3>" },
+  { "description": "ATX heading level 6 (max)", "section": "4.2", "markdown": "###### Heading", "html": "<h6>Heading</h6>" },
+  { "description": "ATX heading with no space after # is not a heading", "section": "4.2", "markdown": "#Not a heading", "html": "<p>#Not a heading</p>" },
+  { "description": "Seven # is not a heading", "section": "4.2", "markdown": "####### Not a heading", "html": "<p>####### Not a heading</p>" },
+  { "description": "ATX heading with trailing spaces", "section": "4.2", "markdown": "# Heading   ", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading with trailing closing #", "section": "4.2", "markdown": "# Heading #", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading ###### with trailing closing #", "section": "4.2", "markdown": "###### Heading ######", "html": "<h6>Heading</h6>" },
+  { "description": "Indented code block with 4 spaces", "section": "4.4", "markdown": "    code line", "html": "<pre><code>code line</code></pre>" },
+  { "description": "Indented code block with multiple lines", "section": "4.4", "markdown": "    line1\n    line2", "html": "<pre><code>line1\nline2</code></pre>" },
+  { "description": "Fenced code block basic", "section": "4.5", "markdown": "```\ncode\n```", "html": "<pre><code>code</code></pre>" },
+  { "description": "Fenced code block with language", "section": "4.5", "markdown": "```js\ncode\n```", "html": "<pre><code class=\"language-js\">code</code></pre>" },
+  { "description": "Fenced code block closing fence length must equal or exceed opening", "section": "4.5", "markdown": "````\ncode\n```\nmore code\n````", "html": "<pre><code>code\n&#96;&#96;&#96;\nmore code</code></pre>" },
+  { "description": "Basic paragraph", "section": "4.8", "markdown": "Hello world", "html": "<p>Hello world</p>" },
+  { "description": "Consecutive lines merge into one paragraph", "section": "4.8", "markdown": "first line\nsecond line", "html": "<p>first line second line</p>" },
+  { "description": "Blank line separates paragraphs", "section": "4.9", "markdown": "para one\n\npara two", "html": "<p>para one</p>\n\n<p>para two</p>" },
+  { "description": "Unordered list with -", "section": "5.2", "markdown": "- item", "html": "<ul><li>item</li></ul>" },
+  { "description": "Unordered list with *", "section": "5.2", "markdown": "* item", "html": "<ul><li>item</li></ul>" },
+  { "description": "Unordered list with +", "section": "5.2", "markdown": "+ item", "html": "<ul><li>item</li></ul>" },
+  { "description": "Unordered list multiple items", "section": "5.2", "markdown": "- one\n- two\n- three", "html": "<ul><li>one</li>\n<li>two</li>\n<li>three</li></ul>" },
+
+  { "description": "ATX heading with tab after #", "section": "4.2", "markdown": "#\tHeading", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading with tab then space after #", "section": "4.2", "markdown": "#\t Heading", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading with space then tab after #", "section": "4.2", "markdown": "# \tHeading", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading with content-only tab", "section": "4.2", "markdown": "#\t", "html": "<h1></h1>" },
+  { "description": "ATX heading with closing # and tab whitespace", "section": "4.2", "markdown": "# Heading\t#", "html": "<h1>Heading</h1>" },
+  { "description": "ATX heading with extra leading spaces trimmed", "section": "4.2", "markdown": "#  Heading", "html": "<h1>Heading</h1>" },
+
+  { "description": "Indented code block with tab indentation", "section": "4.4", "markdown": "\tcode line", "html": "<pre><code>code line</code></pre>" },
+  { "description": "Indented code block with tab multiple lines", "section": "4.4", "markdown": "\tline1\n\tline2", "html": "<pre><code>line1\nline2</code></pre>" },
+  { "description": "Indented code block with tab and blank line", "section": "4.4", "markdown": "\tcode\n\n\tmore code", "html": "<pre><code>code\n\nmore code</code></pre>" },
+
+  { "description": "Multiple blank lines between paragraphs collapse", "section": "4.9", "markdown": "a\n\n\nb", "html": "<p>a</p>\n\n<p>b</p>" }
+]

@@ -89,12 +89,12 @@ describe('HEADING', () => {
     expect((h.children[0] as BoldNode).children[0]).toEqual({ type: 'text', value: 'title' });
   });
 
-  it('handles heading without space after #', () => {
+  it('handles heading without space after # as paragraph', () => {
     const doc = build('#Text');
-    const h = firstChild<HeadingNode>(doc);
-    expect(h.level).toBe(1);
-    expect(h.children).toHaveLength(1);
-    expect(h.children[0]).toEqual({ type: 'text', value: 'Text' });
+    const p = firstChild<ParagraphNode>(doc);
+    expect(p.type).toBe('paragraph');
+    expect(p.children).toHaveLength(1);
+    expect(p.children[0]).toEqual({ type: 'text', value: '#Text' });
   });
 
   it('handles heading with only marker', () => {

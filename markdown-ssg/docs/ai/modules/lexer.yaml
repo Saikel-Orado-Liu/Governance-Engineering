@@ -29,7 +29,14 @@ constraints:
   - "支持反斜杠转义（isEscaped 检测）"
   - "未闭合的代码块（``` 无结尾）视作到文件末尾"
   - "行号 1-indexed"
+  - "ATX heading（#…######）必须在 # 后跟空格/tab/行尾（CommonMark §4.2 拒绝 #NotHeading）"
+  - "Fenced code block 闭合 fence 的反引号数必须 ≥ 开始 fence（CommonMark §4.5）"
+  - "Indented code block（4 空格或 tab）仅于文档开头或 blank line 后触发（CommonMark §4.4）"
+  - "Unordered list marker 支持 -, *, +（CommonMark §5.2）"
 
-known_issues: []
+known_issues:
+  - id: "IR-001"
+    description: "缺少 Setext heading / Blockquote / Ordered list 的专属 TokenType。Setext heading 和 Ordered list 当前通过 PARAGRAPH fallback 处理，Blockquote 在 buildAST 中从 PARAGRAPH 转化。虽能部分工作，但 TokenType 粒度不够精确，可能导致渲染行为与 CommonMark 不一致。"
+    mitigation: "当前缓解：buildAST 中检测 raw 文本特征（^---$, ^> , ^\d+\.\s, ^[*-]）以识别这些结构。长期需新增 TokenType：SETEXT_HEADING, BLOCKQUOTE, ORDERED_LIST。"
 
-last_updated: "2026-05-12"
+last_updated: "2026-05-14"

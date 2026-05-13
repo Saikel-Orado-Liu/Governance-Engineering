@@ -32,7 +32,15 @@ constraints:
   - "link/image raw 中包含的 text 片段不走递归内联解析"
   - "CodeBlock 的 lang 从 token raw 第一行 ```lang 中提取"
   - "paragraph merge: 连续段落（无 blank_line 或其他 block 分隔）自动合并为单个 ParagraphNode，中间插入 TextNode(' ') 分隔"
+  - "headingContent 剥离 # 后所有空格和 tab（CommonMark §4.2）"
+  - "Trailing # sequence 及其前方空格/tab 从 heading text 子节点剥离（§4.2）"
+  - "连续 BLANK_LINE 折叠为单个 BlankLineNode（§4.9）"
+  - "Indented code block 行消毒：tab→1 空字符移除，4 空格→4 字符移除"
+  - "Fenced code block：提取 fence 长度后解析 lang 为 firstLine.slice(fenceLen).trim()"
 
-known_issues: []
+known_issues:
+  - id: "IR-001"
+    description: "缺少 Setext heading / Blockquote / Ordered list 的专属 TokenType。Setext heading 和 Ordered list 当前通过 PARAGRAPH fallback 处理，Blockquote 在 buildAST 中从 PARAGRAPH 转化。虽能部分工作，但 TokenType 粒度不够精确，可能导致渲染行为与 CommonMark 不一致。"
+    mitigation: "当前缓解：buildAST 中检测 raw 文本特征（^---$, ^> , ^\d+\.\s, ^[*-]）以识别这些结构。长期需新增 TokenType：SETEXT_HEADING, BLOCKQUOTE, ORDERED_LIST，并在 lexer 中产生对应标识。"
 
 last_updated: "2026-05-14"
