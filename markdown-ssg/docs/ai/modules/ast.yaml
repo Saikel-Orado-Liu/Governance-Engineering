@@ -16,12 +16,14 @@ public_interface:
   - "export type BlockNode = HeadingNode | ParagraphNode | CodeBlockNode | ListNode | BlockquoteNode | HorizontalRuleNode | BlankLineNode"
   - "export type InlineNode = TextNode | BoldNode | ItalicNode | CodeInlineNode | LinkNode | ImageNode | BlankLineNode"
   - "export function buildAST(tokens: Token[]): DocumentNode"
+  - "export interface CodeBlockNode — 新增 readonly isValid: boolean 字段，标记代码块是否有闭合 fence"
 
 dependencies:
   lexer: "src/lexer.ts — Token/TokenType 类型定义"
 
 dependents:
   - "src/renderer.ts — 递归遍历 AST 生成 HTML"
+  - "src/parser.ts — 作为薄代理层包装 buildAST"
   - "src/cli.ts — 调用 buildAST 串联 lexer→AST→renderer 管道"
 
 constraints:
@@ -29,6 +31,7 @@ constraints:
   - "list: 连续 UNORDERED_LIST token 合并到一个 ListNode"
   - "link/image raw 中包含的 text 片段不走递归内联解析"
   - "CodeBlock 的 lang 从 token raw 第一行 ```lang 中提取"
+  - "paragraph merge: 连续段落（无 blank_line 或其他 block 分隔）自动合并为单个 ParagraphNode，中间插入 TextNode(' ') 分隔"
 
 known_issues: []
 

@@ -30,3 +30,6 @@ export { renderToHTML, escapeHtml } from './renderer.js';
 
 // Mustache template
 export { renderTemplate, DEFAULT_TEMPLATE } from './template.js';
+
+// Parser (public API)
+export { parse } from './parser.js';

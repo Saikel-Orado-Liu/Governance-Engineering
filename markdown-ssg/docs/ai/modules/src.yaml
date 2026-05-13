@@ -11,7 +11,7 @@ description: >
 public_interface:
   - "CLI 命令: md-ssg build <src> <out> [--template <path>] [--css <path>]"
   - "CLI 命令: md-ssg serve <src> <out> [--port <port>]"
-  - "导出: buildAST, renderToHTML, escapeHtml, renderTemplate, DEFAULT_TEMPLATE"
+  - "导出: buildAST, parse, renderToHTML, escapeHtml, renderTemplate, DEFAULT_TEMPLATE"
   - "导出类型: 全部 15 种 ASTNode discriminated union"
 
 dependencies:
@@ -20,6 +20,7 @@ dependencies:
   renderer: "src/renderer.ts — HTML 递归渲染器 + XSS 转义"
   template: "src/template.ts — Mustache {{var}} 模板引擎"
   cli: "src/cli.ts — CLI 命令实现 (build/serve)"
+  parser: "src/parser.ts — 解析器薄代理层，导出 parse(tokens): DocumentNode"
 
 dependents: []
 

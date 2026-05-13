@@ -32,6 +32,11 @@ modules:
     type: module
     description: "HTTP 开发服务器 + SSE 热刷新"
     card: docs/ai/modules/server.yaml
+  - name: parser
+    path: src/parser.ts
+    type: module
+    description: "解析器薄代理层 — 包装 buildAST 为 parse() 公开 API"
+    card: null
 
 standards:
   - file: docs/ai/standards/ts-checklist.yaml

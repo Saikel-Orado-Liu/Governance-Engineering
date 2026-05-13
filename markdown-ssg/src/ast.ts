@@ -89,6 +89,7 @@ export interface CodeBlockNode {
   type: 'code_block';
   language?: string;
   value: string;
+  readonly isValid: boolean;
 }
 
 // — List (ordered or unordered), children are list items
@@ -299,6 +300,32 @@ function appendListItem(
 }
 
 // =============================================================================
+// Paragraph Merge
+// =============================================================================
+
+/**
+ * Merge adjacent ParagraphNode entries in the children array.
+ * Consecutive paragraphs (no BlankLineNode or other block between them) are
+ * merged into a single ParagraphNode with a TextNode(' ') separator inserted
+ * between their respective inline children.
+ */
+function mergeParagraphNodes(children: BlockNode[]): BlockNode[] {
+  const result: BlockNode[] = [];
+  for (const node of children) {
+    const last = result[result.length - 1];
+    if (node.type === 'paragraph' && last?.type === 'paragraph') {
+      (last as ParagraphNode).children.push(
+        { type: 'text', value: ' ' },
+        ...(node as ParagraphNode).children,
+      );
+    } else {
+      result.push(node);
+    }
+  }
+  return result;
+}
+
+// =============================================================================
 // buildAST — Token[] → DocumentNode
 // =============================================================================
 
@@ -434,9 +461,11 @@ export function buildAST(tokens: Token[]): DocumentNode {
         const firstLine = lines[0]; // ```  or  ```lang
         const language = firstLine.length > 3 ? firstLine.slice(3).trim() : undefined;
         // Content between opening and closing fences (if closing exists)
-        const codeLines = lines.length > 1 ? lines.slice(1, lines[lines.length - 1].startsWith('```') ? -1 : undefined) : [];
+        const hasClosingFence = lines.length > 1 && lines[lines.length - 1].startsWith('```');
+        const codeLines = lines.length > 1 ? lines.slice(1, hasClosingFence ? -1 : undefined) : [];
         const value = codeLines.join('\n');
-        children.push({ type: 'code_block', language, value });
+        const isValid = hasClosingFence;
+        children.push({ type: 'code_block', language, value, isValid });
         break;
       }
 
@@ -445,5 +474,5 @@ export function buildAST(tokens: Token[]): DocumentNode {
     }
   }
 
-  return { type: 'document', children };
+  return { type: 'document', children: mergeParagraphNodes(children) };
 }
