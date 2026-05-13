@@ -1,0 +1,35 @@
+# ast — AST 节点定义与构建器
+
+name: ast
+path: src/ast.ts
+type: module
+language: TypeScript 5.6
+description: >
+  定义 15 种 discriminated union AST 节点类型，并提供 buildAST(tokens): DocumentNode
+  函数将扁平 Token[] 转换为层级 AST 树。
+  支持节点：Document, Heading(1-6), Paragraph, Text, Bold, Italic,
+  CodeInline, CodeBlock(带 lang), List(unordered), ListItem,
+  Link(href), Image(src,alt), Blockquote, HorizontalRule, BlankLine.
+
+public_interface:
+  - "export type ASTNode = DocumentNode | HeadingNode | ... | BlankLineNode (15 种)"
+  - "export type BlockNode = HeadingNode | ParagraphNode | CodeBlockNode | ListNode | BlockquoteNode | HorizontalRuleNode | BlankLineNode"
+  - "export type InlineNode = TextNode | BoldNode | ItalicNode | CodeInlineNode | LinkNode | ImageNode | BlankLineNode"
+  - "export function buildAST(tokens: Token[]): DocumentNode"
+
+dependencies:
+  lexer: "src/lexer.ts — Token/TokenType 类型定义"
+
+dependents:
+  - "src/renderer.ts — 递归遍历 AST 生成 HTML"
+  - "src/cli.ts — 调用 buildAST 串联 lexer→AST→renderer 管道"
+
+constraints:
+  - "text: 合并连续 TextNode（run-length compression）"
+  - "list: 连续 UNORDERED_LIST token 合并到一个 ListNode"
+  - "link/image raw 中包含的 text 片段不走递归内联解析"
+  - "CodeBlock 的 lang 从 token raw 第一行 ```lang 中提取"
+
+known_issues: []
+
+last_updated: "2026-05-14"

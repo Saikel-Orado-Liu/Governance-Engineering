@@ -1,0 +1,29 @@
+# template — Mustache 模板引擎
+
+name: template
+path: src/template.ts
+type: module
+language: TypeScript 5.6
+description: >
+  简约 Mustache 风格模板引擎，支持 {{var}} 占位符替换（自动 HTML 转义）。
+  内置 DEFAULT_TEMPLATE 提供 HTML5 文档骨架。
+
+public_interface:
+  - "export const DEFAULT_TEMPLATE: string — 默认 HTML5 文档模板"
+  - "export function renderTemplate(template: string, vars: Record<string, string>): string"
+
+dependencies:
+  renderer: "src/renderer.js — 导入 escapeHtml 做模板值转义"
+
+dependents:
+  - "src/cli.ts — 调用 renderTemplate 包裹生成页面"
+
+constraints:
+  - "仅支持 {{var}} 语法（无节、无部分）"
+  - "所有插值自动通过 escapeHtml 转义"
+  - "不存在的变量替换为空字符串"
+  - "DEFAULT_TEMPLATE 插槽: {{title}}, {{style}}, {{content}}"
+
+known_issues: []
+
+last_updated: "2026-05-14"

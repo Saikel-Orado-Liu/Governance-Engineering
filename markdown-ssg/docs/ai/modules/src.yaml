@@ -9,17 +9,26 @@ description: >
   通过 src/index.ts 暴露 CLI 接口。
 
 public_interface:
-  - "CLI 命令: md-ssg build <src> <out>, md-ssg serve"
+  - "CLI 命令: md-ssg build <src> <out> [--template <path>] [--css <path>]"
+  - "CLI 命令: md-ssg serve <src> <out> [--port <port>]"
+  - "导出: buildAST, renderToHTML, escapeHtml, renderTemplate, DEFAULT_TEMPLATE"
+  - "导出类型: 全部 15 种 ASTNode discriminated union"
 
 dependencies:
   lexer: "src/lexer.ts — 两阶段 Markdown 词法分析器"
+  ast: "src/ast.ts — AST 节点类型和 buildAST 构建器"
+  renderer: "src/renderer.ts — HTML 递归渲染器 + XSS 转义"
+  template: "src/template.ts — Mustache {{var}} 模板引擎"
+  cli: "src/cli.ts — CLI 命令实现 (build/serve)"
 
 dependents: []
 
 constraints:
   - "ES2022 target, ESNext module"
   - "strict 模式开启"
+  - "AST 作为 lexer 与 renderer 之间的接口边界"
+  - "CLI 接受 --template/--css 路径参数，需白名单校验防路径遍历"
 
 known_issues: []
 
-last_updated: "2026-05-12"
+last_updated: "2026-05-14"

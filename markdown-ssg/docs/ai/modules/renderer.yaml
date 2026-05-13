@@ -1,0 +1,31 @@
+# renderer — HTML 递归渲染器
+
+name: renderer
+path: src/renderer.ts
+type: module
+language: TypeScript 5.6
+description: >
+  递归遍历 AST 树生成 HTML 字符串。包含 escapeHtml 工具函数用于 XSS 防护。
+  每个 ASTNode 类型有对应的 HTML 标签映射规则。
+
+public_interface:
+  - "export function escapeHtml(text: string): string — 转义 HTML 特殊字符 (& < > \" ')"
+  - "export function renderToHTML(node: ASTNode): string — 递归渲染 AST 为 HTML"
+
+dependencies:
+  ast: "src/ast.ts — AST 节点类型"
+
+dependents:
+  - "src/cli.ts — 调用 renderToHTML 生成页面 HTML"
+  - "src/template.ts — 导入 escapeHtml 做模板值转义"
+
+constraints:
+  - "BlockNode 渲染自动包裹 <p> 或对应块级标签"
+  - "ImageNode 渲染为 <img src=\"...\" alt=\"...\" />"
+  - "LinkNode 渲染为 <a href=\"...\">...</a>"
+  - "escapeHtml 在模板插值和内联节点文本中统一调用"
+  - "CodeBlockNode 渲染为 <pre><code class=\"language-{lang}\">"
+
+known_issues: []
+
+last_updated: "2026-05-14"

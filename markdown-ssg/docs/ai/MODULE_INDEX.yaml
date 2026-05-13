@@ -7,6 +7,31 @@ modules:
     type: application
     description: "CLI 入口和核心逻辑 — Markdown 静态站点生成器"
     card: docs/ai/modules/src.yaml
+  - name: ast
+    path: src/ast.ts
+    type: module
+    description: "AST 节点类型定义和 buildAST 构建器"
+    card: docs/ai/modules/ast.yaml
+  - name: renderer
+    path: src/renderer.ts
+    type: module
+    description: "HTML 递归渲染器 + XSS 转义"
+    card: docs/ai/modules/renderer.yaml
+  - name: template
+    path: src/template.ts
+    type: module
+    description: "Mustache {{var}} 模板引擎"
+    card: docs/ai/modules/template.yaml
+  - name: cli
+    path: src/cli.ts
+    type: module
+    description: "CLI 命令实现 (build/serve)"
+    card: docs/ai/modules/cli.yaml
+  - name: server
+    path: src/server.ts
+    type: module
+    description: "HTTP 开发服务器 + SSE 热刷新"
+    card: docs/ai/modules/server.yaml
 
 standards:
   - file: docs/ai/standards/ts-checklist.yaml

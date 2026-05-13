@@ -1,0 +1,31 @@
+# cli — CLI 命令实现
+
+name: cli
+path: src/cli.ts
+type: module
+language: TypeScript 5.6
+description: >
+  md-ssg CLI 命令实现。build 命令读取 Markdown 文件执行
+  lexer→AST→renderer→template 全管道；serve 命令委托 server 模块。
+  含路径白名单校验防止路径遍历攻击。
+
+public_interface:
+  - "export function buildAll(srcDir: string, outDir: string, template?: string, css?: string): BuildResult"
+  - "export function main(): void — CLI 入口（解析 process.argv）"
+
+dependencies:
+  lexer: "src/lexer.ts — 词法分析"
+  ast: "src/ast.ts — AST 构建"
+  renderer: "src/renderer.ts — HTML 渲染"
+  template: "src/template.ts — 模板包裹"
+
+dependents:
+  - "src/server.ts — 导入 buildAll 做自动重建"
+
+constraints:
+  - "--template/--css 路径必须为 .html/.css 文件且在项目目录下"
+  - "buildAll 在 server 自动重建时被调用"
+
+known_issues: []
+
+last_updated: "2026-05-14"

@@ -14,3 +14,19 @@ patterns:
       适合文件规模较小（<1MB）、不需要处理深层嵌套语法的场景。
     verified_count: 1
     last_used: "2026-05-12"
+
+  - pattern_id: P-002
+    date: "2026-05-14"
+    name: "AST 管道架构"
+    description: >
+      在词法分析器和渲染器之间插入 AST 中间层，形成
+      Token[] → buildAST → DocumentNode → renderToHTML → HTML
+      的管道架构。Token 和 HTML 不直接耦合，通过 AST 作为接口边界隔离。
+      每层职责单一：Lexer 只管产生扁平 Token，AST builder 处理层级组合，
+      Renderer 只需 switch 匹配节点类型递归输出 HTML。
+    context: >
+      源语言（Markdown）有层级嵌套语法（列表内段落、段落内内联样式），
+      且渲染逻辑需要在多个输出格式之间切换或扩展的场景。
+      适合中小规模标记语言处理工具。
+    verified_count: 1
+    last_used: "2026-05-14"

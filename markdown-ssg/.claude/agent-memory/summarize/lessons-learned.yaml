@@ -20,3 +20,19 @@ entries:
       2) 如不确定或文件深度层级较深，在新类自己的头文件中直接声明所需宏；
       3) 对日志类别使用独立的 DECLARE_LOG_CATEGORY_EXTERN，不依赖外部头文件传递；
       4) 若使用模块级日志类别（如 LogTest），确保其在每个使用位置都能找到定义。
+
+  - id: ll-019
+    date: "2026-05-14"
+    task: "实现 AST + 渲染器 + 模板引擎 + CLI + 开发服务器"
+    category: logic
+    lesson: >
+      CLI 工具接受 --template/--css 文件路径参数时容易忽略路径遍历防护。
+      如果不对用户提供的路径做白名单校验（resolve + startsWith 项目目录），
+      攻击者可通过 ../../../etc/passwd 读取任意文件。
+    symptom: >
+      Inspector 标记为 MAJOR 安全漏洞。修复前，--template 参数可指向项目目录外的
+      任意文件，导致敏感文件内容被包含到生成的页面中。
+    prevention: >
+      所有用户提供的文件路径参数：1) 使用 path.resolve() 解析为绝对路径；
+      2) 校验是否以项目目录为前缀（startsWith）；3) 拒绝包含 .. 段落的路径。
+      对模板和 CSS 文件路径实施白名单校验。

@@ -1,0 +1,29 @@
+# server — 开发服务器
+
+name: server
+path: src/server.ts
+type: module
+language: TypeScript 5.6
+description: >
+  HTTP 静态文件服务器 + fs.watch 文件监听 + SSE 热刷新。
+  源文件变更时自动触发 buildAll 重建并通过 SSE 推送 reload 事件到浏览器。
+
+public_interface:
+  - "export interface ServerOptions { srcDir: string; outDir: string; port: number; template: string; css: string; }"
+  - "export function startServer(options: ServerOptions): void"
+
+dependencies:
+  cli: "src/cli.ts — 导入 buildAll 做自动重建"
+
+dependents: []
+
+constraints:
+  - "使用原生 node:http（无 Express 依赖）"
+  - "SSE 端点: GET /__reload — 推送 'event: reload\\ndata: {timestamp}'"
+  - "fs.watch 防抖 300ms，避免高频重建"
+  - "MIME 类型映射: .html→text/html, .css→text/css, .js→application/javascript"
+
+known_issues:
+  - "fs.watch 在 Windows 上可能触发重复事件（防抖已处理）"
+
+last_updated: "2026-05-14"
