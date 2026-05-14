@@ -17,6 +17,7 @@ public_interface:
   - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）
   - "Unit"                            # 单位实体类，row/col/hp 私有，getter 只读访问
   - "UnitManager"                     # 管理器，通过构造函数注入 MapGrid 引用
+  - "MovementEngine"                  # BFS/Dijkstra 加权图移动范围计算引擎，构造函数注入 UnitManager
 
 exports:
   - "UnitType (const enum)"           # Warrior/Archer/Knight/Mage
@@ -28,13 +29,17 @@ exports:
   - "UnitManager.getUnitAt()"         # 单格查询
   - "UnitManager.getAllUnits()"       # 全量查询（过滤已死亡）
   - "UnitManager.getUnitsByTeam()"    # 按队伍过滤（过滤已死亡）
+  - "MovementEngine.getReachableCells()"  # BFS 加权图可达范围计算，返回 {row,col}[]
+  - "MovementEngine"                 # 类，构造函数 new MovementEngine(unitManager)
 
 components:
   - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
   - "Unit.ts":                        # Unit 实体类，row/col/hp 私有 + getter，setPosition/takeDamage 受控修改，克制乘数计算，isAlive
   - "UnitManager.ts":                 # 管理器，spawnUnit/moveUnit 含边界检查，getAllUnits/getUnitsByTeam 过滤死亡单位
+  - "MovementEngine.ts":             # BFS/Dijkstra 加权图移动计算引擎，getReachableCells 返回可达单元格列表
   - "__tests__/Unit.test.ts":         # 10 项测试：构造函数验证4种单位属性、takeDamage伤害减免(min1)、克制乘数(1.5/0.67)、isAlive
   - "__tests__/UnitManager.test.ts":  # 10 项测试：spawnUnit通行/不可通行/占用/越界，getUnitAt/getUnitsByTeam过滤/移动合法性
+  - "__tests__/MovementEngine.test.ts": # 6 项测试：全Plain 24格可达、Forest加权成本、不可通行阻塞、单位占用、moveRange=0边界、完全包围
 
 constraints:
   - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"
@@ -50,6 +55,9 @@ development_notes:
   - "row/col/hp 私有 + getter 保证外部只读，通过 setPosition/takeDamage 受控修改"
   - "renderUnits 前置 filter(isAlive) 避免循环内条件判断"
   - "UnitManager 构造函数注入 MapGrid，不持有 MapGrid 的创建权"
+  - "MovementEngine 构造函数注入 UnitManager（非 MapGrid），用于 isOccupied 占用查询"
+  - "BFS 使用 Map<string,number> bestCost 替代 visited Set，支持加权地形（Forest cost=2）下最优路径"
+  - "bestCost 在占用检查前更新，避免同格被多方向重复处理；getReachableCells 返回结果不含起点自身"
 
 lessons_learned:
   - "克制表使用对称数据结构（[attacker][defender] 二维对象查找），避免链式 if-else"

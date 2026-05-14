@@ -15,6 +15,7 @@ const TILE_COLORS: Record<TileType, string> = {
 export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
   private currentGrid: MapGrid | null = null;
+  private flashingUnits: Set<Unit> = new Set();
   onClick: ((row: number, col: number, type: TileType) => void) | null = null;
 
   constructor(options: { canvas: HTMLCanvasElement; onClick?: (row: number, col: number, type: TileType) => void }) {
@@ -48,6 +49,15 @@ export class MapRenderer {
       const cx = unit.col * TILE_SIZE + TILE_SIZE / 2;
       const cy = unit.row * TILE_SIZE + TILE_SIZE / 2;
 
+      // Flashing units render in red
+      if (this.flashingUnits.has(unit)) {
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.fill();
+        continue;
+      }
+
       // Team-color filled circle
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -69,6 +79,14 @@ export class MapRenderer {
       this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
       this.ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
+  }
+
+  setFlashingUnits(units: Unit[]): void {
+    this.flashingUnits = new Set(units);
+  }
+
+  clearFlashingUnits(): void {
+    this.flashingUnits.clear();
   }
 
   render(grid: MapGrid): void {

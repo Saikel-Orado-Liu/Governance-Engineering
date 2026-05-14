@@ -2,6 +2,8 @@ import { MapGenerator } from './map/MapGenerator';
 import { MapRenderer } from './map/MapRenderer';
 import { UnitManager } from './unit/UnitManager';
 import { MovementEngine } from './unit/MovementEngine';
+import { executeCombat } from './unit/CombatSystem';
+import { TurnManager, type EnemyAction } from './unit/TurnManager';
 import { UnitType } from './unit/UnitType';
 import { GRID_SIZE } from './map/MapGrid';
 import type { Unit } from './unit/Unit';
@@ -12,9 +14,64 @@ const grid = generator.generate();
 
 const manager = new UnitManager(grid);
 const movementEngine = new MovementEngine(manager);
+const turnManager = new TurnManager(grid, manager, executeCombat);
 
 let selectedUnit: Unit | null = null;
 let reachableCells: { row: number; col: number }[] = [];
+let isEnemyTurn = false;
+
+const DIRECTION_OFFSETS: [number, number][] = [
+  [-1, 0], [1, 0], [0, -1], [0, 1],
+];
+
+function getAdjacentEnemies(unit: Unit): Unit[] {
+  const enemies: Unit[] = [];
+  for (const [dr, dc] of DIRECTION_OFFSETS) {
+    const nr = unit.row + dr;
+    const nc = unit.col + dc;
+    const u = manager.getUnitAt(nr, nc);
+    if (u && u.team !== unit.team && u.isAlive()) {
+      enemies.push(u);
+    }
+  }
+  return enemies;
+}
+
+function processEnemyActions(actions: EnemyAction[], index: number): void {
+  if (index >= actions.length) {
+    // All actions processed — restore player turn
+    turnManager.startPlayerTurn();
+    isEnemyTurn = false;
+    updateView();
+    return;
+  }
+
+  const action = actions[index];
+
+  if (action.action === 'attack' && action.combatResult) {
+    // Flash damaged units that are still alive
+    const flashing: Unit[] = [];
+    if (action.combatResult.defender.isAlive() && action.combatResult.damageDealt > 0) {
+      flashing.push(action.combatResult.defender);
+    }
+    if (action.combatResult.attacker.isAlive() && action.combatResult.damageReceived > 0) {
+      flashing.push(action.combatResult.attacker);
+    }
+    renderer.setFlashingUnits(flashing);
+    updateView();
+    setTimeout(() => {
+      renderer.clearFlashingUnits();
+      updateView();
+      setTimeout(() => processEnemyActions(actions, index + 1), 200);
+    }, 400);
+  } else if (action.action === 'move') {
+    updateView();
+    setTimeout(() => processEnemyActions(actions, index + 1), 300);
+  } else {
+    // idle
+    setTimeout(() => processEnemyActions(actions, index + 1), 200);
+  }
+}
 
 function trySpawn(type: UnitType, team: number, row: number, col: number): Unit | null {
   const unit = manager.spawnUnit(type, team, row, col);
@@ -42,6 +99,8 @@ function updateView(): void {
 const renderer = new MapRenderer({
   canvas,
   onClick: (row: number, col: number) => {
+    if (isEnemyTurn || turnManager.getState() === 'gameOver') return;
+
     const clickedUnit = manager.getUnitAt(row, col);
 
     if (clickedUnit && clickedUnit.team === 0) {
@@ -53,9 +112,32 @@ const renderer = new MapRenderer({
       // Clicked a highlighted cell — move unit there
       const moved = manager.moveUnit(selectedUnit, row, col);
       if (moved) {
+        const movedUnit = selectedUnit;
         selectedUnit = null;
         reachableCells = [];
-        updateView();
+
+        // Combat detection after movement
+        const adjacentEnemies = getAdjacentEnemies(movedUnit);
+        if (adjacentEnemies.length > 0) {
+          const target = adjacentEnemies.sort((a, b) => a.hp - b.hp)[0];
+          executeCombat(movedUnit, target, manager);
+          renderer.setFlashingUnits([target]);
+          updateView();
+
+          // Check game over after player attack
+          const gameOver = turnManager.isGameOver();
+
+          setTimeout(() => {
+            renderer.clearFlashingUnits();
+            updateView();
+            if (gameOver) {
+              const playerAlive = manager.getUnitsByTeam(0).length > 0;
+              alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
+            }
+          }, 400);
+        } else {
+          updateView();
+        }
       }
       // If moveUnit returns false, keep selection intact
     } else {
@@ -65,6 +147,43 @@ const renderer = new MapRenderer({
       updateView();
     }
   },
+});
+
+// Add End Turn button
+const endTurnBtn = document.createElement('button');
+endTurnBtn.textContent = 'End Turn';
+endTurnBtn.style.cssText = [
+  'position: fixed',
+  'top: 12px',
+  'right: 12px',
+  'padding: 10px 20px',
+  'font-size: 16px',
+  'z-index: 100',
+  'cursor: pointer',
+  'background: #2c3e50',
+  'color: #fff',
+  'border: none',
+  'border-radius: 4px',
+].join(';');
+document.body.appendChild(endTurnBtn);
+
+endTurnBtn.addEventListener('click', () => {
+  if (isEnemyTurn || turnManager.getState() !== 'player') return;
+
+  isEnemyTurn = true;
+  const actions = turnManager.endPlayerTurn();
+
+  // Check game over
+  if (turnManager.getState() === 'gameOver') {
+    isEnemyTurn = false;
+    const playerAlive = manager.getUnitsByTeam(0).length > 0;
+    const msg = playerAlive ? 'Player Wins!' : 'Enemy Wins!';
+    updateView();
+    setTimeout(() => alert(msg), 200);
+    return;
+  }
+
+  processEnemyActions(actions, 0);
 });
 
 // Deploy team 0 (Blue) — 1 unit at (0,0), guaranteed Plain

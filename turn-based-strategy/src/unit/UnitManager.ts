@@ -51,6 +51,17 @@ export class UnitManager {
     return true;
   }
 
+  removeUnit(unit: Unit): void {
+    const index = this.units.indexOf(unit);
+    if (index !== -1) {
+      this.units.splice(index, 1);
+    }
+  }
+
+  getGrid(): MapGrid {
+    return this.grid;
+  }
+
   isOccupied(row: number, col: number): boolean {
     return this.units.some(u => u.isAlive() && u.row === row && u.col === col);
   }

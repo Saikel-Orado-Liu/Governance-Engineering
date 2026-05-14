@@ -15,7 +15,7 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits 单位渲染
+  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights 渲染方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
