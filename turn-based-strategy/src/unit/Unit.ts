@@ -1,4 +1,5 @@
-import { UnitType, UNIT_CONFIGS, getCounterMultiplier } from './UnitType';
+import { type UnitType, UNIT_CONFIGS, getCounterMultiplier } from './UnitType';
+import { type AbilityType, type StatusEffect } from './AbilityConfig';
 
 export class Unit {
   readonly type: UnitType;
@@ -15,6 +16,10 @@ export class Unit {
   readonly def: number;
   readonly attackRange: number;
   readonly moveRange: number;
+  readonly skill: AbilityType;
+  skillCooldown: number = 0;
+  effects: StatusEffect[] = [];
+  movedThisTurn: boolean = false;
 
   constructor(type: UnitType, team: number, row: number, col: number) {
     const config = UNIT_CONFIGS[type];
@@ -28,6 +33,7 @@ export class Unit {
     this.def = config.def;
     this.attackRange = config.attackRange;
     this.moveRange = config.moveRange;
+    this.skill = config.skill;
   }
 
   isAlive(): boolean {

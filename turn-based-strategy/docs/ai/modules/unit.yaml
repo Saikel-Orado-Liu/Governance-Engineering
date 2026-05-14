@@ -1,5 +1,5 @@
 # Module Card: unit
-# 单位系统 — 4种单位类型、属性、克制关系、战斗系统与回合管理
+# 单位系统 — 4种单位类型、属性、克制关系、战斗系统、技能系统与回合管理
 
 module: unit
 path: "src/unit/"
@@ -18,13 +18,13 @@ dependencies:
     - "src/core/Coordinate.ts"        # DIRECTION_OFFSETS 共享常量来源（CombatSystem/MovementEngine/EnemyAI/main.ts 共用）
 
 public_interface:
-  - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）
-  - "Unit"                            # 单位实体类，row/col/hp 私有，getter 只读访问
+  - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move/skill）
+  - "Unit"                            # 单位实体类，row/col/hp 私有 + getter 只读；skill/skillCooldown/effects/movedThisTurn 公共字段
   - "UnitManager"                     # 管理器，通过构造函数注入 MapGrid 引用
   - "MovementEngine"                  # BFS/Dijkstra 加权图移动范围计算引擎，构造函数注入 UnitManager
   - "executeCombat"                   # 战斗执行纯函数：攻击->反击->阵亡移除，返回 CombatResult
   - "CombatResult"                    # 战斗结果：伤害、阵亡标志、执行日志
-  - "TurnManager"                     # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统 + actedUnits 战斗追踪 + gameOver 检测
+  - "TurnManager"                     # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统 + actedUnits 战斗追踪 + gameOver 检测 + advanceCooldowns 集成
   - "TurnState"                       # Phase 的类型别名（向后兼容）
   - "EnemyAction"                     # 敌方行动记录：move/attack/idle，定义移至 EnemyAI.ts
   - "Phase"                           # 五阶段枚举：Deploy/PlayerMove/PlayerCombat/EnemyAI/End
@@ -34,10 +34,20 @@ public_interface:
   - "DeployManager"                   # 部署管理器类，接收 UnitManager + GameConfig，executeDeploy 返回 DeployResult
   - "DeployResult"                    # 部署结果接口：{ deployed: Unit[], failed: FailedDeploy[] }
   - "FailedDeploy"                    # 部署失败记录：{ team, index, type, intendedRow, intendedCol, reason }
+  - "AbilityType (enum)"             # 能力枚举：None/ShieldBash/Volley/Charge/Fireball
+  - "AbilityConfig"                   # 能力配置接口：id/name/damage/cooldown/range/aoeRadius/description
+  - "StatusEffect"                    # 状态效果接口（预留）：type/duration
+  - "ABILITY_CONFIGS"                 # 能力配置常量表，四个能力各一条
+  - "canUseAbility"                   # 技能使用前校验纯函数：存活、有效类型、冷却、射程、Charge 直线条件
+  - "useAbility"                      # 技能执行纯函数：设置冷却、伤害目标、AoE/Charge/Single-target 三变体
+  - "advanceCooldowns"                # 全单位冷却递减 1（min 0），每回合开始调用
+  - "getCooldown"                     # 读取单位当前冷却值
+  - "CanUseAbilityResult"            # 校验结果接口：{ usable, reason? }
+  - "AbilityResult"                   # 执行结果接口：{ success, caster, target, abilityType, damageDealt, targetDied, log }
 
 exports:
   - "UnitType (const enum)"           # Warrior/Archer/Knight/Mage
-  - "UNIT_CONFIGS"                    # 属性表：HP60-100, ATK22-35, DEF3-15
+  - "UNIT_CONFIGS"                    # 属性表：HP60-100, ATK22-35, DEF3-15；每单位含 skill: AbilityType 映射
   - "COUNTER_TABLE"                   # 克制表：Archer->Knight, Knight->Mage, Mage->Warrior, Warrior->Archer
   - "getCounterMultiplier()"          # 返回 1.5（克制）/ 0.67（被克制）/ 1.0（无关系）
   - "UnitManager.spawnUnit()"         # 放置单位（含通行/占用/越界校验）
@@ -74,24 +84,37 @@ exports:
   - "DeployResult (interface)"        # { deployed: Unit[], failed: FailedDeploy[] }
   - "FailedDeploy (interface)"        # { team, index, type, intendedRow, intendedCol, reason }
   - "TurnManager.completeDeploy()"    # 从 Phase.Deploy 过渡到 Phase.PlayerMove，返回 boolean；失败条件：当前 Phase 非 Deploy
+  - "AbilityType (enum)"             # None/ShieldBash/Volley/Charge/Fireball（-1/0/1/2/3）
+  - "ABILITY_CONFIGS"                # 能力配置表：ShieldBash dmg=5 cd=2 range=1；Volley dmg=3 cd=3 range=3 aoeRadius=1；Charge dmg=4 cd=3 range=4；Fireball dmg=6 cd=2 range=3
+  - "AbilityConfig (interface)"      # { id, name, damage, cooldown, range, aoeRadius?, description }
+  - "StatusEffect (interface)"       # { type, duration } — 预留，未实例化
+  - "canUseAbility()"                # 校验纯函数：存活/非None/冷却=0/射程内/Charge直线，返回 CanUseAbilityResult
+  - "useAbility()"                   # 执行纯函数：Volley AoE（Manhattan菱形）/Charge（直线穿透）/单目标，返回 AbilityResult
+  - "advanceCooldowns()"             # 全单位冷却-1（>=0），startPlayerTurn 自动调用
+  - "getCooldown()"                  # 返回 skillCooldown 值
+  - "CanUseAbilityResult"           # { usable: boolean, reason?: string }
+  - "AbilityResult"                  # { success, caster, target, abilityType, damageDealt, targetDied, log }
 
 components:
-  - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
-  - "Unit.ts":                        # Unit 实体类，row/col/hp 私有 + getter，setPosition/takeDamage 受控修改，克制乘数计算，isAlive
+  - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口（含 skill: AbilityType）, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
+  - "Unit.ts":                        # Unit 实体类，row/col/hp 私有 + getter，setPosition/takeDamage 受控修改，skill/skillCooldown/effects/movedThisTurn 公共字段，克制乘数计算，isAlive
+  - "AbilityConfig.ts":              # AbilityType 枚举（4 能力 + None），AbilityConfig/StatusEffect 接口，ABILITY_CONFIGS 常量表
+  - "AbilitySystem.ts":              # 纯函数模块：canUseAbility/useAbility/advanceCooldowns/getCooldown，CanUseAbilityResult/AbilityResult 接口；Volley AoE Manhattan 菱形 + Charge 直线穿透 + 单目标
   - "UnitManager.ts":                 # 管理器，spawnUnit/moveUnit 含边界检查，getAllUnits/getUnitsByTeam 过滤死亡单位，removeUnit 物理移除
   - "MovementEngine.ts":             # BFS/Dijkstra 加权图移动计算引擎，getReachableCells 返回可达单元格列表
   - "CombatSystem.ts":               # executeCombat 纯函数：攻击->反击->阵亡移除，DIRECTION_OFFSETS 4方向相邻判定，reverse-calculation 伤害交付
-  - "TurnManager.ts":                # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统（onPhaseEnter/onPhaseExit/onPhaseChange + actionHistory）
+  - "TurnManager.ts":                # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统（onPhaseEnter/onPhaseExit/onPhaseChange + actionHistory）+ advanceCooldowns 集成 + movedThisTurn 重置
   - "PhaseTypes.ts":                 # Phase 字符串枚举（5阶段）、PHASE_SEQUENCE 有序数组、canTransitionTo 转换校验（含 loop/skip 规则）
   - "EnemyAI.ts":                    # EnemyAI 类：贪心 Manhattan 策略，executeTurn/findNearest/getAdjacentEnemies/findBestAdjacentMove；EnemyAction 接口 + CombatFn 类型
+  - "DeployManager.ts":              # DeployManager 类：executeDeploy 部署两队单位，trySpawnFallback 8 方向相邻回退（先四方后对角）处理占用/不可通行，DeployResult/FailedDeploy 接口
   - "__tests__/Unit.test.ts":         # 10 项测试：构造函数验证4种单位属性、takeDamage伤害减免(min1)、克制乘数(1.5/0.67)、isAlive
   - "__tests__/UnitManager.test.ts":  # 10 项测试：spawnUnit通行/不可通行/占用/越界，getUnitAt/getUnitsByTeam过滤/移动合法性
   - "__tests__/MovementEngine.test.ts": # 6 项测试：全Plain 24格可达、Forest加权成本、不可通行阻塞、单位占用、moveRange=0边界、完全包围
   - "__tests__/CombatSystem.test.ts": # 9 项测试：基础伤害、反击、阵亡(双方向)、克制/被克制乘数、最小伤害、死亡移除、回合存活保护
   - "__tests__/TurnManager.test.ts":  # 13 项测试：初始状态(Deploy)、全周期切换(PlayerMove→PlayerCombat→EnemyAI)、敌方移动/攻击、gameOver(双方向)、actedUnits追踪、isAllUnitsActed、getRemainingCombatUnits、endPlayerCombat 前置/后置 gameOver
   - "__tests__/EnemyAI.test.ts":      # 5 项测试：findNearest 距离、findBestAdjacentMove 有效性、getAdjacentEnemies 相邻过滤、executeTurn 移动/攻击/空结果
-  - "DeployManager.ts":               # DeployManager 类：executeDeploy 部署两队单位，trySpawnFallback 8 方向相邻回退（先四方后对角）处理占用/不可通行，DeployResult/FailedDeploy 接口
   - "__tests__/DeployManager.test.ts": # 6 项测试：部署数量、编队类型匹配、部署坐标正确、占用回退、不可通行回退、完全阻塞失败报告
+  - "__tests__/AbilitySystem.test.ts": # 13 项测试：canUseAbility 校验5条件、useAbility 单目标伤害/冷却/阵亡/失败、Volley AoE Manhattan 菱形覆盖/对角线排除、advanceCooldowns 递减、getCooldown 读取
 
 constraints:
   - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"
@@ -107,13 +130,21 @@ constraints:
   - "Phase 特殊转换：PlayerCombat→End 绕过 EnemyAI（gameOver 快速结束）；gameOver 在 endPlayerCombat 前后双重检测"
   - "PlayerCombat 阶段交互：选己方单位→显示相邻敌人红色高亮→点击攻击→标记已行动（actedUnits）；全部行动后自动/手动结束"
   - "部署按 team 顺序执行，单个坐标失败时 8 方向回退（先四方后对角）；全部失败仍继续后续部署，失败详情记录在 DeployResult.failed[] 中"
+  - "技能系统为纯函数模块（非类）：canUseAbility/useAbility/advanceCooldowns/getCooldown 四函数无内部状态，接收 UnitManager 做实体查询"
+  - "技能冷却：useAbility 设置 skillCooldown = config.cooldown，advanceCooldowns 每回合减 1（最小 0）；startPlayerTurn 自动调用"
+  - "Volley AoE 使用 Manhattan 距离菱形区域（|dr|+|dc| ≤ aoeRadius），aoeRadius=1 覆盖 5 格（中心+4方向），排除对角线格"
+  - "Charge 需要直线路径（同行或同列），沿方向逐格扫描找第一个敌方单位；canUseAbility 使用 Manhattan 校验 range"
+  - "movedThisTurn 为预留字段，当前仅定义和 reset，未在移动逻辑中校验"
+  - "StatusEffect 接口预留，未实例化；effects 字段初始化为空数组"
 
 known_issues:
   - "CombatSystem.executeCombat 调用 Unit.takeDamage(atkDamage + defender.def) 使用 reverse-calculation 抵消内部伤害减免，调用方与 Unit 内部分式形成隐含耦合；若 Unit.takeDamage 修改公式，CombatSystem 需同步调整"
+  - "useAbility 直接设置 caster.skillCooldown = config.cooldown 并直接调用 unitManager.removeUnit(unit) 移除阵亡单位，无 setter 封装；若 Unit/UnitManager 未来添加副作用逻辑或校验，useAbility 需同步调整——与 CombatSystem reverse-calculation 同属外部耦合模式"
 
 development_notes:
   - "Unit 使用 new Unit() 直接构造，无静态工厂方法"
   - "row/col/hp 私有 + getter 保证外部只读，通过 setPosition/takeDamage 受控修改"
+  - "skill/skillCooldown/effects/movedThisTurn 为公共字段（非 getter 封装），外部可直接读写——这与 row/col/hp 的私有模式不同，原因是这些字段被多个外部系统（AbilitySystem/TurnManager）频繁修改，使用 getter+setter 会增加模板代码。但这也意味着未来添加校验逻辑需要修改所有调用方。"
   - "renderUnits 前置 filter(isAlive) 避免循环内条件判断"
   - "UnitManager 构造函数注入 MapGrid，不持有 MapGrid 的创建权"
   - "MovementEngine 构造函数注入 UnitManager（非 MapGrid），用于 isOccupied 占用查询"
@@ -129,7 +160,7 @@ development_notes:
   - "事件钩子系统使用 Set<callback> 替代 callback[]：Set 自动去重同一回调多次注册；onPhaseEnter/onPhaseExit/onPhaseChange 三个钩子覆盖进入/退出/变更三种粒度；actionHistory 数组记录每次 transition 的时间戳，用于调试和回放"
   - "TurnManager.endPlayerTurn() 从 PlayerMove 过渡到 PlayerCombat（不再直接到 EnemyAI）；返回 []（空数组），EnemyAI 执行已移至 endPlayerCombat()——实现玩家移动→战斗→敌方回合的三步分离"
   - "TurnManager.endPlayerCombat() 封装了 PlayerCombat→EnemyAI 过渡：1) 前置 gameOver 检测（skip 到 End）；2) nextPhase(EnemyAI)；3) 执行敌方回合；4) 后置 gameOver 检测（玩家在敌方回合被全灭→End）；前后双检测覆盖战斗过程和敌方回合两个 gameOver 时间点"
-  - "TurnManager.startPlayerTurn() 为在 EnemyAI 行动全部处理完毕后由 main.ts 调用恢复玩家阶段"
+  - "TurnManager.startPlayerTurn() 为在 EnemyAI 行动全部处理完毕后由 main.ts 调用恢复玩家阶段；Phase 6 新增 advanceCooldowns 调用和 movedThisTurn 重置"
   - "TurnManager 初始状态为 Phase.Deploy（此前为 Phase.PlayerMove）；构造函数不再立刻进入玩家回合，需要外部先调用 deployManager.executeDeploy() 部署单位，再调 turnManager.completeDeploy() 过渡到 PlayerMove"
   - "completeDeploy() 为轻量方法：仅校验当前为 Deploy 阶段 → 调用 nextPhase(PlayerMove)；不关心实际部署状态（由调用方保证先执行部署），返回 boolean 表示 transition 是否发生"
   - "DeployManager 职责单一：读取 GameConfig 的 deployCoordinates/formations/teamSize，遍历每个 team 的部署坐标调用 unitManager.spawnUnit()；主坐标失败时 trySpawnFallback 按 8 方向回退（[0,1][1,0][0,-1][-1,0] 四方优先，[1,1][1,-1][-1,1][-1,-1] 对角次之）；回退失败记录 FailedDeploy，不中断后续部署"
@@ -138,6 +169,12 @@ development_notes:
   - "PlayerCombat 交互流程（main.ts onClick）：点击己方单位→getAdjacentEnemies 4 方向检测→renderAttackHighlights 红色高亮敌人→点击高亮目标执行 combat→markUnitActed→400ms 闪烁后 auto-advance 或等待手动 End Combat 按钮"
   - "combatInProgress 布尔标志防止 PlayerCombat 阶段 setTimeout 动画链期间的竞态条件：End Combat 按钮和 Canvas 点击事件在 combatInProgress=true 时直接 return，避免 endPlayerCombat() 或 markUnitActed() 被重复调用；在 setTimeout 链末尾（updateView 后）重置为 false"
   - "TurnManager.isGameOver() 提取为公开方法，供 main.ts 在 combatInProgress→setTimeout 回调中调用，避免将 isGameOver 逻辑复制到 UI 层；endPlayerCombat 内部同样使用此方法做前后双重 gameOver 检测"
+  - "AbilitySystem 遵循 CombatSystem 的纯函数模块模式：canUseAbility/useAbility/advanceCooldowns/getCooldown 为顶层导出函数而非类方法，接收 UnitManager 参数做实体查询，返回 AbilityResult/CanUseAbilityResult 结构化结果"
+  - "技能配置（ABILITY_CONFIGS）与单位配置（UNIT_CONFIGS）分离设计：UNIT_CONFIGS 通过 skill: AbilityType 引用能力类型，能力详细参数在 ABILITY_CONFIGS 中定义，添加新能力不修改 UNIT_CONFIGS 结构"
+  - "Volley AoE 使用 Manhattan 距离而非 Chebyshev（正方形）：菱形区域面积增长更平缓（面积≈2r²+2r+1 vs (2r+1)²），避免小半径下区域过大导致平衡问题；实现上使用 3x3 双重循环 + |dr|+|dc| > aoeRadius 过滤"
+  - "Charge 特殊实现：canUseAbility 中校验直线路径（same row or col），useAbility 中沿方向逐格扫描找第一个非友方单位；不同于普通技能直接定位 target，Charge 的 target 参数在当前实现中仅作为方向指示"
+  - "movedThisTurn 和 effects 字段为未来系统预留：movedThisTurn 在 startPlayerTurn 中重置，当前未在移动逻辑中校验；effects 初始化为空数组，StatusEffect 接口已定义但未实例化"
+  - "AbilityConfig 预留 aoeRadius 可选字段：仅 Volley 使用 aoeRadius=1；其他能力省略此字段，未来 AoE 能力可直接复用该字段及 Manhattan 菱形逻辑"
 
 lessons_learned:
   - "克制表使用对称数据结构（[attacker][defender] 二维对象查找），避免链式 if-else"
@@ -147,5 +184,6 @@ lessons_learned:
   - "renderUnits 作为 MapRenderer 的独立方法追加，不修改既有 render 签名，向后兼容"
   - "private + getter 模式替代 public readonly，后续可在 setter 添加校验而不破坏调用方"
   - "CombatSystem 使用 reverse-calculation 调用 takeDamage(atkDamage + def) 以精确传递预计算伤害——此模式在 Unit.takeDamage 与 CombatSystem.executeCombat 间形成了隐蔽的耦合契约，若取消防御抵消逻辑需同步修改两处"
+  - "AoE 技能实现时默认使用 3x3 双重循环（Chebyshev 正方形），但本游戏设计意图为 Manhattan 距离菱形范围。实现 AoE 时需显式使用 |dr|+|dc| > aoeRadius 过滤对角线格，并在 development_notes 中记录选择理由——正方形 vs 菱形选择影响游戏平衡（菱形面积增长更缓），不是可互换的实现细节"
 
 last_updated: "2026-05-15"

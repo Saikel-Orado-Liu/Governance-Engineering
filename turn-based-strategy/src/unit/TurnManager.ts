@@ -2,6 +2,7 @@ import { MapGrid } from '../map/MapGrid';
 import { UnitManager } from './UnitManager';
 import { Phase, canTransitionTo } from './PhaseTypes';
 import { EnemyAI, type EnemyAction, type CombatFn } from './EnemyAI';
+import { advanceCooldowns } from './AbilitySystem';
 import type { Unit } from './Unit';
 
 export type TurnState = Phase;
@@ -85,6 +86,8 @@ export class TurnManager {
   }
 
   startPlayerTurn(): void {
+    advanceCooldowns(this.unitManager.getAllUnits());
+    this.unitManager.getUnitsByTeam(0).forEach(u => u.movedThisTurn = false);
     this.nextPhase(Phase.PlayerMove);
   }
 

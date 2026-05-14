@@ -81,3 +81,22 @@ entries:
       力推FullConnectivity 的通用解法：从种子点 BFS 标记主分量 →
       扫描孤立可通行格 → BFS 任意地形找最短打通路径 → 平衡处理。
     resolved: true
+  - id: LL-022
+    date: "2026-05-15"
+    task: "Ability System Core — Config + Engine + Unit Integration"
+    category: logic
+    lesson: >
+      AoE 技能在网格游戏中可使用 Manhattan（菱形）或 Chebyshev（正方形）两种距离度量。
+      本游戏 Volley 技能使用 Manhattan 菱形（|dr|+|dc| ≤ aoeRadius），排除对角线格，
+      而非默认的 3x3 正方形。菱形面积增长更平缓（面积≈2r²+2r+1 vs (2r+1)²），
+      小半径下覆盖范围更可控（r=1 时菱形 5 格 vs 正方形 9 格），对游戏平衡影响显著。
+      实现时容易默认使用 3x3 双重循环而不加 Manhattan 过滤，需审查阶段主动发现。
+    symptom: >
+      Volley AoE 初始实现使用 3x3 正方形范围（9 格），导致对角线格也被伤害覆盖，
+      与设计意图的菱形 5 格不符。审查发现后修正为 3x3 双层循环 + |dr|+|dc| > aoeRadius 过滤。
+    prevention: >
+      实现网格 AoE 时：1) 明确选择 Manhattan（菱形）或 Chebyshev（正方形）距离度量并记录理由；
+      2) 双重循环遍历方形区域后加 Manhattan 距离过滤（if Math.abs(dr) + Math.abs(dc) > aoeRadius continue）；
+      3) 在 development_notes 中记录选择理由供后续能力设计参考；
+      4) 测试中显式验证边缘格是否被排除（如对角线格保持不变）以确认距离度量正确。
+    resolved: true

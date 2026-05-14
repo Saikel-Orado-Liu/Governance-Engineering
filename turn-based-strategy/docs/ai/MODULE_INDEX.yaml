@@ -19,7 +19,7 @@ modules:
     type: "feature"
     description: "单位系统 — 4种单位类型(Warrior/Archer/Knight/Mage) + 属性 + 克制关系 + UnitManager 管理器 + MapRenderer 单位渲染"
     card: "docs/ai/modules/unit.yaml"
-    last_updated: "2026-05-14"
+    last_updated: "2026-05-15"
   config:
     path: "src/config/"
     type: "utility"
