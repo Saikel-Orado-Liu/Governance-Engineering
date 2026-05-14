@@ -20,3 +20,20 @@ entries:
       2) 如不确定或文件深度层级较深，在新类自己的头文件中直接声明所需宏；
       3) 对日志类别使用独立的 DECLARE_LOG_CATEGORY_EXTERN，不依赖外部头文件传递；
       4) 若使用模块级日志类别（如 LogTest），确保其在每个使用位置都能找到定义。
+  - id: ll-019
+    date: "2026-05-14"
+    task: "MapRenderer 移除 console.log，改为公开 onClick 回调属性"
+    category: coding-standards
+    lesson: >
+      console.log 是调试阶段的产物，提交前必须移除。明确禁止的 console.log
+      不应出现在任何提交的代码中。移除 console.log 的正确替代方案是将调试信息
+      通过公开 API 暴露给消费者：MapRenderer.onClick 回调让外部决定如何处理点击事件，
+      既保留了调试能力又遵守了编码规范。
+    symptom: >
+      MapRenderer 的 click 事件处理中使用了 console.log 输出 tile 坐标和类型，
+      违反了编码规范中"禁止提交 console.log"的规则。
+    prevention: >
+      在 Canvas 组件中需要暴露交互信息给外部时：1) 优先使用公开回调属性模式
+      （如 onClick: ((row, col, type) => void) | null）；2) 构造函数使用 options
+      对象模式接收可选回调，避免参数位置依赖；3) 在 development_notes 中记录
+      此类设计决策供后续维护参考；4) 代码审查时重点检查 console.log 残留。

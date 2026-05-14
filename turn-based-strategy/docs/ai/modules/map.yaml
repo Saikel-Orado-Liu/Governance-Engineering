@@ -15,16 +15,18 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
+  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
   - "MapRenderer.render()"     # 在 Canvas 上绘制地图
+  - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，替代 console.log 调试
 
 components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
   - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ BFS (0,0)→(7,7) 可达性保证
-  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线
+  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线；options 对象构造函数，公开 onClick 点击回调
   - "__tests__/MapGrid.test.ts": # 13 项 vitest 测试（通行/移动力/边界/生成/路径保证）
 
 constraints:
@@ -35,10 +37,16 @@ constraints:
 
 known_issues: []
 
+development_notes:
+  - "console.log 禁止提交；调试信息通过公开回调（如 onClick）暴露给消费者"
+  - "构造函数使用 options 对象模式，便于后续扩展而不破坏调用方签名"
+
 lessons_learned:
   - "移动力成本与通行性分离设计（isPassable 为 boolean gate，getMoveCost 为数值计算）"
   - "TileType 使用 const enum 避免运行时查找，TILE_PROPERTIES 作为 Record 映射成本"
   - "BFS 路径保证是独立于 MapGenerator 的可测试功能点"
   - "地图渲染器无状态设计：每次 render() 从 MapGrid 快照绘制，不与游戏状态耦合"
+  - "移除 console.log 改为公开 onClick 回调，保持编码规范同时提供消费者自定义处理能力"
+  - "options 对象构造函数模式（new MapRenderer({ canvas, onClick? })），避免参数位置依赖，便于扩展"
 
-last_updated: "2026-05-12"
+last_updated: "2026-05-14"

@@ -1,4 +1,4 @@
-import { TileType, getTileLabel } from './TileType';
+import { TileType } from './TileType';
 import { MapGrid, GRID_SIZE } from './MapGrid';
 
 const TILE_SIZE = 80;
@@ -14,11 +14,14 @@ const TILE_COLORS: Record<TileType, string> = {
 export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
   private currentGrid: MapGrid | null = null;
+  onClick: ((row: number, col: number, type: TileType) => void) | null = null;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(options: { canvas: HTMLCanvasElement; onClick?: (row: number, col: number, type: TileType) => void }) {
+    const { canvas, onClick } = options;
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
     this.ctx = canvas.getContext('2d')!;
+    this.onClick = onClick ?? null;
 
     canvas.addEventListener('click', (e: MouseEvent) => {
       if (!this.currentGrid) return;
@@ -31,7 +34,7 @@ export class MapRenderer {
 
       if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
         const type = this.currentGrid.tiles[row][col];
-        console.log(`Clicked tile: row=${row}, col=${col}, type=${getTileLabel(type)}`);
+        this.onClick?.(row, col, type);
       }
     });
   }
