@@ -4,6 +4,7 @@ import { UnitManager } from './unit/UnitManager';
 import { MovementEngine } from './unit/MovementEngine';
 import { executeCombat } from './unit/CombatSystem';
 import { TurnManager, type EnemyAction } from './unit/TurnManager';
+import { Phase } from './unit/PhaseTypes';
 import { UnitType } from './unit/UnitType';
 import { GRID_SIZE } from './map/MapGrid';
 import type { Unit } from './unit/Unit';
@@ -18,7 +19,6 @@ const turnManager = new TurnManager(grid, manager, executeCombat);
 
 let selectedUnit: Unit | null = null;
 let reachableCells: { row: number; col: number }[] = [];
-let isEnemyTurn = false;
 
 const DIRECTION_OFFSETS: [number, number][] = [
   [-1, 0], [1, 0], [0, -1], [0, 1],
@@ -41,7 +41,6 @@ function processEnemyActions(actions: EnemyAction[], index: number): void {
   if (index >= actions.length) {
     // All actions processed — restore player turn
     turnManager.startPlayerTurn();
-    isEnemyTurn = false;
     updateView();
     return;
   }
@@ -99,7 +98,7 @@ function updateView(): void {
 const renderer = new MapRenderer({
   canvas,
   onClick: (row: number, col: number) => {
-    if (isEnemyTurn || turnManager.getState() === 'gameOver') return;
+    if (turnManager.getState() !== Phase.PlayerMove) return;
 
     const clickedUnit = manager.getUnitAt(row, col);
 
@@ -168,14 +167,12 @@ endTurnBtn.style.cssText = [
 document.body.appendChild(endTurnBtn);
 
 endTurnBtn.addEventListener('click', () => {
-  if (isEnemyTurn || turnManager.getState() !== 'player') return;
+  if (turnManager.getState() !== Phase.PlayerMove) return;
 
-  isEnemyTurn = true;
   const actions = turnManager.endPlayerTurn();
 
   // Check game over
-  if (turnManager.getState() === 'gameOver') {
-    isEnemyTurn = false;
+  if (turnManager.getState() === Phase.End) {
     const playerAlive = manager.getUnitsByTeam(0).length > 0;
     const msg = playerAlive ? 'Player Wins!' : 'Enemy Wins!';
     updateView();
@@ -185,6 +182,12 @@ endTurnBtn.addEventListener('click', () => {
 
   processEnemyActions(actions, 0);
 });
+
+// Subscribe to phase changes for UI state updates
+turnManager.onPhaseChange.add((_from, to) => {
+  endTurnBtn.disabled = to !== Phase.PlayerMove;
+});
+endTurnBtn.disabled = turnManager.getState() !== Phase.PlayerMove;
 
 // Deploy team 0 (Blue) — 1 unit at (0,0), guaranteed Plain
 trySpawn(UnitType.Warrior, 0, 0, 0);

@@ -3,6 +3,7 @@ import { MapGrid, GRID_SIZE } from '../../map/MapGrid';
 import { TileType } from '../../map/TileType';
 import { UnitManager } from '../UnitManager';
 import { TurnManager } from '../TurnManager';
+import { Phase } from '../PhaseTypes';
 import { UnitType } from '../UnitType';
 
 function makeTiles(fill: TileType): TileType[][] {
@@ -20,7 +21,7 @@ function makeTurnManager() {
 describe('TurnManager', () => {
   it('initial state is player', () => {
     const { turnManager } = makeTurnManager();
-    expect(turnManager.getState()).toBe('player');
+    expect(turnManager.getState()).toBe(Phase.PlayerMove);
     expect(turnManager.getCurrentTeam()).toBe(0);
   });
 
@@ -32,7 +33,7 @@ describe('TurnManager', () => {
 
     turnManager.endPlayerTurn();
 
-    expect(turnManager.getState()).toBe('enemy');
+    expect(turnManager.getState()).toBe(Phase.EnemyAI);
   });
 
   it('enemy moves toward nearest player unit when not adjacent', () => {
@@ -85,7 +86,7 @@ describe('TurnManager', () => {
     unitManager.removeUnit(player);
 
     turnManager.endPlayerTurn();
-    expect(turnManager.getState()).toBe('gameOver');
+    expect(turnManager.getState()).toBe(Phase.End);
   });
 
   it('sets gameOver when all enemy units are eliminated', () => {
@@ -97,6 +98,6 @@ describe('TurnManager', () => {
     unitManager.removeUnit(enemy);
 
     turnManager.endPlayerTurn();
-    expect(turnManager.getState()).toBe('gameOver');
+    expect(turnManager.getState()).toBe(Phase.End);
   });
 });
