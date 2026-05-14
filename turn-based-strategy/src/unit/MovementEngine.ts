@@ -1,10 +1,7 @@
 import type { MapGrid } from '../map/MapGrid';
 import type { Unit } from './Unit';
 import type { UnitManager } from './UnitManager';
-
-const DIRECTION_OFFSETS: [number, number][] = [
-  [-1, 0], [1, 0], [0, -1], [0, 1],
-];
+import { DIRECTION_OFFSETS } from '../core/Coordinate';
 
 interface QueueEntry {
   row: number;

@@ -16,19 +16,24 @@ public_interface:
   - "Pathfinding"                   # 通用 A* 加权寻路类，findPath + findPathInRange
   - "PathNode"                      # A* 寻路节点接口（row/col/g/h/f/parent）
   - "HeuristicFn"                   # 启发函数类型签名
+  - "Coordinate"                    # 网格坐标接口（row/col），共享类型
+  - "DIRECTION_OFFSETS"             # 4 方向偏移常量（上下左右），共享来源
 
 exports:
   - "Pathfinding.findPath()"        # A* 寻路，返回不含起点的路径数组，无可达路径返回 null
   - "Pathfinding.findPathInRange()" # BFS 范围搜索，返回移动力范围内所有可达格（不含起点）
   - "PathNode (interface)"          # 导出于 A* 实现公开
   - "HeuristicFn (type)"            # 允许外部注入自定义启发函数
+  - "Coordinate (interface)"        # { row: number; col: number } 共享坐标类型
+  - "DIRECTION_OFFSETS (const)"     # readonly 4 方向偏移量数组，消除 4 处重复定义
 
 components:
   - "Pathfinding.ts":               # A* 寻路类（findPath）+ BFS 范围搜索（findPathInRange），4 方向扩展，O(n) openList 线性查找，可注入 isOccupied 回调解耦
+  - "Coordinate.ts":                # Coordinate 接口 + DIRECTION_OFFSETS 共享常量，零依赖纯类型定义，消除 4 处重复
   - "__tests__/Pathfinding.test.ts": # 10 项测试：全 Plain 路径/障碍绕行/排除起点/完全阻塞/起点不可通行/Manhattan 范围/占用地块/加权地形 Forest/range=0 边界
 
 constraints:
-  - "使用 4 方向移动（上下左右，DIRS = [[-1,0],[1,0],[0,-1],[0,1]]），不支持斜向"
+  - "使用 4 方向移动（上下左右，DIRS = [[-1,0],[1,0],[0,-1],[0,1]]），不支持斜向；DIRECTION_OFFSETS 统一在 Coordinate.ts 中定义，不在此或单元模块中重复"
   - "openList 使用 Array.find() 线性查找最小 f 值节点（非优先队列），适合 8x8 网格（最大 64 节点）"
   - "findPathInRange 使用 BFS（queue.shift），非 A*——无需目标启发函数"
 
@@ -42,6 +47,7 @@ development_notes:
   - "reconstructPath 使用 unshift 正向构建路径（从起始相邻格到终点），而非 push+reverse——可读性更好但大网格下 reverse 性能更优"
   - "启发函数默认可注入 (HeuristicFn)，当前使用 Manhattan 距离与 MovementEngine 一致"
   - "isOccupied 回调可选；未提供时不做占用检查，仅依靠 getMoveCost < 0 判断通行性"
+  - "Coordinate.ts 作为 DIRECTION_OFFSETS 的唯一声源地：此前该数组在 CombatSystem、MovementEngine、EnemyAI、main.ts 中共 4 次重复定义，任何一处修改方向集都将导致行为不一致；提取至 core/ 确保单点修改全局生效"
 
 lessons_learned:
   - "Pathfinding 与 MovementEngine 使用相同的 4 方向 DIRS 和 key() 字符串键模式——保持一致利于未来合并或重构"

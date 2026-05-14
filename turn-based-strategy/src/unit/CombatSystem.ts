@@ -1,10 +1,7 @@
 import { Unit } from './Unit';
 import { UNIT_CONFIGS } from './UnitType';
 import type { UnitManager } from './UnitManager';
-
-const DIRECTION_OFFSETS: [number, number][] = [
-  [-1, 0], [1, 0], [0, -1], [0, 1],
-];
+import { DIRECTION_OFFSETS } from '../core/Coordinate';
 
 export interface CombatResult {
   attacker: Unit;

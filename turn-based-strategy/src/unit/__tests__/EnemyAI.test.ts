@@ -88,4 +88,109 @@ describe('EnemyAI', () => {
     const actions = enemyAI.executeTurn();
     expect(actions).toHaveLength(0);
   });
+
+  // --- New Test 1: getEnemiesInRange ---
+  it('getEnemiesInRange returns enemies within attackRange', () => {
+    const { unitManager, enemyAI } = makeEnemyAI();
+    const enemy = unitManager.spawnUnit(UnitType.Archer, 1, 5, 5)!;
+    const close1 = unitManager.spawnUnit(UnitType.Warrior, 0, 5, 3)!;   // dist 2
+    const close2 = unitManager.spawnUnit(UnitType.Warrior, 0, 5, 6)!;   // dist 1
+    const far = unitManager.spawnUnit(UnitType.Mage, 0, 0, 0)!;         // dist 10
+
+    const inRange = enemyAI.getEnemiesInRange(enemy, [close1, close2, far]);
+    expect(inRange).toHaveLength(2);
+    expect(inRange).toContain(close1);
+    expect(inRange).toContain(close2);
+    expect(inRange).not.toContain(far);
+  });
+
+  // --- New Test 2: Attack before move ---
+  it('attacks within attackRange without moving', () => {
+    const { unitManager, enemyAI } = makeEnemyAI();
+    // Archer (attackRange=2) at (5,5), player at (5,4) within range
+    unitManager.spawnUnit(UnitType.Archer, 1, 5, 5)!;
+    const player = unitManager.spawnUnit(UnitType.Warrior, 0, 5, 4)!;
+
+    const actions = enemyAI.executeTurn();
+    // Should have exactly one action: attack (no move)
+    const attackActions = actions.filter(a => a.action === 'attack');
+    const moveActions = actions.filter(a => a.action === 'move');
+    expect(attackActions).toHaveLength(1);
+    expect(moveActions).toHaveLength(0);
+    expect(attackActions[0].target).toBe(player);
+  });
+
+  // --- New Test 3: A* selects closest reachable cell to player ---
+  it('A* pathfinding selects reachable cell closest to player', () => {
+    const { unitManager, enemyAI } = makeEnemyAI();
+    // Enemy at (5,5), player at (0,0)
+    unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+
+    const actions = enemyAI.executeTurn();
+    const moveActions = actions.filter(a => a.action === 'move');
+
+    // Should have at least one move action
+    expect(moveActions.length).toBeGreaterThan(0);
+
+    // The last move destination should be closer to player than starting position
+    const lastMove = moveActions[moveActions.length - 1];
+    const startDist = Math.abs(5 - 0) + Math.abs(5 - 0);  // = 10
+    const endDist = Math.abs(lastMove.to!.row - 0) + Math.abs(lastMove.to!.col - 0);
+    expect(endDist).toBeLessThan(startDist);
+  });
+
+  // --- New Test 4: Move then attack ---
+  it('moves then attacks when target comes within attackRange after move', () => {
+    const { unitManager, enemyAI } = makeEnemyAI();
+    // Warrior (attackRange=1, moveRange=3) at (5,5)
+    // Player at (5,3) — 2 steps away
+    unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 3)!;
+
+    const actions = enemyAI.executeTurn();
+    const moveActions = actions.filter(a => a.action === 'move');
+    const attackActions = actions.filter(a => a.action === 'attack');
+
+    // Should have at least one move
+    expect(moveActions.length).toBeGreaterThan(0);
+
+    // After moving, enemy should be within attackRange of player
+    // The last move put the enemy within attackRange of the player at (5,3)
+    expect(attackActions.length).toBe(1);
+    expect(attackActions[0].target!.row).toBe(5);
+    expect(attackActions[0].target!.col).toBe(3);
+  });
+
+  // --- New Test 5: Knight multi-step long-range move ---
+  it('Knight moves multiple steps toward distant player', () => {
+    const { unitManager, enemyAI } = makeEnemyAI();
+    // Knight (moveRange=5) at (7, 7), player at (0, 0)
+    unitManager.spawnUnit(UnitType.Knight, 1, 7, 7)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+
+    const actions = enemyAI.executeTurn();
+    const moveActions = actions.filter(a => a.action === 'move');
+
+    // Knight should take multiple steps (more than 1) toward the player
+    expect(moveActions.length).toBeGreaterThan(1);
+
+    // Each move should be a valid adjacent step
+    for (const action of moveActions) {
+      const from = action.from!;
+      const to = action.to!;
+      const stepDist = Math.abs(to.row - from.row) + Math.abs(to.col - from.col);
+      expect(stepDist).toBe(1);
+    }
+
+    // The Knight should end up closer to the player
+    const lastPos = moveActions[moveActions.length - 1].to!;
+    const startDist = Math.abs(7 - 0) + Math.abs(7 - 0); // = 14
+    const endDist = Math.abs(lastPos.row - 0) + Math.abs(lastPos.col - 0);
+    expect(endDist).toBeLessThan(startDist);
+
+    // Should be no attack actions (too far)
+    const attackActions = actions.filter(a => a.action === 'attack');
+    expect(attackActions).toHaveLength(0);
+  });
 });

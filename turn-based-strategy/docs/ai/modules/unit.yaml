@@ -14,6 +14,8 @@ dependencies:
     - "src/unit/PhaseTypes.ts"        # TurnManager 使用 Phase 枚举管理回合阶段
     - "src/unit/EnemyAI.ts"           # TurnManager 通过依赖注入持有 EnemyAI 实例
     - "src/config/GameConfig.ts"      # DeployManager 使用 GameConfig 接口做部署配置（编队/坐标/队伍大小）
+    - "src/core/Pathfinding.ts"       # EnemyAI 使用 A* 多步寻路替代贪心单步（Phase 5）
+    - "src/core/Coordinate.ts"        # DIRECTION_OFFSETS 共享常量来源（CombatSystem/MovementEngine/EnemyAI/main.ts 共用）
 
 public_interface:
   - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）

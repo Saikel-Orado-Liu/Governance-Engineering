@@ -8,6 +8,7 @@ import { Phase } from './unit/PhaseTypes';
 import { GRID_SIZE } from './map/MapGrid';
 import { DeployManager } from './unit/DeployManager';
 import { DEFAULT_GAME_CONFIG } from './config/GameConfig';
+import { DIRECTION_OFFSETS } from './core/Coordinate';
 import type { Unit } from './unit/Unit';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -23,10 +24,6 @@ let selectedUnit: Unit | null = null;
 let reachableCells: { row: number; col: number }[] = [];
 let attackTargets: { row: number; col: number }[] = [];
 let combatInProgress = false;
-
-const DIRECTION_OFFSETS: [number, number][] = [
-  [-1, 0], [1, 0], [0, -1], [0, 1],
-];
 
 function getAdjacentEnemies(unit: Unit): Unit[] {
   const enemies: Unit[] = [];
