@@ -4,30 +4,39 @@ import { executeCombat } from './CombatSystem';
 import type { CombatResult } from './CombatSystem';
 import type { Unit } from './Unit';
 import { Pathfinding } from '../core/Pathfinding';
+import { UnitType } from './UnitType';
 import { DIRECTION_OFFSETS } from '../core/Coordinate';
+import { AbilityType, ABILITY_CONFIGS } from './AbilityConfig';
+import type { AbilityResult } from './AbilitySystem';
 
 export interface EnemyAction {
   unit: Unit;
-  action: 'move' | 'attack' | 'idle';
+  action: 'move' | 'attack' | 'skill' | 'idle';
   target?: Unit;
   from?: { row: number; col: number };
   to?: { row: number; col: number };
   combatResult?: CombatResult;
+  skillType?: AbilityType;
+  skillResult?: AbilityResult;
 }
 
 export type CombatFn = (attacker: Unit, defender: Unit, unitManager: UnitManager) => CombatResult;
+
+export type SkillFunction = (caster: Unit, target: Unit, unitManager: UnitManager) => AbilityResult | null;
 
 export class EnemyAI {
   private grid: MapGrid;
   private unitManager: UnitManager;
   private combatFn: CombatFn;
   private pathfinding: Pathfinding | null = null;
+  private useSkillFn?: SkillFunction;
 
   constructor(
     grid: MapGrid,
     unitManager: UnitManager,
     combatFn?: CombatFn,
     pathfinding?: Pathfinding,
+    useSkillFn?: SkillFunction,
   ) {
     this.grid = grid;
     this.unitManager = unitManager;
@@ -35,6 +44,7 @@ export class EnemyAI {
     if (pathfinding) {
       this.pathfinding = pathfinding;
     }
+    this.useSkillFn = useSkillFn;
   }
 
   private getPathfinding(): Pathfinding {
@@ -54,6 +64,24 @@ export class EnemyAI {
     for (const enemyUnit of enemyUnits) {
       if (!enemyUnit.isAlive()) {
         continue;
+      }
+
+      // Phase 8: Skill check before movement/attack
+      if (this.useSkillFn) {
+        const skillUsage = this.evaluateSkillUsage(enemyUnit);
+        if (skillUsage) {
+          const result = this.useSkillFn(enemyUnit, skillUsage.target, this.unitManager);
+          if (result && result.success) {
+            actions.push({
+              unit: enemyUnit,
+              action: 'skill',
+              target: skillUsage.target,
+              skillType: skillUsage.abilityType,
+              skillResult: result,
+            });
+            continue;
+          }
+        }
       }
 
       const playerUnits = this.unitManager.getUnitsByTeam(0);
@@ -260,5 +288,115 @@ export class EnemyAI {
     }
 
     return best;
+  }
+
+  private evaluateSkillUsage(unit: Unit): { abilityType: AbilityType; target: Unit } | null {
+    if (unit.skillCooldown > 0) return null;
+
+    const skillType = unit.skill;
+    if (skillType === AbilityType.None) return null;
+
+    const playerUnits = this.unitManager.getUnitsByTeam(0);
+    if (playerUnits.length === 0) return null;
+
+    // Dispatch by unit type
+    if (unit.type === UnitType.Warrior) {
+      return this.evaluateWarriorSkill(unit, playerUnits);
+    }
+    if (unit.type === UnitType.Archer) {
+      return this.evaluateArcherSkill(unit, playerUnits);
+    }
+    if (unit.type === UnitType.Knight) {
+      return this.evaluateKnightSkill(unit, playerUnits);
+    }
+    if (unit.type === UnitType.Mage) {
+      return this.evaluateMageSkill(unit, playerUnits);
+    }
+
+    return null;
+  }
+
+  private evaluateWarriorSkill(unit: Unit, playerUnits: Unit[]): { abilityType: AbilityType; target: Unit } | null {
+    // Warrior: ShieldBash — only when health > 50, on cardinally adjacent target
+    if (unit.hp <= 50) return null;
+    const adjacent = playerUnits.filter(p =>
+      Math.abs(unit.row - p.row) + Math.abs(unit.col - p.col) <= 1
+    );
+    if (adjacent.length === 0) return null;
+    const target = adjacent.sort((a, b) => a.hp - b.hp)[0];
+    return { abilityType: AbilityType.ShieldBash, target };
+  }
+
+  private evaluateArcherSkill(unit: Unit, playerUnits: Unit[]): { abilityType: AbilityType; target: Unit } | null {
+    // Archer: Volley — target a cluster of at least 2 enemies within range
+    const volleyConfig = ABILITY_CONFIGS[AbilityType.Volley];
+    const volleyRange = volleyConfig.range;
+    const aoeRadius = volleyConfig.aoeRadius ?? 1;
+
+    const candidates = playerUnits.filter(p =>
+      Math.abs(unit.row - p.row) + Math.abs(unit.col - p.col) <= volleyRange
+    );
+    if (candidates.length < 2) return null;
+
+    let bestTarget: Unit | null = null;
+    let bestCoverage = 0;
+
+    for (const candidate of candidates) {
+      let coverage = 0;
+      for (const other of playerUnits) {
+        if (other === candidate) continue;
+        const dist = Math.abs(candidate.row - other.row) + Math.abs(candidate.col - other.col);
+        if (dist <= aoeRadius) {
+          coverage++;
+        }
+      }
+      if (coverage > bestCoverage) {
+        bestCoverage = coverage;
+        bestTarget = candidate;
+      }
+    }
+
+    if (bestCoverage < 1) return null;
+    return { abilityType: AbilityType.Volley, target: bestTarget! };
+  }
+
+  private evaluateKnightSkill(unit: Unit, playerUnits: Unit[]): { abilityType: AbilityType; target: Unit } | null {
+    // Knight: Charge — only when health < 45, on farthest straight-line target
+    if (unit.hp >= 45) return null;
+
+    const chargeCandidates = playerUnits.filter(p => {
+      const sameRow = p.row === unit.row;
+      const sameCol = p.col === unit.col;
+      const manhattanDist = Math.abs(unit.row - p.row) + Math.abs(unit.col - p.col);
+      return (sameRow || sameCol) && manhattanDist >= 2;
+    });
+
+    if (chargeCandidates.length === 0) return null;
+
+    const target = chargeCandidates.reduce((best, curr) => {
+      const bestDist = Math.abs(unit.row - best.row) + Math.abs(unit.col - best.col);
+      const currDist = Math.abs(unit.row - curr.row) + Math.abs(unit.col - curr.col);
+      return currDist > bestDist ? curr : best;
+    });
+    return { abilityType: AbilityType.Charge, target };
+  }
+
+  private evaluateMageSkill(unit: Unit, playerUnits: Unit[]): { abilityType: AbilityType; target: Unit } | null {
+    // Mage: Fireball — only when health > 36, highest-hp enemy in range
+    if (unit.hp <= 36) return null;
+
+    const fireballConfig = ABILITY_CONFIGS[AbilityType.Fireball];
+    const fireballRange = fireballConfig.range;
+
+    const candidates = playerUnits.filter(p =>
+      Math.abs(unit.row - p.row) + Math.abs(unit.col - p.col) <= fireballRange
+    );
+
+    if (candidates.length === 0) return null;
+
+    const target = candidates.reduce((best, curr) =>
+      curr.hp > best.hp ? curr : best
+    );
+    return { abilityType: AbilityType.Fireball, target };
   }
 }

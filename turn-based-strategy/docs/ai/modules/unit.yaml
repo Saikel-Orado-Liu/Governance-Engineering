@@ -24,22 +24,23 @@ public_interface:
   - "MovementEngine"                  # BFS/Dijkstra 加权图移动范围计算引擎，构造函数注入 UnitManager
   - "executeCombat"                   # 战斗执行纯函数：攻击->反击->阵亡移除，返回 CombatResult
   - "CombatResult"                    # 战斗结果：伤害、阵亡标志、执行日志
-  - "TurnManager"                     # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统 + actedUnits 战斗追踪 + gameOver 检测 + advanceCooldowns 集成
+  - "TurnManager"                     # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统 + actedUnits 战斗追踪 + gameOver 检测 + advanceCooldowns 集成 + skipTurn 过滤
   - "TurnState"                       # Phase 的类型别名（向后兼容）
-  - "EnemyAction"                     # 敌方行动记录：move/attack/idle，定义移至 EnemyAI.ts
+  - "EnemyAction"                     # 敌方行动记录：move/attack/skill/idle，定义移至 EnemyAI.ts
   - "Phase"                           # 五阶段枚举：Deploy/PlayerMove/PlayerCombat/EnemyAI/End
   - "PHASE_SEQUENCE"                  # Phase 有序数组，用于 transition 校验
   - "canTransitionTo"                 # 阶段转换校验函数，含 loop（End→PlayerMove、EnemyAI→PlayerMove）和 gameOver（PlayerCombat→End）
-  - "EnemyAI"                         # 敌方 AI 类：贪心 Manhattan 策略，纯动作生成器
+  - "EnemyAI"                         # 敌方 AI 类：贪心 Manhattan 策略 + A* 多步寻路 + 技能评估（useSkillFn 回调注入）
+  - "SkillFunction"                   # 技能执行回调类型：(caster, target, unitManager) => AbilityResult | null
   - "DeployManager"                   # 部署管理器类，接收 UnitManager + GameConfig，executeDeploy 返回 DeployResult
   - "DeployResult"                    # 部署结果接口：{ deployed: Unit[], failed: FailedDeploy[] }
   - "FailedDeploy"                    # 部署失败记录：{ team, index, type, intendedRow, intendedCol, reason }
   - "AbilityType (enum)"             # 能力枚举：None/ShieldBash/Volley/Charge/Fireball
   - "AbilityConfig"                   # 能力配置接口：id/name/damage/cooldown/range/aoeRadius/description
-  - "StatusEffect"                    # 状态效果接口（预留）：type/duration
+  - "StatusEffect"                    # 状态效果接口：type/duration；实例化的 { type: 'skipTurn', duration: 1 }
   - "ABILITY_CONFIGS"                 # 能力配置常量表，四个能力各一条
   - "canUseAbility"                   # 技能使用前校验纯函数：存活、有效类型、冷却、射程、Charge 直线条件
-  - "useAbility"                      # 技能执行纯函数：设置冷却、伤害目标、AoE/Charge/Single-target 三变体
+  - "useAbility"                      # 技能执行纯函数：设置冷却、伤害目标、AoE/Charge/Single-target 三变体；ShieldBash 额外添加 skipTurn 效果
   - "advanceCooldowns"                # 全单位冷却递减 1（min 0），每回合开始调用
   - "getCooldown"                     # 读取单位当前冷却值
   - "CanUseAbilityResult"            # 校验结果接口：{ usable, reason? }
@@ -62,24 +63,27 @@ exports:
   - "MovementEngine"                 # 类，构造函数 new MovementEngine(unitManager)
   - "executeCombat()"                # 战斗执行纯函数，导入即可调用
   - "CombatResult"                    # { attacker, defender, damageDealt, damageReceived, attackerDied, defenderDied, log }
-  - "TurnManager"                     # 类，new TurnManager(grid, unitManager, combatFn?)
+  - "TurnManager"                     # 类，new TurnManager(grid, unitManager, combatFn?, useSkillFn?)
   - "TurnState"                       # = Phase（向后兼容的类型别名）
   - "TurnManager.endPlayerTurn()"    # 结束 PlayerMove 过渡到 PlayerCombat，清空 actedUnits
   - "TurnManager.endPlayerCombat()"  # 结束 PlayerCombat 过渡到 EnemyAI/End，含 gameOver 双重检测 + 敌方回合执行
   - "TurnManager.markUnitActed()"    # 标记单位已在本回合战斗阶段行动
   - "TurnManager.hasUnitActed()"     # 查询单位是否已行动
-  - "TurnManager.isAllUnitsActed()"  # 全部存活己方单位是否已行动完毕
-  - "TurnManager.getRemainingCombatUnits()" # 获取存活且未行动的己方单位
+  - "TurnManager.isAllUnitsActed()"  # 全部存活己方单位是否已行动完毕（含 skipTurn 过滤）
+  - "TurnManager.getRemainingCombatUnits()" # 获取存活且未行动的己方单位（排除 skipTurn 单位）
   - "TurnManager.isGameOver()"       # 任意队伍全灭检测
-  - "EnemyAction"                    # { unit, action, target?, from?, to?, combatResult? }
+  - "EnemyAction"                    # { unit, action, target?, from?, to?, combatResult?, skillType?, skillResult? }
   - "Phase (enum)"                   # Deploy/PlayerMove/PlayerCombat/EnemyAI/End（字符串值）
   - "PHASE_SEQUENCE"                  # 有序数组：Deploy→PlayerMove→PlayerCombat→EnemyAI→End
   - "canTransitionTo()"              # 阶段转换校验（含 loop 规则和 gameOver 直达）
-  - "EnemyAI"                        # 类，new EnemyAI(grid, unitManager, combatFn?)
-  - "EnemyAI.executeTurn()"          # 执行全部敌方行动，返回 EnemyAction[]
+  - "EnemyAI"                        # 类，new EnemyAI(grid, unitManager, combatFn?, pathfinding?, useSkillFn?)
+  - "SkillFunction (type)"           # (caster, target, unitManager) => AbilityResult | null
+  - "EnemyAI.executeTurn()"          # 执行全部敌方行动，技能优先于普攻，返回 EnemyAction[]
   - "EnemyAI.findNearest()"          # Manhattan 距离找最近目标
   - "EnemyAI.getAdjacentEnemies()"   # 4 方向相邻敌人查询
   - "EnemyAI.findBestAdjacentMove()" # 4 方向贪心单步移动
+  - "EnemyAI.getEnemiesInRange()"    # 筛选攻击范围内目标（公共方法，Phase 7 添加）
+  - "EnemyAI.findPathDestination()"  # A* 寻路到目标的最优可达格（公共方法，Phase 7 添加）
   - "DeployManager"                   # 类，new DeployManager(unitManager, config)；executeDeploy() 返回 DeployResult
   - "DeployResult (interface)"        # { deployed: Unit[], failed: FailedDeploy[] }
   - "FailedDeploy (interface)"        # { team, index, type, intendedRow, intendedCol, reason }
@@ -105,16 +109,16 @@ components:
   - "CombatSystem.ts":               # executeCombat 纯函数：攻击->反击->阵亡移除，DIRECTION_OFFSETS 4方向相邻判定，reverse-calculation 伤害交付
   - "TurnManager.ts":                # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统（onPhaseEnter/onPhaseExit/onPhaseChange + actionHistory）+ advanceCooldowns 集成 + movedThisTurn 重置
   - "PhaseTypes.ts":                 # Phase 字符串枚举（5阶段）、PHASE_SEQUENCE 有序数组、canTransitionTo 转换校验（含 loop/skip 规则）
-  - "EnemyAI.ts":                    # EnemyAI 类：贪心 Manhattan 策略，executeTurn/findNearest/getAdjacentEnemies/findBestAdjacentMove；EnemyAction 接口 + CombatFn 类型
+  - "EnemyAI.ts":                    # EnemyAI 类：A* 多步寻路 + 贪心策略，executeTurn/findNearest/getAdjacentEnemies/findBestAdjacentMove/getEnemiesInRange/findPathDestination；evaluateSkillUsage/getSkillTarget 私有方法（4 兵种策略）；SkillFunction 类型 + EnemyAction 接口（含 'skill' action）
   - "DeployManager.ts":              # DeployManager 类：executeDeploy 部署两队单位，trySpawnFallback 8 方向相邻回退（先四方后对角）处理占用/不可通行，DeployResult/FailedDeploy 接口
   - "__tests__/Unit.test.ts":         # 10 项测试：构造函数验证4种单位属性、takeDamage伤害减免(min1)、克制乘数(1.5/0.67)、isAlive
   - "__tests__/UnitManager.test.ts":  # 10 项测试：spawnUnit通行/不可通行/占用/越界，getUnitAt/getUnitsByTeam过滤/移动合法性
   - "__tests__/MovementEngine.test.ts": # 6 项测试：全Plain 24格可达、Forest加权成本、不可通行阻塞、单位占用、moveRange=0边界、完全包围
   - "__tests__/CombatSystem.test.ts": # 9 项测试：基础伤害、反击、阵亡(双方向)、克制/被克制乘数、最小伤害、死亡移除、回合存活保护
   - "__tests__/TurnManager.test.ts":  # 13 项测试：初始状态(Deploy)、全周期切换(PlayerMove→PlayerCombat→EnemyAI)、敌方移动/攻击、gameOver(双方向)、actedUnits追踪、isAllUnitsActed、getRemainingCombatUnits、endPlayerCombat 前置/后置 gameOver
-  - "__tests__/EnemyAI.test.ts":      # 5 项测试：findNearest 距离、findBestAdjacentMove 有效性、getAdjacentEnemies 相邻过滤、executeTurn 移动/攻击/空结果
+  - "__tests__/EnemyAI.test.ts":      # 19 项测试（原6+13新增/重构）：findNearest 距离、findBestAdjacentMove 有效性、getAdjacentEnemies 相邻过滤、getEnemiesInRange 范围过滤、executeTurn A*多步移动/移动后攻击/Knight 长距多步/空结果 + 8 项技能测试（Warrior/Archer/Knight/Mage 技能决策、冷却回退普攻、action类型验证、冷却设置、advanceCooldowns）
   - "__tests__/DeployManager.test.ts": # 6 项测试：部署数量、编队类型匹配、部署坐标正确、占用回退、不可通行回退、完全阻塞失败报告
-  - "__tests__/AbilitySystem.test.ts": # 13 项测试：canUseAbility 校验5条件、useAbility 单目标伤害/冷却/阵亡/失败、Volley AoE Manhattan 菱形覆盖/对角线排除、advanceCooldowns 递减、getCooldown 读取
+  - "__tests__/AbilitySystem.test.ts": # 13 项测试：canUseAbility 校验5条件、useAbility 单目标伤害/冷却/阵亡/失败/ShieldBash skipTurn 效果、Volley AoE Manhattan 菱形覆盖/对角线排除、advanceCooldowns 递减、getCooldown 读取
 
 constraints:
   - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"

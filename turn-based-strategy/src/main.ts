@@ -7,6 +7,7 @@ import { useAbility } from './unit/AbilitySystem';
 import { AbilityType, ABILITY_CONFIGS } from './unit/AbilityConfig';
 import type { AbilityConfig } from './unit/AbilityConfig';
 import { TurnManager, type EnemyAction } from './unit/TurnManager';
+import type { SkillFunction } from './unit/EnemyAI';
 import { Phase } from './unit/PhaseTypes';
 import { GRID_SIZE } from './map/MapGrid';
 import { DeployManager } from './unit/DeployManager';
@@ -20,7 +21,10 @@ const grid = generator.generate();
 
 const manager = new UnitManager(grid);
 const movementEngine = new MovementEngine(manager);
-const turnManager = new TurnManager(grid, manager, executeCombat);
+const useSkillFn: SkillFunction = (caster, target, mgr) => {
+  return useAbility(caster, target, caster.skill, ABILITY_CONFIGS[caster.skill], mgr);
+};
+const turnManager = new TurnManager(grid, manager, executeCombat, useSkillFn);
 const deployManager = new DeployManager(manager, DEFAULT_GAME_CONFIG);
 
 let selectedUnit: Unit | null = null;
@@ -106,6 +110,16 @@ function processEnemyActions(actions: EnemyAction[], index: number): void {
   } else if (action.action === 'move') {
     updateView();
     setTimeout(() => processEnemyActions(actions, index + 1), 300);
+  } else if (action.action === 'skill') {
+    if (action.target) {
+      renderer.setFlashingUnits([action.target]);
+    }
+    updateView();
+    setTimeout(() => {
+      renderer.clearFlashingUnits();
+      updateView();
+      setTimeout(() => processEnemyActions(actions, index + 1), 200);
+    }, 400);
   } else {
     // idle
     setTimeout(() => processEnemyActions(actions, index + 1), 200);
@@ -290,7 +304,7 @@ const renderer = new MapRenderer({
 
     const clickedUnit = manager.getUnitAt(row, col);
 
-    if (clickedUnit && clickedUnit.team === 0) {
+    if (clickedUnit && clickedUnit.team === 0 && !clickedUnit.effects.some(e => e.type === 'skipTurn')) {
       // Clicked own unit — select and show reachable cells
       selectedUnit = clickedUnit;
       renderer.setSelectedUnit(clickedUnit);
@@ -447,7 +461,23 @@ endTurnBtn.addEventListener('click', () => {
     reachableCells = [];
 
     turnManager.endPlayerTurn();
+
+    // Process skipTurn effects on player units
+    const playerUnits = manager.getUnitsByTeam(0);
+    for (const unit of playerUnits) {
+      const skipEffect = unit.effects.find(e => e.type === 'skipTurn');
+      if (skipEffect) {
+        turnManager.markUnitActed(unit);
+        skipEffect.duration--;
+      }
+    }
+    // Remove expired effects
+    for (const unit of playerUnits) {
+      unit.effects = unit.effects.filter(e => e.duration > 0);
+    }
+
     updateView();
+    renderSkillBar();
   } else if (state === Phase.PlayerCombat) {
     if (combatInProgress) return;
     // Clear selection when ending combat

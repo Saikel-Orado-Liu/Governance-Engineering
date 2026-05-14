@@ -118,6 +118,10 @@ export function useAbility(
     const actual = target.takeDamage(config.damage);
     totalDamage = actual;
     log.push(`${config.name} hits ${UNIT_CONFIGS[target.type].name} for ${actual} damage`);
+    // ShieldBash applies skipTurn effect to target
+    if (abilityType === AbilityType.ShieldBash) {
+      target.effects.push({ type: 'skipTurn', duration: 1 });
+    }
     if (!target.isAlive()) {
       unitManager.removeUnit(target);
       targetDied = true;

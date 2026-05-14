@@ -3,7 +3,9 @@ import { MapGrid, GRID_SIZE } from '../../map/MapGrid';
 import { TileType } from '../../map/TileType';
 import { UnitManager } from '../UnitManager';
 import { UnitType } from '../UnitType';
-import { EnemyAI } from '../EnemyAI';
+import { EnemyAI, type SkillFunction } from '../EnemyAI';
+import { AbilityType, ABILITY_CONFIGS } from '../AbilityConfig';
+import { useAbility, advanceCooldowns } from '../AbilitySystem';
 
 function makeTiles(fill: TileType): TileType[][] {
   return Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(fill));
@@ -14,6 +16,17 @@ function makeEnemyAI() {
   const grid = new MapGrid(tiles);
   const unitManager = new UnitManager(grid);
   const enemyAI = new EnemyAI(grid, unitManager);
+  return { grid, unitManager, enemyAI };
+}
+
+function makeEnemyAIWithSkills() {
+  const tiles = makeTiles(TileType.Plain);
+  const grid = new MapGrid(tiles);
+  const unitManager = new UnitManager(grid);
+  const useSkillFn: SkillFunction = (caster, target, mgr) => {
+    return useAbility(caster, target, caster.skill, ABILITY_CONFIGS[caster.skill], mgr);
+  };
+  const enemyAI = new EnemyAI(grid, unitManager, undefined, undefined, useSkillFn);
   return { grid, unitManager, enemyAI };
 }
 
@@ -192,5 +205,111 @@ describe('EnemyAI', () => {
     // Should be no attack actions (too far)
     const attackActions = actions.filter(a => a.action === 'attack');
     expect(attackActions).toHaveLength(0);
+  });
+
+  // --- Skill Tests (8 new) ---
+
+  it('EnemyAI: Warrior HP>50% 使用 ShieldBash', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 4)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeDefined();
+    expect(skillAction!.skillType).toBe(AbilityType.ShieldBash);
+  });
+
+  it('EnemyAI: Archer ≥2 目标使用 Volley', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    unitManager.spawnUnit(UnitType.Archer, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 3)!;
+    unitManager.spawnUnit(UnitType.Mage, 0, 5, 4)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeDefined();
+    expect(skillAction!.skillType).toBe(AbilityType.Volley);
+  });
+
+  it('EnemyAI: Knight HP<50% 使用 Charge', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    const enemy = unitManager.spawnUnit(UnitType.Knight, 1, 5, 5)!;
+    // Knight has HP=90, def=12. Deal 58 raw dmg -> actual=46 -> HP=44 (< 45)
+    enemy.takeDamage(58);
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 7)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeDefined();
+    expect(skillAction!.skillType).toBe(AbilityType.Charge);
+  });
+
+  it('EnemyAI: Mage HP>60% 使用 Fireball', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    unitManager.spawnUnit(UnitType.Mage, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 3)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeDefined();
+    expect(skillAction!.skillType).toBe(AbilityType.Fireball);
+  });
+
+  it('EnemyAI: 技能冷却时使用普攻', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    const enemy = unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    enemy.skillCooldown = 1;
+    unitManager.spawnUnit(UnitType.Archer, 0, 5, 4)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeUndefined();
+    const attackAction = actions.find(a => a.action === 'attack');
+    expect(attackAction).toBeDefined();
+  });
+
+  it('EnemyAI: skill action 类型在 EnemyAction 中正确记录', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 4)!;
+
+    const actions = enemyAI.executeTurn();
+    const skillAction = actions.find(a => a.action === 'skill');
+    expect(skillAction).toBeDefined();
+    expect(skillAction!.action).toBe('skill');
+    expect(skillAction!.skillType).toBe(AbilityType.ShieldBash);
+    expect(skillAction!.target).toBeDefined();
+    expect(skillAction!.skillResult).toBeDefined();
+    expect(skillAction!.skillResult!.success).toBe(true);
+  });
+
+  it('EnemyAI: Skill 使用后冷却被设置', () => {
+    const { unitManager, enemyAI } = makeEnemyAIWithSkills();
+    const enemy = unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unitManager.spawnUnit(UnitType.Warrior, 0, 5, 4)!;
+
+    enemyAI.executeTurn();
+    // ShieldBash cooldown = 2
+    expect(enemy.skillCooldown).toBe(2);
+  });
+
+  it('AbilitySystem: advanceCooldowns 在 EnemyAI->PlayerMove 后触发', () => {
+    const { unitManager } = makeEnemyAI();
+    const unit = unitManager.spawnUnit(UnitType.Warrior, 1, 5, 5)!;
+    unit.skillCooldown = 3;
+
+    advanceCooldowns(unitManager.getAllUnits());
+    expect(unit.skillCooldown).toBe(2);
+
+    advanceCooldowns(unitManager.getAllUnits());
+    expect(unit.skillCooldown).toBe(1);
+
+    advanceCooldowns(unitManager.getAllUnits());
+    expect(unit.skillCooldown).toBe(0);
+
+    // Stays at 0
+    advanceCooldowns(unitManager.getAllUnits());
+    expect(unit.skillCooldown).toBe(0);
   });
 });

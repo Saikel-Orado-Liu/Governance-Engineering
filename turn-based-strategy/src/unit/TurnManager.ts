@@ -1,7 +1,7 @@
 import { MapGrid } from '../map/MapGrid';
 import { UnitManager } from './UnitManager';
 import { Phase, canTransitionTo } from './PhaseTypes';
-import { EnemyAI, type EnemyAction, type CombatFn } from './EnemyAI';
+import { EnemyAI, type EnemyAction, type CombatFn, type SkillFunction } from './EnemyAI';
 import { advanceCooldowns } from './AbilitySystem';
 import type { Unit } from './Unit';
 
@@ -26,9 +26,10 @@ export class TurnManager {
     grid: MapGrid,
     unitManager: UnitManager,
     combatFn?: CombatFn,
+    useSkillFn?: SkillFunction,
   ) {
     this.unitManager = unitManager;
-    this.enemyAI = new EnemyAI(grid, unitManager, combatFn);
+    this.enemyAI = new EnemyAI(grid, unitManager, combatFn, undefined, useSkillFn);
   }
 
   getState(): TurnState {
@@ -77,12 +78,16 @@ export class TurnManager {
   /** Check if all alive player units have acted */
   isAllUnitsActed(): boolean {
     const alivePlayerUnits = this.unitManager.getUnitsByTeam(0);
-    return alivePlayerUnits.length > 0 && alivePlayerUnits.every(u => this.actedUnits.has(u));
+    return alivePlayerUnits.length > 0 && alivePlayerUnits.every(u =>
+      this.actedUnits.has(u) || u.effects.some(e => e.type === 'skipTurn')
+    );
   }
 
   /** Get remaining player units that can still act this combat phase (alive and not acted) */
   getRemainingCombatUnits(): Unit[] {
-    return this.unitManager.getUnitsByTeam(0).filter(u => u.isAlive() && !this.actedUnits.has(u));
+    return this.unitManager.getUnitsByTeam(0).filter(u =>
+      u.isAlive() && !this.actedUnits.has(u) && !u.effects.some(e => e.type === 'skipTurn')
+    );
   }
 
   startPlayerTurn(): void {
