@@ -15,7 +15,7 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/setFlashingUnits/clearFlashingUnits/setSelectedUnit 方法
+  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit 方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
@@ -25,6 +25,8 @@ exports:
   - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，替代 console.log 调试
   - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（红色 #ff0000 渲染）
   - "MapRenderer.clearFlashingUnits()" # 清除所有闪烁标记
+  - "MapRenderer.renderAbilityRange()" # 渲染技能范围（菱形区域），接收自定义 fillStyle 字符串
+  - "MapRenderer.renderAbilityTargets()" # 渲染技能目标（蓝色 rgba(41,128,185,0.5) 高亮）
 
 components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
@@ -42,6 +44,7 @@ constraints:
   - "ctx.shadowBlur 每次调用后手动重置为 0，否则会污染后续 draw call（Canvas 2D 状态不自动清除）"
   - "HP 条在单位圆正下方绘制（cy+18），宽度 20px 高度 3px，背景 #555，前景绿红渐变基于 hpRatio"
   - "选中单位金色圆环 (r=18) 在 renderUnits 末尾绘制，作为独立覆盖层在所有单位之上"
+  - "技能范围（renderAbilityRange）和技能目标（renderAbilityTargets）复用 renderCells 基础方法，只传不同 fillStyle：技能范围用半透明蓝色 (rgba(41,128,185,0.2))，技能目标用半透明蓝色 (rgba(41,128,185,0.5))——与移动范围 (yellow 0.3) 和攻击目标 (red 0.4) 的视觉层级不同，便于玩家区分四种高亮含义"
 
 known_issues:
   - "setFlashingUnits 使用 Set 引用（非深拷贝），若外部在闪烁期间修改 Unit 引用可能导致意外行为；当前仅 main.ts 在 setTimeout 链中调用，风险可控"
@@ -55,6 +58,8 @@ development_notes:
   - "选中单位（setSelectedUnit）使用独立的 Unit | null 字段存储，不混入 alive units 数组；金色圆环在 for 循环外作为单次后置绘制叠加，保证始终在所有单位之上，不受绘制顺序影响"
   - "HP 条使用条件颜色梯度：hpRatio > 0.5 时从绿色向黄色过渡（R 增加），hpRatio <= 0.5 时从黄色向红色过渡（G 减少），形成绿→黄→红的自然色阶"
   - "renderUnits 不再在顶部 filter(isAlive)——已改为循环前 filter，避免循环内条件判断；flashing 单位跳过发光但不跳过 HP 条和边框"
+  - "renderAbilityRange 和 renderAbilityTargets 为独立方法（不并入 renderHighlights 或 renderAttackHighlights），原因是它们的生命周期独立于移动范围和攻击目标——技能范围在技能选中后显示、执行或取消后消失，与移动/攻击高亮受不同状态变量控制"
+  - "renderAbilityRange 接受 fillStyle 参数（不硬编码颜色），因为技能范围在 updateView 中使用 `rgba(41,128,185,0.2)`；renderAbilityTargets 固定使用 `rgba(41,128,185,0.5)`，与攻击目标红色 (0.4) 形成视觉区分"
 
 lessons_learned:
   - "移动力成本与通行性分离设计（isPassable 为 boolean gate，getMoveCost 为数值计算）"
