@@ -1,0 +1,230 @@
+# 完整回合制策略游戏玩法框架 — 实施规格
+# 版本: 1.0.0
+# 状态: 已批准
+# 上游: optimize-agent + plan-agent
+# 下游: developer-agent (sonnet)
+
+spec:
+  name: "Complete Turn-Based Strategy Gameplay Framework"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    在现有 4 种单位类型、UnitManager、MovementEngine (BFS 加权)、CombatSystem (纯函数)、
+    TurnManager (状态机)、EnemyAI (贪心)、MapRenderer (Canvas 2D) 基础上，构建完整的
+    回合制策略游戏框架。新增：GameConfig 配置系统 / DeployManager 自动部署 /
+    A* Pathfinding 寻路工具 / 地图连通性保证 / 完整 Phase 循环
+    (Deploy->PlayerMove->PlayerCombat->EnemyAI->End->loop) / 技能系统
+    (4 单位各 1 技能) / EnemyAI 多步路径移动 + 技能使用 / DOM 技能 UI。
+
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "Canvas 2D 渲染，无外部运行时依赖"
+    - "100% OOP class 体系，遵循 ADR-003"
+    - "现有 60 测试必须保持通过 (vitest)"
+    - "增量演进，不推翻现有架构"
+    - "每个 Phase 完成后 npm run build + npm test 必须通过"
+    - "2 空格缩进，严格遵循 coding-standards.md"
+
+  design_decisions:
+    - {id: "DD-001", title: "GameConfig 为纯数据模块而非运行时可修改状态", rationale: "所有编队/规模/部署映射在游戏加载时一次读取。与现有 UNIT_CONFIGS 模式一致。"}
+    - {id: "DD-002", title: "Pathfinding 为通用独立类而非 UnitManager 方法", rationale: "A* 寻路被 EnemyAI 和 MovementEngine 多模块复用，保持工具类独立。"}
+    - {id: "DD-003", title: "DeployManager 接管自动部署流程", rationale: "Phase.Deploy 作为真实游戏阶段，需可配置、可测试、可扩展的部署逻辑。"}
+    - {id: "DD-004", title: "PlayerCombat 从跳过阶段变为独立选择目标阶段", rationale: "技能系统需要独立战斗阶段。移除 PlayerMove 自动攻击。"}
+    - {id: "DD-005", title: "AbilitySystem 为独立执行引擎，不混入 CombatSystem", rationale: "技能效果包含 AoE/状态效果，与 executeCombat 执行模式不同。"}
+    - {id: "DD-006", title: "技能 UI 使用 DOM 而非 Canvas", rationale: "技能按钮需按钮状态/点击事件/提示文本，与 Phase 指示器 DOM 模式一致。"}
+    - {id: "DD-007", title: "EnemyAI 多步路径移动使用 Pathfinding 替代贪心单步", rationale: "A* 在 moveRange 内移动多格，行为更自然。"}
+    - {id: "DD-008", title: "冷却管理在 EnemyAI->PlayerMove 转换时触发", rationale: "统一推进与回合概念对齐。"}
+
+phases:
+  # ===== Phase 1: Core Utilities =====
+  - id: 1
+    name: "Core Utilities — GameConfig + Pathfinding"
+    description: "创建游戏配置系统和通用 A* 寻路工具。纯数据/算法模块，可独立测试。"
+    dependencies: []
+    files:
+      create:
+        - {path: "src/config/GameConfig.ts", loc: 50, exports: "GameConfig接口/teamSize/formations/deployCoordinates/DEFAULT_GAME_CONFIG"}
+        - {path: "src/core/Pathfinding.ts", loc: 80, exports: "Pathfinding类/findPath/findPathInRange (A*加权地形)"}
+    acceptance:
+      - "GameConfig 定义 teamSize 可配置 1-4 范围"
+      - "Pathfinding.findPath Plain地图 (0,0)->(7,7) 步数=14"
+      - "Pathfinding.findPath 含Forest绕行, 完全阻塞返回null"
+      - "npm run build + npm test 通过"
+    complexity: small
+    estimated_loc: 130
+    test_loc: 60
+
+  # ===== Phase 2: Map Connectivity =====
+  - id: 2
+    name: "Map Connectivity + Deploy Zones"
+    description: "增强 MapGenerator 多起点连通保证 + 创建 Coordinate 工具类型。"
+    dependencies: []
+    files:
+      create:
+        - {path: "src/core/Coordinate.ts", loc: 30, exports: "Coordinate接口/manhattan/isValid/equals/DIRECTION_OFFSETS"}
+      modify:
+        - {path: "src/map/MapGenerator.ts", loc: 40, changes: "ensureDeployConnectivity 多起点BFS，修复孤立地形为Plain"}
+    acceptance:
+      - "DIRECTION_OFFSETS 从 Coordinate.ts 统一导入"
+      - "deploy坐标被Mountain/Water包围时自动修复"
+      - "所有deploy坐标互相可达"
+      - "现有地图测试(13项)保持通过"
+    complexity: small
+    estimated_loc: 70
+    test_loc: 40
+
+  # ===== Phase 3: Deploy Phase =====
+  - id: 3
+    name: "DeployManager + Phase.Deploy Integration"
+    description: "实现 DeployManager 自动部署。TurnManager 初始状态改为 Deploy。替换 main.ts 硬编码部署。"
+    dependencies: ["Phase 1", "Phase 2"]
+    files:
+      create:
+        - {path: "src/unit/DeployManager.ts", loc: 100, exports: "DeployManager类/executeDeploy/DeployResult"}
+      modify:
+        - {path: "src/unit/PhaseTypes.ts", loc: 5, changes: "确保Deploy->PlayerMove正常转换"}
+        - {path: "src/unit/TurnManager.ts", loc: 30, changes: "state初始值改为Phase.Deploy; 添加deployed字段"}
+        - {path: "src/main.ts", loc: 60, changes: "移除trySpawn; 实例化DeployManager; 监听Phase.Deploy执行部署"}
+    acceptance:
+      - "TurnManager初始化后 getState()===Phase.Deploy"
+      - "DeployManager为双方各生成DEFAULT_GAME_CONFIG.teamSize个单位"
+      - "部署完成后transition到PlayerMove"
+      - "现有60测试通过(TurnManager.test适配初始状态)"
+    complexity: large
+    estimated_loc: 195
+    test_loc: 80
+    affects_tests:
+      - "TurnManager.test.ts: 初始状态断言改为Phase.Deploy"
+
+  # ===== Phase 4: Full Phase Sequence =====
+  - id: 4
+    name: "Full Phase Sequence — PlayerCombat as Real Phase"
+    description: "移除canTransitionTo全部跳过规则，实现完整 5 阶段循环。PlayerMove 不再自动攻击。PlayerCombat 可选目标普攻。"
+    dependencies: ["Phase 3"]
+    files:
+      modify:
+        - {path: "src/unit/PhaseTypes.ts", loc: 10, changes: "删除PlayerMove→EnemyAI skip规则; 保留循环规则"}
+        - {path: "src/unit/TurnManager.ts", loc: 80, changes: "添加actedUnits/clearActedUnits/markUnitActed; endPlayerTurn转入PlayerCombat; 新增endPlayerCombat"}
+        - {path: "src/main.ts", loc: 120, changes: "PlayerMove移动后不自动攻击; PlayerCombat点击交互(选中单位→点击敌人攻击); 攻击范围红色高亮; End Turn转入PlayerCombat; 更新PHASE_GUIDES"}
+    acceptance:
+      - "canTransitionTo(PlayerMove, EnemyAI)===false (移除skip)"
+      - "canTransitionTo(PlayerMove, PlayerCombat)===true"
+      - "PlayerMove: 移动后标记acted, 不自动攻击"
+      - "PlayerCombat: 选中单位→敌人高亮红色→executeCombat"
+      - "所有现有测试通过"
+    complexity: large
+    estimated_loc: 210
+    test_loc: 100
+    affects_tests:
+      - "TurnManager.test.ts: endPlayerTurn后state=PlayerCombat非EnemyAI"
+
+  # ===== Phase 5: A* Enemy AI =====
+  - id: 5
+    name: "A* Enemy AI — Multi-Step Pathfinding Movement"
+    description: "EnemyAI 升级为 A* 多步路径移动 + 远程攻击范围支持 (Archer=2, Mage=3)。"
+    dependencies: ["Phase 1", "Phase 4"]
+    files:
+      modify:
+        - {path: "src/unit/EnemyAI.ts", loc: 120, changes: "导入Pathfinding; 构造函数实例化; 移动改为findPathInRange多步; 新增isInRange远程攻击检测"}
+        - {path: "src/main.ts", loc: 15, changes: "移除重复DIRECTION_OFFSETS, 从Coordinate导入"}
+    acceptance:
+      - "Knight(moveRange=5)可一回合移动5格"
+      - "Mage(range=3)/Archer(range=2)可远程攻击,不触发反击"
+      - "EnemyAI构造函数签名不变"
+      - "所有现有测试通过"
+    complexity: large
+    estimated_loc: 135
+    test_loc: 70
+    affects_tests:
+      - "EnemyAI.test.ts: 移动策略变更, 整体行为方向不变"
+
+  # ===== Phase 6: Ability System Core =====
+  - id: 6
+    name: "Ability System Core — Config + Engine + Unit Integration"
+    description: "技能系统核心：AbilityConfig(4单位各1技能)、AbilitySystem(执行引擎)、Unit扩展(skill/cooldown/effects/movedThisTurn)。"
+    dependencies: ["Phase 4"]
+    files:
+      create:
+        - {path: "src/unit/AbilityConfig.ts", loc: 70, exports: "AbilityType枚举/AbilityConfig接口/ABILITY_CONFIGS/StatusEffect接口"}
+        - {path: "src/unit/AbilitySystem.ts", loc: 120, exports: "AbilitySystem类/canUseAbility/useAbility/advanceCooldowns/AbilityResult"}
+      modify:
+        - {path: "src/unit/Unit.ts", loc: 20, changes: "添加skill/cooldown/effects/movedThisTurn/canActThisTurn"}
+    acceptance:
+      - "ABILITY_CONFIGS 为4种UnitType各定义1个技能"
+      - "ShieldBash(1.5x+skipTurn)/Volley(AoE 3x3 0.7x)/Charge(移动4格1.2x)/Fireball(2x)"
+      - "canUseAbility: cooldown==0时true; 技能伤害不触发反击"
+      - "advanceCooldowns: 冷却正确减1"
+      - "所有现有测试通过"
+    complexity: large
+    estimated_loc: 210
+    test_loc: 120
+    affects_tests:
+      - "Unit.test.ts: 新增字段不影响现有构造函数签名"
+
+  # ===== Phase 7: Skill UI =====
+  - id: 7
+    name: "PlayerCombat Skill UI — DOM Buttons + Interaction"
+    description: "PlayerCombat 阶段技能按钮 DOM UI + MapRenderer.renderAbilityRange 目标高亮。"
+    dependencies: ["Phase 6", "Phase 4"]
+    files:
+      modify:
+        - {path: "src/main.ts", loc: 200, changes: "技能栏DOM(按钮+冷却显示); selectedSkill+skillTargeting状态; onClick支持普攻与技能双模式; Phase转换时advanceCooldowns"}
+        - {path: "src/map/MapRenderer.ts", loc: 25, changes: "新增renderAbilityRange(cells,color)"}
+        - {path: "src/unit/TurnManager.ts", loc: 15, changes: "getSkillCooldown/isSkillReady"}
+    acceptance:
+      - "PlayerCombat选中单位后显示技能按钮(含冷却状态)"
+      - "点击技能→目标选择模式→目标格高亮"
+      - "使用技能后cooldown设置+单位标记acted"
+      - "所有现有测试通过"
+    complexity: large
+    estimated_loc: 240
+    test_loc: 80
+
+  # ===== Phase 8: EnemyAI Skills + Final Integration =====
+  - id: 8
+    name: "EnemyAI Skills + Final Integration"
+    description: "敌方AI技能策略 + EnemyAction扩展'skill'类型 + processEnemyActions处理 + 完整5阶段循环验证。"
+    dependencies: ["Phase 5", "Phase 7"]
+    files:
+      modify:
+        - {path: "src/unit/EnemyAI.ts", loc: 85, changes: "注入AbilitySystem; evaluateSkillUsage策略; getSkillTarget; executeTurn技能路径; EnemyAction扩展'skill'类型"}
+        - {path: "src/main.ts", loc: 40, changes: "AbilitySystem注入EnemyAI; processEnemyActions处理'skill'action"}
+    acceptance:
+      - "Warrior(HP>50%)使用ShieldBash; Archer(>=2目标)使用Volley"
+      - "Knight(HP<50%)使用Charge; Mage(HP>60%)使用Fireball"
+      - "冷却期间使用普通攻击"
+      - "完整5阶段循环验证通过; skill skipTurn效果正确"
+      - "npm test全部通过"
+    complexity: large
+    estimated_loc: 125
+    test_loc: 100
+
+total_phases: 8
+total_loc: 1315
+total_test_loc: 650
+
+appendix:
+  file_structure_final:
+    - "src/config/GameConfig.ts              [Phase 1 NEW]"
+    - "src/core/Coordinate.ts                [Phase 2 NEW]"
+    - "src/core/Pathfinding.ts               [Phase 1 NEW]"
+    - "src/map/MapGenerator.ts               [Phase 2 MOD]"
+    - "src/map/MapRenderer.ts                [Phase 7 MOD]"
+    - "src/unit/Unit.ts                      [Phase 6 MOD]"
+    - "src/unit/TurnManager.ts               [Phase 3/4/7 MOD]"
+    - "src/unit/PhaseTypes.ts                [Phase 3/4 MOD]"
+    - "src/unit/EnemyAI.ts                   [Phase 5/8 MOD]"
+    - "src/unit/DeployManager.ts             [Phase 3 NEW]"
+    - "src/unit/AbilityConfig.ts             [Phase 6 NEW]"
+    - "src/unit/AbilitySystem.ts             [Phase 6 NEW]"
+    - "src/main.ts                           [Phase 3/4/5/7/8 MOD]"
+    - "src/style.css                         [不变]"
+    - "docs/specs/gameplay-framework.yaml    [当前文件]"
+
+  risk_register:
+    - {risk: "TurnManager初始状态改为Deploy导致现有测试失败", impact: medium, likelihood: high, mitigation: "Phase 3同步更新测试断言"}
+    - {risk: "PlayerCombat阶段UI复杂度超出预估", impact: medium, likelihood: medium, mitigation: "Phase 4先做基础普通攻击, Phase 7再叠加技能UI"}
+    - {risk: "Charge技能需要跨模块移动距离跟踪", impact: medium, likelihood: medium, mitigation: "Unit.movedThisTurn + UnitManager.moveUnit更新 + startPlayerTurn重置"}
+    - {risk: "main.ts 复杂度持续增长接近难以维护", impact: medium, likelihood: high, mitigation: "当前保持增量演进; 若超过500行建议独立GameController类"}
+    - {risk: "技能平衡性迭代成本", impact: low, likelihood: medium, mitigation: "ABILITY_CONFIGS 纯数据改配置即可, 不触碰引擎代码"}

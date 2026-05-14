@@ -1,0 +1,120 @@
+# Phase 2: Map Connectivity + Deploy Zones
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 2
+  name: "Map Connectivity + Deploy Zones"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    增强 MapGenerator 多起点连通保证 + 创建 Coordinate 工具类型。
+    从分散代码中提取 DIRECTION_OFFSETS 到统一坐标工具。
+    确保所有 6 个 deploy 坐标（每队 3 个，依据 DEFAULT_GAME_CONFIG.teamSize=3）
+    互相可达，被 Mountain/Water 包围时自动修复为 Plain。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 1"]
+    existing_modules:
+      - "src/map/MapGrid.ts — isPassable/getMoveCost"
+      - "src/map/TileType.ts — TileType 枚举"
+      - "src/map/MapGenerator.ts — class MapGenerator { generate(): MapGrid } — 当前只保证 (0,0)↔(7,7) 连通"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-001", title: "GameConfig 为纯数据模块而非运行时可修改状态", rationale: "编队/规模在游戏加载时一次读取。DEFAULT_GAME_CONFIG 确定 deploy 坐标。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "100% OOP class 体系"
+    - "现有测试必须保持通过 (MapGrid.test.ts 13 项)"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    create:
+      - path: "src/core/Coordinate.ts"
+        loc: 30
+        reason: "坐标工具类型 + 统一方向偏移常量"
+        exports:
+          - "Coordinate 接口 {row: number; col: number}"
+          - "manhattan(a, b): number — 曼哈顿距离"
+          - "isValid(row, col): boolean — 边界检查 (0≤r,c<GRID_SIZE)"
+          - "equals(a, b): boolean — 坐标相等比较"
+          - "DIRECTION_OFFSETS: [number, number][] — 四个方向偏移"
+          - "add(a, offset): Coordinate — 坐标+偏移"
+        details:
+          - "DIRECTION_OFFSETS 从现有 EnemyAI/MovementEngine/CombatSystem/main.ts 提取统一"
+          - "isValid 使用 GRID_SIZE 常量"
+          - "manhattan = |a.row-b.row| + |a.col-b.col|"
+
+    modify:
+      - path: "src/map/MapGenerator.ts"
+        loc: 40
+        change: "添加 ensureDeployConnectivity 方法 — 多起点 BFS 保证所有 deploy 坐标互相可达"
+        details:
+          - "新增 ensureDeployConnectivity(deployCells: {row:number,col:number}[]): void"
+          - "从第一个 deploy 坐标 BFS, 遍历所有可达 passable 格"
+          - "对 unreachable 的 deploy 坐标: 将路径上首个非 Plain 改为 Plain"
+          - "保留现有 (0,0)↔(7,7) 连通保证逻辑不变"
+          - "generate() 调用 ensureDeployConnectivity 传入默认 deploy 坐标"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "DIRECTION_OFFSETS 从 Coordinate.ts 统一导入 (不再分散在 4 个文件中)"
+    - "deploy 坐标被 Mountain/Water 包围时自动修复为 Plain"
+    - "所有 6 个 deploy 坐标互相可达 (通过 passable 路径)"
+    - "现有 MapGrid.test.ts (13 项) 全部保持通过"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/core/__tests__/Coordinate.test.ts"
+    test_loc: 40
+    new_tests:
+      - "manhattan: (0,0)↔(7,7)=14"
+      - "manhattan: (3,4)↔(3,4)=0"
+      - "isValid: (-1,0)=false, (8,0)=false, (0,0)=true, (7,7)=true"
+      - "equals: (3,4)=== (3,4) true; (3,4)!==(4,3) false"
+      - "DIRECTION_OFFSETS 包含 4 个方向"
+      - "add: (3,4)+(0,-1)={row:3,col:3}"
+
+    existing_tests_modified:
+      - "MapGrid.test.ts: MapGenerator 测试仍通过 (连通性逻辑扩展, 不破坏现有)"
+      - "EnemyAI.test.ts/MovementEngine.test.ts/CombatSystem.test.ts: 若导入 DIRECTION_OFFSETS 从 Coordinate, 测试不受影响"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥6)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_files:
+      - "src/map/MapGenerator.ts: class MapGenerator { generate(): MapGrid } — 随机生成, DIRECTIONS 硬编码, bfsHasPath/bfsFindAnyPath 内部方法"
+      - "src/map/MapGrid.ts: class MapGrid { isPassable, getMoveCost, tiles }"
+    existing_hardcoded_DIRECTION_OFFSETS:
+      - "EnemyAI.ts: 第18行 `const DIRECTION_OFFSETS: [number, number][] = [[-1,0], ...]`"
+      - "MovementEngine.ts: 第5行 同上"
+      - "CombatSystem.ts: 第5行 (用于反击相邻检测)"
+      - "main.ts: 第23行 + getAdjacentEnemies 函数内"
+    deploy_coordinates_from_GameConfig:
+      - "Team 0 (Player): 预计在 (0,0), (0,1), (0,2) 附近"
+      - "Team 1 (Enemy): 预计在 (7,7), (7,6), (7,5) 附近"
+    test_summary:
+      total_tests: 60
+      MapGrid_test_tests: 13
+
+  complexity: small
+  estimated_loc: 70
+  test_loc: 40

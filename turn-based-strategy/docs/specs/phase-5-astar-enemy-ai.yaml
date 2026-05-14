@@ -1,0 +1,132 @@
+# Phase 5: A* Enemy AI — Multi-Step Pathfinding Movement
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 5
+  name: "A* Enemy AI — Multi-Step Pathfinding Movement"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    EnemyAI 升级为 A* 多步路径移动 + 远程攻击范围支持。
+    当前 EnemyAI 使用贪心单步移动 (findBestAdjacentMove), 升级为使用 Pathfinding.findPathInRange
+    在 moveRange 内移动多格。远程单位 (Archer range=2, Mage range=3) 可在不触发反击的距离攻击。
+    行为更自然, 不再一格格挪。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 1 (Pathfinding)", "Phase 4 (完整 5 阶段循环)"]
+    existing_modules:
+      - "src/core/Pathfinding.ts — Pathfinding 类 (findPath, findPathInRange)"
+      - "src/core/Coordinate.ts — Coordinate 接口, DIRECTION_OFFSETS"
+      - "src/unit/EnemyAI.ts — 当前贪心单步, findNearest/findBestAdjacentMove/getAdjacentEnemies"
+      - "src/unit/Unit.ts — attackRange 属性"
+      - "src/unit/UnitManager.ts — moveUnit"
+      - "src/unit/CombatSystem.ts — executeCombat"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-007", title: "EnemyAI 多步路径移动使用 Pathfinding 替代贪心单步", rationale: "A* 在 moveRange 内移动多格, 行为更自然。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过 (EnemyAI.test.ts 测试方向不变但具体路径可能变化)"
+    - "EnemyAI 构造函数签名不变 (向后兼容)"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    modify:
+      - path: "src/unit/EnemyAI.ts"
+        loc: 120
+        change: "导入 Pathfinding; 构造函数实例化; 移动改为 findPathInRange 多步; 新增 isInRange 远程攻击; 更新 executeTurn 逻辑"
+        details:
+          - "导入 { Pathfinding } from '../core/Pathfinding'"
+          - "导入 { Coordinate } from '../core/Coordinate' (可选的)"
+          - "构造函数新增可选参数 pathfinding?: Pathfinding, 无参时 new Pathfinding(grid, unitManager)"
+          - "新增 private isInRange(attacker: Unit, target: Unit): boolean — 使用 Manhattan 距离 ≤ attacker.attackRange"
+          - "重写 executeTurn 移动逻辑:"
+            - "if 远程单位(isInRange): 直接攻击, 不移动"
+            - "if 近战:"
+              - "使用 findPathInRange 获取 moveRange 内可达格"
+              - "按曼哈顿距离最近玩家单位排序"
+              - "选择最近的格并移动 (单步多格)"
+              - "移动后检查相邻敌人 → 攻击"
+          - "保持 findNearest 与 getAdjacentEnemies 不变 (其他模块可能调用)"
+          - "移除 DIRECTION_OFFSETS 硬编码, 改为从 Coordinate.ts 导入 (Phase 2 成果)"
+
+      - path: "src/main.ts"
+        loc: 15
+        change: "移除重复 DIRECTION_OFFSETS, 从 Coordinate 导入"
+        details:
+          - "删除 main.ts 中第 23-26 行的 `const DIRECTION_OFFSETS: [number, number][] = [...]`"
+          - "添加 `import { DIRECTION_OFFSETS } from './core/Coordinate'`"
+          - "getAdjacentEnemies 函数仍用 DIRECTION_OFFSETS (来源更新)"
+          - "注: 此变更假设 Phase 2 已完成"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "Knight (moveRange=5) 可一回合移动 5 格 (使用 findPathInRange 多步)"
+    - "Mage (range=3)/Archer (range=2) 可远程攻击, 不触发反击"
+    - "EnemyAI 构造函数签名不变 (向后兼容)"
+    - "所有现有 EnemyAI.test.ts (6 项) 通过 (移动策略变更但行为方向不变)"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/unit/__tests__/EnemyAI.test.ts"
+    test_loc: 70
+    existing_tests_modified:
+      - "findBestAdjacentMove 测试: 仍通过 (方法签名不变)"
+      - "executeTurn 移动测试: 移动距离可能从 1 变为多格, 断言需适配"
+      - "远程攻击测试: 新增远程攻击场景"
+
+    new_tests:
+      - "EnemyAI: knight 在 Plain 上 moveRange=5 可移动 5 格"
+      - "EnemyAI: mage (range=3) 在距离 3 时远程攻击, 不移动"
+      - "EnemyAI: archer (range=2) 在距离 2 时远程攻击, 不触发反击"
+      - "EnemyAI: 远程单位在 range 外时移动靠近"
+      - "EnemyAI: pathfinding 注入测试 (自定义 pathfinding 实例)"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥5)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_EnemyAI_class:
+      - "class EnemyAI { constructor(grid, unitManager, combatFn?) }"
+      - "方法: executeTurn(), findNearest(unit, targets), getAdjacentEnemies(unit), findBestAdjacentMove(unit, target)"
+      - "executeTurn 当前逻辑: for each enemyUnit → 相邻?攻击 : findBestAdjacentMove 单步→攻击"
+      - "EnemyAction 接口: { unit, action: 'move'|'attack'|'idle', target?, from?, to?, combatResult? }"
+      - "DIRECTION_OFFSETS 当前硬编码在 EnemyAI.ts 第18行"
+
+    unit_attackRanges:
+      - "Warrior: range=1"
+      - "Archer: range=2"
+      - "Knight: range=1"
+      - "Mage: range=3"
+
+    test_summary:
+      total_tests: 60
+      EnemyAI_tests: 6
+        - "findNearest returns closest unit"
+        - "findBestAdjacentMove produces valid move toward target"
+        - "getAdjacentEnemies returns adjacent opponent units only"
+        - "executeTurn produces move action when not adjacent"
+        - "executeTurn attacks adjacent low-HP target"
+        - "executeTurn returns empty array when no player units"
+
+  complexity: large
+  estimated_loc: 135
+  test_loc: 70

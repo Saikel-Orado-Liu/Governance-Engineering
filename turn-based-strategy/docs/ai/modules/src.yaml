@@ -20,7 +20,8 @@ exports:
 
 constraints:
   - "无外部运行时依赖"
-  - "纯 Canvas 2D 渲染，无 DOM 框架"
+  - "混合渲染：Canvas 2D 地图/单位图形 + DOM HUD 文本（Phase指示器/操作指引/工具提示）"
+  - "HUD DOM 元素均设置 pointer-events: none，避免拦截 Canvas 点击事件"
   - "单入口 HTML 文件 (index.html)"
 
 known_issues: []

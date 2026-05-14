@@ -1,0 +1,138 @@
+# Phase 1: Core Utilities — GameConfig + Pathfinding
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 1
+  name: "Core Utilities — GameConfig + Pathfinding"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    创建游戏配置系统和通用 A* 寻路工具。纯数据/算法模块，可独立测试。
+    GameConfig 为纯数据模块（一次性加载，运行时不修改），与现有 UNIT_CONFIGS 模式一致。
+    Pathfinding 为通用独立类，被 EnemyAI 和 MovementEngine 多模块复用。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: []
+    existing_modules:
+      - "src/map/MapGrid.ts — MapGrid 类 (isPassable/getMoveCost)"
+      - "src/map/TileType.ts — TileType 枚举, TILE_PROPERTIES"
+      - "src/map/MapGenerator.ts — MapGenerator 类"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-001", title: "GameConfig 为纯数据模块而非运行时可修改状态", rationale: "所有编队/规模/部署映射在游戏加载时一次读取。与现有 UNIT_CONFIGS 模式一致。"}
+    - {id: "DD-002", title: "Pathfinding 为通用独立类而非 UnitManager 方法", rationale: "A* 寻路被 EnemyAI 和 MovementEngine 多模块复用，保持工具类独立。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "Canvas 2D 渲染，无外部运行时依赖"
+    - "100% OOP class 体系，遵循 ADR-003"
+    - "现有 60 测试必须保持通过 (vitest)"
+    - "增量演进，不推翻现有架构"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进，严格遵循 coding-standards.md"
+    - "src/config/ 目录新建即首次创建"
+
+  # ===== 文件清单 =====
+  files:
+    create:
+      - path: "src/config/GameConfig.ts"
+        loc: 50
+        reason: "游戏配置系统 — 编队规模/部署坐标/DEFAULT_GAME_CONFIG"
+        exports:
+          - "GameConfig 接口 (teamSize, formations, deployCoordinates)"
+          - "DEFAULT_GAME_CONFIG 常量"
+          - "Formation 类型定义"
+        details:
+          - "GameConfig 接口: teamSize (1-4), formations (Record<number, UnitType[]>), deployCoordinates (Record<number, {row:number, col:number}[]>)"
+          - "DEFAULT_GAME_CONFIG 常量: teamSize=3, formations 包含默认编队配置"
+          - "部署坐标: team 0 在 (0,0)(0,1)(0,2) 附近, team 1 在 (7,7)(7,6)(7,5) 附近"
+          - "所有字段 readonly, 运行时不可修改"
+
+      - path: "src/core/Pathfinding.ts"
+        loc: 80
+        reason: "通用 A* 加权寻路工具类"
+        exports:
+          - "Pathfinding 类"
+          - "findPath(start, end) 方法 (A* 加权, 返回路径数组)"
+          - "findPathInRange(start, range) 方法 (可达范围)"
+          - "PathNode 接口"
+          - "HeuristicFn 类型"
+        details:
+          - "A* 加权: 使用 Manhattan 启发式 + 地形移动代价 (getMoveCost)"
+          - "findPath: 起点→终点, 遇阻塞返回 null"
+          - "findPathInRange: 指定移动力内所有可达格"
+          - "考虑单位占据 (isOccupied 回调注入)"
+          - "openList 使用简单数组 (8x8 地图, 性能足够)"
+          - "支持自定义启发函数注入"
+
+    modify: []
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "GameConfig 定义 teamSize 可配置 1-4 范围"
+    - "DEFAULT_GAME_CONFIG.teamSize === 3"
+    - "Pathfinding.findPath 全 Plain 地图 (0,0)→(7,7) 步数=14 (含起点不含终点? 明确约定)"
+    - "Pathfinding.findPath 含 Forest 绕行 Mountain, 正确返回路径"
+    - "Pathfinding.findPath 完全阻塞 (起点被孤立) 返回 null"
+    - "Pathfinding.findPathInRange 返回启动单位 moveRange 内所有格"
+    - "寻找路径时考虑单位占据"
+    - "npm run build 通过 (TypeScript strict)"
+    - "npm test 全部通过 (现有 60 测试不受影响)"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/core/__tests__/Pathfinding.test.ts"
+    test_loc: 60
+    new_tests:
+      - "findPath: (0,0)→(7,7) 全 Plain 返回路径长度 15 (14步+终点)"
+      - "findPath: 含 Forest 绕 Mountain 返回正确路径"
+      - "findPath: 完全阻塞返回 null"
+      - "findPath: 路径不含起点 (从当前格开始的邻居)"
+      - "findPathInRange: moveRange=3 返回曼哈顿距离≤3 的所有格"
+      - "findPathInRange: 排除被占据格"
+      - "findPathInRange: 排除起点自身"
+      - "GameConfig: DEFAULT_GAME_CONFIG.teamSize 默认 3"
+      - "GameConfig: deployCoordinates 包含 0/1 两队"
+
+    existing_tests_affected: []
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "Vite 打包成功"
+      - "全部测试通过 (现有 60 + 新增 ≥9)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_files:
+      - "src/map/MapGrid.ts: class MapGrid { isPassable(row, col): boolean; getMoveCost(row, col): number; readonly tiles: TileType[][] } — GRID_SIZE=8"
+      - "src/map/TileType.ts: const enum TileType { Plain=0, Forest=1, Mountain=2, Water=3 } — TILE_PROPERTIES: Plain cost=1, Forest cost=2, Mountain/Water impassable"
+      - "src/map/MapGenerator.ts: class MapGenerator { generate(): MapGrid } — 随机生成地图, 保证 (0,0)→(7,7) 连通, 现行 DIRECTIONS 硬编码"
+      - "existing DIRECTION_OFFSETS 分散在 EnemyAI.ts, MovementEngine.ts, CombatSystem.ts, main.ts 中硬编码"
+    unit_config:
+      - "UNIT_CONFIGS: Warrior(hp=100,atk=25,def=15,range=1,move=3), Archer(70,30,5,2,3), Knight(90,22,12,1,5), Mage(60,35,3,3,2)"
+      - "UnitType: Warrior=0, Archer=1, Knight=2, Mage=3"
+    test_summary:
+      total_tests: 60
+      files:
+        - "MapGrid.test.ts: 2 describe, 13 tests"
+        - "Unit.test.ts: 1 describe, 8 tests"
+        - "UnitManager.test.ts: 1 describe, 8 tests"
+        - "MovementEngine.test.ts: 1 describe, 6 tests"
+        - "CombatSystem.test.ts: 1 describe, 10 tests"
+        - "TurnManager.test.ts: 1 describe, 6 tests"
+        - "EnemyAI.test.ts: 1 describe, 6 tests"
+
+  complexity: small
+  estimated_loc: 130
+  test_loc: 60

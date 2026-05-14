@@ -1,0 +1,146 @@
+# Phase 3: DeployManager + Phase.Deploy Integration
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 3
+  name: "DeployManager + Phase.Deploy Integration"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    实现 DeployManager 自动部署系统。TurnManager 初始状态从 Phase.PlayerMove 改为 Phase.Deploy。
+    替换 main.ts 中的 trySpawn 硬编码部署。DeployManager 根据 GameConfig 配置为双方队伍生成单位。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 1", "Phase 2"]
+    existing_modules:
+      - "src/config/GameConfig.ts — GameConfig 接口 + DEFAULT_GAME_CONFIG"
+      - "src/core/Coordinate.ts — Coordinate 接口 + DIRECTION_OFFSETS"
+      - "src/map/MapGenerator.ts — 含 ensureDeployConnectivity"
+      - "src/unit/PhaseTypes.ts — Phase 枚举 (含 Deploy)"
+      - "src/unit/TurnManager.ts — 当前初始状态 Phase.PlayerMove, 构造函数(grid, unitManager, combatFn)"
+      - "src/unit/UnitManager.ts — spawnUnit/isOccupied"
+      - "src/unit/UnitType.ts — UnitType 枚举 + UNIT_CONFIGS"
+      - "src/main.ts — 当前硬编码 trySpawn 部署方式"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-003", title: "DeployManager 接管自动部署流程", rationale: "Phase.Deploy 作为真实游戏阶段，需可配置、可测试、可扩展的部署逻辑。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过 (TurnManager.test.ts 需适配初始状态变更)"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    create:
+      - path: "src/unit/DeployManager.ts"
+        loc: 100
+        reason: "自动部署系统 — 按 GameConfig 为两队生成单位"
+        exports:
+          - "DeployManager 类"
+          - "DeployResult 接口"
+          - "executeDeploy(): DeployResult"
+        details:
+          - "DeployManager 构造函数: (unitManager: UnitManager, config: GameConfig, deployCells: {team:number, cells:{row:number,col:number}[]})"
+          - "executeDeploy(): 遍历两队 deploy 坐标, 每队生成 config.teamSize 个单位"
+          - "单位类型来自 config.formations 或默认循环 [Warrior, Archer, Knight, Mage]"
+          - "若 deploy 坐标被占据, 尝试相邻格 (同现有 trySpawn 回退逻辑)"
+          - "DeployResult 含 deployedUnits/teams 各部署了哪些单位"
+          - "全部失败返回失败信息"
+
+    modify:
+      - path: "src/unit/PhaseTypes.ts"
+        loc: 5
+        change: "确保 canTransitionTo 支持 Deploy→PlayerMove 正常转换"
+        details:
+          - "检查 canTransitionTo(Deploy, PlayerMove) 是否返回 true"
+          - "当前逻辑: nextIndex === currentIndex + 1 → Deploy=0, PlayerMove=1 → 应自动支持"
+          - "移除 canTransitionTo 中 PlayerMove→EnemyAI skip 规则 (此项在 Phase 4 做, 此处不动)"
+          - "只需确保现有 skip 规则不影响 Deploy 阶段"
+
+      - path: "src/unit/TurnManager.ts"
+        loc: 30
+        change: "初始状态改为 Phase.Deploy; 添加 deployed 字段; 支持 Deploy→PlayerMove 转换"
+        details:
+          - "private state: Phase = Phase.Deploy (原 Phase.PlayerMove)"
+          - "添加 public deployed: boolean = false"
+          - "添加 setDeployed(): void 设置 deployed=true 并调用 nextPhase(Phase.PlayerMove)"
+          - "endPlayerTurn/startPlayerTurn 不受影响 — 仅在 PlayerMove→EnemyAI→PlayerMove 循环中工作"
+          - "getCurrentTeam 适配: Phase.Deploy 返回 0"
+
+      - path: "src/main.ts"
+        loc: 60
+        change: "移除 trySpawn 函数; 实例化 DeployManager; 监听 Phase.Deploy 执行部署"
+        details:
+          - "删除 trySpawn 函数定义 (约 16 行)"
+          - "删除 trySpawn 调用行 (main 尾部 6 行)"
+          - "导入 DeployManager, GameConfig, DEFAULT_GAME_CONFIG"
+          - "创建 DeployManager 实例, 传入 grid/manager/DEFAULT_GAME_CONFIG"
+          - "Deploy 阶段: executeDeploy() 后 transition 到 PlayerMove"
+          - "Phase 变更监听: Phase.Deploy exit 时触发部署"
+          - "DIRECTION_OFFSETS 若已从 Coordinate.ts 导入则更新导入"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "TurnManager 初始化后 getState() === Phase.Deploy"
+    - "DeployManager.executeDeploy() 为双方各生成 DEFAULT_GAME_CONFIG.teamSize 个单位"
+    - "部署完成后 turnManager.deployed === true"
+    - "部署完成后 state 转换到 PlayerMove"
+    - "现有 60 测试通过 (TurnManager.test.ts 初始状态断言从 Phase.PlayerMove 改为 Phase.Deploy)"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/unit/__tests__/DeployManager.test.ts"
+    test_loc: 80
+    new_tests:
+      - "executeDeploy: 为 team 0 生成 teamSize=3 个单位"
+      - "executeDeploy: 为 team 1 生成 teamSize=3 个单位"
+      - "executeDeploy: 单位位置在 deploy 坐标附近"
+      - "executeDeploy: 全部单位类型正确"
+      - "executeDeploy: 若某格被占则回退相邻格"
+      - "DeployManager: 构造函数接受 config 参数"
+
+    existing_tests_modified:
+      - "TurnManager.test.ts: 初始状态断言 expect(turnManager.getState()).toBe(Phase.PlayerMove) → 改为 Phase.Deploy 或适配"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥6)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_key_classes:
+      - "TurnManager: 当前 state=Phase.PlayerMove 初始化, 方法: getState/getCurrentTeam/endPlayerTurn/startPlayerTurn/isGameOver/nextPhase"
+      - "UnitManager: spawnUnit(type, team, row, col): Unit | null, isOccupied(row, col): boolean"
+      - "PhaseTypes: enum Phase { Deploy, PlayerMove, PlayerCombat, EnemyAI, End }, canTransitionTo 含 PlayerMove→EnemyAI skip (Phase 4 移除)"
+    existing_main_deploy_logic:
+      - "trySpawn(type, team, row, col): 先 spawn, 失败则尝试 8 方向相邻格"
+      - "当前部署: team 0 只部署 1 个 Warrior 在 (0,0); team 1 部署 3 单位在 (7,7)/(7,0)/(0,7)"
+
+    test_summary:
+      total_tests: 60
+      TurnManager_tests: 6
+        - "initial state is player (Phase.PlayerMove) — 需改为 Phase.Deploy"
+        - "changes state to enemy after endPlayerTurn"
+        - "enemy moves toward nearest player..."
+        - "enemy attacks adjacent low-HP..."
+        - "sets gameOver when all player units eliminated"
+        - "sets gameOver when all enemy units eliminated"
+
+  complexity: large
+  estimated_loc: 195
+  test_loc: 80

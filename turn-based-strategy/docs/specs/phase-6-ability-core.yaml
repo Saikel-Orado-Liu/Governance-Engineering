@@ -1,0 +1,165 @@
+# Phase 6: Ability System Core — Config + Engine + Unit Integration
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 6
+  name: "Ability System Core — Config + Engine + Unit Integration"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    技能系统核心实现。三个子模块:
+    1. AbilityConfig — 4 单位各 1 独特技能的数据配置
+    2. AbilitySystem — 技能执行引擎 (冷却管理, 伤害计算, AoE, 状态效果)
+    3. Unit 扩展 — 添加 skill/cooldown/effects/movedThisTurn 字段
+    技能效果不触发反击。与 CombatSystem 分离 — CombatSystem 处理普攻, AbilitySystem 处理技能。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 4 (PlayerCombat 作为独立阶段 — 技能在 PlayerCombat 中使用)"]
+    existing_modules:
+      - "src/unit/Unit.ts — Unit 类 (type/team/hp/atk/def/attackRange/moveRange/takeDamage/setPosition)"
+      - "src/unit/UnitType.ts — UnitType 枚举 (Warrior/Archer/Knight/Mage), UNIT_CONFIGS, getCounterMultiplier"
+      - "src/unit/UnitManager.ts — getUnitsByTeam/getUnitAt/getAllUnits"
+      - "src/unit/CombatSystem.ts — CombatResult 接口 (复用)"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-005", title: "AbilitySystem 为独立执行引擎，不混入 CombatSystem", rationale: "技能效果包含 AoE/状态效果，与 executeCombat 执行模式不同。"}
+    - {id: "DD-008", title: "冷却管理在 EnemyAI→PlayerMove 转换时触发", rationale: "统一推进与回合概念对齐。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过"
+    - "Unit 构造函数签名不变 (新增字段默认值, 不破坏现有 new Unit())"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    create:
+      - path: "src/unit/AbilityConfig.ts"
+        loc: 70
+        reason: "技能数据配置 — 4 单位各 1 技能定义 + ABILITY_CONFIGS"
+        exports:
+          - "AbilityType 枚举"
+          - "AbilityConfig 接口"
+          - "ABILITY_CONFIGS: Record<UnitType, AbilityConfig>"
+          - "StatusEffect 接口"
+          - "EffectType 枚举"
+        details:
+          - "AbilityType: { ShieldBash, Volley, Charge, Fireball }"
+          - "AbilityConfig 接口: { id: AbilityType, name, description, cooldown, damageMultiplier, range, aoeRadius?, targetType: 'enemy'|'self'|'area', statusEffect?}"
+          - "STATUS_EFFECTS: 暂不实现, 接口预留"
+          - "4 技能配置:"
+            - "Warrior → ShieldBash: 1.5x 伤害 + skipTargetTurn (在结果中标记), cooldown=2, range=1, aoe=false"
+            - "Archer → Volley: AoE 3x3 区域 0.7x, cooldown=3, range=3, aoeRadius=1"
+            - "Knight → Charge: 移动 4 格 + 路径上首个敌人 1.2x 伤害, cooldown=3, range=4 (移动距离)"
+            - "Mage → Fireball: 2x 伤害, cooldown=2, range=3, aoe=false"
+
+      - path: "src/unit/AbilitySystem.ts"
+        loc: 120
+        reason: "技能执行引擎 — 冷却管理 / canUseAbility / useAbility / advanceCooldowns"
+        exports:
+          - "AbilitySystem 类"
+          - "canUseAbility(unit, abilityType): { usable: boolean, reason?: string }"
+          - "useAbility(caster, target, abilityType, context): AbilityResult"
+          - "advanceCooldowns(team: number): void"
+          - "getCooldown(unit, abilityType): number"
+          - "AbilityResult 接口"
+          - "AbilityTarget 类型"
+        details:
+          - "useAbility: 检查冷却, 执行伤害, 应用 AoE, 设置冷却, 返回 AbilityResult"
+          - "AbilityResult: { success, log[], damageMap: Map<Unit, number>, statusEffects?, skipTargetTurn?: boolean }"
+          - "技能伤害公式: Math.round(attacker.atk * damageMultiplier) — 无视防御 (简化设计)"
+          - "不触发反击"
+          - "AoE: Archer Volley 作用于目标为中心的 3x3 区域, 伤害 0.7x caster.atk"
+          - "Charge: 沿直线移动 4 格, 路径上首个敌人受 1.2x 伤害"
+          - "advanceCooldowns: 遍历队伍所有单位, 冷却 > 0 减 1"
+          - "内部维护 Map<Unit, Map<AbilityType, number>> 冷却状态"
+          - "UnitManager 注入: 构造函数参数 (unitManager: UnitManager)"
+
+    modify:
+      - path: "src/unit/Unit.ts"
+        loc: 20
+        change: "添加 skill/cooldown/effects/movedThisTurn 字段 (默认值, 不破坏构造函数签名)"
+        details:
+          - "添加 `readonly skill: AbilityType` (来自 UNIT_CONFIGS 扩展 或构造函数可选参数)"
+          - "更好的方式: Unit 构造函数可选扩展参数 `skill?: AbilityType`, 默认根据 type 映射"
+          - "添加 `cooldown: number = 0`"
+          - "添加 `effects: StatusEffect[] = []`"
+          - "添加 `movedThisTurn: boolean = false`"
+          - "添加 `canActThisTurn(): boolean` — 返回 !this.movedThisTurn && this.isAlive()"
+          - "这些字段不影响现有构造函数签名 (默认值)"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "ABILITY_CONFIGS 为 4 种 UnitType 各定义 1 个技能"
+    - "ShieldBash: 1.5x 伤害 + skipTargetTurn 标记"
+    - "Volley: AoE 3x3 区域 0.7x 伤害"
+    - "Charge: 移动 4 格 + 路径首敌 1.2x 伤害"
+    - "Fireball: 2x 伤害"
+    - "canUseAbility: cooldown===0 时 true"
+    - "useAbility: 技能伤害不触发反击"
+    - "advanceCooldowns: 冷却正确减 1"
+    - "Unit 构造函数签名不变 (新字段有默认值)"
+    - "所有现有测试通过"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/unit/__tests__/AbilitySystem.test.ts"
+    test_loc: 120
+    new_tests:
+      - "ABILITY_CONFIGS 包含 4 种配置"
+      - "ShieldBash: 伤害正确, 标记 skipTargetTurn"
+      - "Volley: AoE 3x3 区域内所有敌方单位受伤害"
+      - "Charge: 移动并攻击路径上首个敌人"
+      - "Fireball: 2x 伤害"
+      - "canUseAbility: cooldown 0 → true, cooldown >0 → false"
+      - "useAbility: 技能不触发反击"
+      - "advanceCooldowns: 冷却从 1→0"
+      - "advanceCooldowns: 冷却 0 不变"
+      - "Unit: canActThisTurn 正确"
+      - "Unit: movedThisTurn 默认 false"
+
+    existing_tests_affected:
+      - "Unit.test.ts: 构造函数签名不变, 所有 8 项测试应不受影响"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥11)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_Unit_class:
+      - "class Unit { constructor(type, team, row, col) — 只读属性: type/team/row/col/hp/maxHp/atk/def/attackRange/moveRange }"
+      - "方法: isAlive/takeDamage/getDamageMultiplierAgainst/setPosition"
+      - "注意: moveRange 和 attackRange 为 public readonly"
+      - "新字段: skill/cooldown/effects/movedThisTurn → 构造函数增加可选参数或默认计算"
+
+    existing_UnitType:
+      - "const enum UnitType { Warrior=0, Archer=1, Knight=2, Mage=3 }"
+      - "UNIT_CONFIGS: {hp, atk, def, attackRange, moveRange, color, symbol}"
+      - "无 skill 字段在 UNIT_CONFIGS 中"
+
+    combat_formula:
+      - "普攻: Math.round(Math.max(1, atk - def) * getDamageMultiplierAgainst(target))"
+      - "技能伤害: Math.round(atk * damageMultiplier) — 无视防御"
+
+    test_summary:
+      total_tests: 60
+      Unit_tests: 8  # 构造函数签名不破
+
+  complexity: large
+  estimated_loc: 210
+  test_loc: 120

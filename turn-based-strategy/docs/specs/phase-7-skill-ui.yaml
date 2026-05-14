@@ -1,0 +1,148 @@
+# Phase 7: PlayerCombat Skill UI — DOM Buttons + Interaction
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 7
+  name: "PlayerCombat Skill UI — DOM Buttons + Interaction"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    在 PlayerCombat 阶段添加技能按钮 DOM UI + MapRenderer.renderAbilityRange 目标高亮。
+    选中己方单位后显示技能按钮 (含冷却状态)。点击技能进入目标选择模式, 目标格高亮。
+    支持普攻与技能双模式切换。
+    冷却推进在 EnemyAI→PlayerMove 阶段转换时由 TurnManager/AbilitySystem 触发。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 6 (AbilityConfig + AbilitySystem)", "Phase 4 (PlayerCombat 作为独立阶段)"]
+    existing_modules:
+      - "src/unit/AbilityConfig.ts — ABILITY_CONFIGS, AbilityType 枚举"
+      - "src/unit/AbilitySystem.ts — AbilitySystem 类, useAbility, canUseAbility, advanceCooldowns"
+      - "src/unit/Unit.ts — skill 字段, cooldown"
+      - "src/unit/TurnManager.ts — actedUnits 跟踪, getState, startPlayerTurn"
+      - "src/map/MapRenderer.ts — render/renderUnits/renderHighlights/renderAbilityRange(新增)"
+      - "src/main.ts — 当前 Phase 4 PlayerCombat 交互 (选中→红色高亮攻击)"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-006", title: "技能 UI 使用 DOM 而非 Canvas", rationale: "技能按钮需按钮状态/点击事件/提示文本，与 Phase 指示器 DOM 模式一致。"}
+    - {id: "DD-008", title: "冷却管理在 EnemyAI→PlayerMove 转换时触发", rationale: "统一推进与回合概念对齐。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过"
+    - "DOM UI 与 Phase 指示器模式一致 (Phase label / guide label / tooltip 都是 DOM 元素)"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    modify:
+      - path: "src/main.ts"
+        loc: 200
+        change: "技能栏 DOM (按钮+冷却显示); selectedSkill+skillTargeting 状态; onClick 支持普攻与技能双模式; Phase 转换时 advanceCooldowns"
+        details:
+          - "导入 AbilitySystem, AbilityType, canUseAbility, advanceCooldowns"
+          - "新增状态: selectedSkill: AbilityType | null, skillTargeting: boolean"
+          - "新增 DOM 元素: skillBar div (创建/追加至 body)"
+          - "PlayerCombat 选中己方单位时: 创建技能按钮 (每个可用技能 1 个按钮)"
+          - "技能按钮: 显示名称 + 冷却状态 (如 'Fireball [2]' 或 'Fireball [Ready]')"
+          - "点击技能按钮 → selectedSkill 设置 → skillTargeting=true → renderAbilityRange"
+          - "普攻模式 (selectedSkill===null): 红色高亮攻击范围内敌人, 点击执行 executeCombat"
+          - "技能模式 (selectedSkill!==null): 高亮目标格, 点击执行 useAbility"
+          - "目标选择: 技能 targetType=enemy → 高亮敌人; targetType=area → 高亮 AoE 区域"
+          - "使用技能后: 冷却更新, 单位标记 acted, skillTargeting 重置"
+          - "Phase 转换: EnemyAI→PlayerMove → advanceCooldowns"
+          - "Phase 转换: PlayerCombat enter → 清 selectedSkill/skillTargeting, 刷新技能栏"
+          - "PlayerCombat exit → 移除技能栏 DOM"
+          - "End Turn 按钮: PlayerMove → 'End Movement', PlayerCombat → 'End Combat'"
+          - "点击 PlayerCombat 空格 → 取消 skillTargeting, 切换选中"
+
+      - path: "src/map/MapRenderer.ts"
+        loc: 25
+        change: "新增 renderAbilityRange(cells, color) 方法 — 目标选择范围高亮"
+        details:
+          - "新增 renderAbilityRange(cells: {row:number,col:number}[], color: string): void"
+          - "与 renderHighlights 类似但接受自定义颜色参数"
+          - "技能范围用 'rgba(255, 0, 0, 0.4)' 半透明红"
+          - "普攻范围用 'rgba(255, 0, 0, 0.2)' 半透明淡红"
+          - "skill 与 basic 高亮叠加时, skill 覆盖 basic"
+
+      - path: "src/unit/TurnManager.ts"
+        loc: 15
+        change: "暴露 getSkillCooldown/isSkillReady 便捷方法; advanceCooldowns 时机钩子"
+        details:
+          - "添加 getSkillCooldown(unit: Unit): number — 委托给 AbilitySystem"
+          - "添加 isSkillReady(unit: Unit): boolean — 委托给 canUseAbility"
+          - "或保持简洁: 依赖外部 AbilitySystem 直接调用, TurnManager 不做技能管理"
+          - "建议: 外部 (main.ts) 直接调用 AbilitySystem, TurnManager 不耦合技能"
+          - "添加 onPhaseChange 钩子用于冷却推进 (EnemyAI→PlayerMove 时)" — 但此事件已存在
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "PlayerCombat 选中单位后显示技能按钮 (含冷却状态)"
+    - "冷却中技能按钮显示冷却回合数"
+    - "点击技能按钮 → 目标选择模式 → 目标格高亮 (红色)"
+    - "技能目标选择模式下点击目标 → useAbility → 冷却设置 → 单位 acted"
+    - "使用技能后按钮更新 (冷却显示)"
+    - "普攻模式: 红色高亮攻击范围内敌人, 点击执行 executeCombat"
+    - "冷却推进: EnemyAI→PlayerMove 转换后冷却减 1"
+    - "所有现有测试通过"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_loc: 80
+    new_tests:
+      - "MapRenderer.renderAbilityRange: 渲染指定颜色高亮"
+      - "MapRenderer.renderAbilityRange: 空 cells 无渲染"
+      - "UI 互动测试主要在 DOM 层面, 技能逻辑已由 Phase 6 AbilitySystem.test.ts 覆盖"
+      - "main.ts 交互逻辑: 手动测试为主 (DOM 点击事件)"
+
+    existing_tests_affected:
+      - "MapRenderer 新增方法不影响现有渲染逻辑"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥2)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_UI_elements:
+      - "phase-label DOM div: 当前阶段名称"
+      - "guide-label DOM div: 操作指引文本"
+      - "tooltip DOM div: 鼠标悬停单位信息 (HP/ATK/DEF)"
+      - "End Turn button DOM: fixed 定位, 蓝色背景"
+      - "Canvas: TILE_SIZE=80, 640x640"
+    existing_MapRenderer_methods:
+      - "render(grid): 绘制网格+瓦片"
+      - "renderUnits(units): 绘制单位圆+HP条"
+      - "renderHighlights(cells): 黄色半透明覆盖层 (移动可达格)"
+      - "setSelectedUnit(unit)/setFlashingUnits(units)/clearFlashingUnits()"
+
+    main_ts_current:
+      - "~313 行, 含: canvas 事件, 地图生成, TurnManager 初始化, Phase UI, End Turn 按钮, 部署"
+      - "onClick 在 PlayerMove→自动战斗 间切换"
+      - "processEnemyActions 处理敌方行动动画序列"
+
+    Phase_4_PlayerCombat_current:
+      - "PlayerCombat: 选中己方→红色高亮敌人→点击攻击"
+      - "无技能支持"
+
+    test_summary:
+      total_tests: 60
+      MapRenderer 无独立测试文件
+
+  complexity: large
+  estimated_loc: 240
+  test_loc: 80

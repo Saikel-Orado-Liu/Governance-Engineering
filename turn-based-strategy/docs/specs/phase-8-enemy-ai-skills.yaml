@@ -1,0 +1,147 @@
+# Phase 8: EnemyAI Skills + Final Integration
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 8
+  name: "EnemyAI Skills + Final Integration"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    最终集成阶段。EnemyAI 升级为能够评估和使用技能:
+    - AbilitySystem 注入 EnemyAI
+    - evaluateSkillUsage 策略 (根据单位 HP/周围敌人数/冷却状态 决策)
+    - getSkillTarget 技能目标选择
+    - executeTurn 输出扩展 'skill' action 类型
+    - processEnemyActions 处理 'skill' action
+    - 完整 5 阶段循环验证 (Deploy→PlayerMove→PlayerCombat→EnemyAI→End→loop)
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 5 (A* EnemyAI)", "Phase 7 (Skill UI + AbilitySystem)", "Phase 6 (AbilitySystem core)"]
+    existing_modules:
+      - "src/unit/EnemyAI.ts — 当前 EnemyAction {unit, action:'move'|'attack'|'idle', target?, from?, to?, combatResult?}"
+      - "src/unit/AbilitySystem.ts — AbilitySystem, useAbility, canUseAbility, AbilityResult"
+      - "src/unit/AbilityConfig.ts — ABILITY_CONFIGS, AbilityType"
+      - "src/unit/Unit.ts — skill/cooldown/effects"
+      - "src/unit/UnitManager.ts — getUnitsByTeam"
+      - "src/main.ts — processEnemyActions 函数, Phase 监听"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-008", title: "冷却管理在 EnemyAI→PlayerMove 转换时触发", rationale: "统一推进与回合概念对齐。"}
+    - {id: "DD-007", title: "EnemyAI 多步路径移动使用 Pathfinding 替代贪心单步", rationale: "A* 在 moveRange 内移动多格。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过 (EnemyAI.test.ts 扩展而非重构)"
+    - "EnemyAI 构造函数签名不变"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+
+  # ===== 文件清单 =====
+  files:
+    modify:
+      - path: "src/unit/EnemyAI.ts"
+        loc: 85
+        change: "注入 AbilitySystem; evaluateSkillUsage 策略; getSkillTarget; executeTurn 技能分支; EnemyAction 扩展 'skill' 类型"
+        details:
+          - "导入 AbilitySystem, AbilityType, AbilityConfig, ABILITY_CONFIGS"
+          - "导入 AbilityResult 类型"
+          - "EnemyAction 接口扩展: action 增加 'skill' 类型; 添加 abilityType?: AbilityType; abilityResult?: AbilityResult"
+          - "构造函数新增参数 abilitySystem?: AbilitySystem, 无参时 new AbilitySystem(unitManager)"
+          - "新增 private evaluateSkillUsage(unit: Unit): { abilityType: AbilityType, target: Unit } | null"
+          - "技能使用阈值策略:"
+            - "Warrior: HP > 50% → ShieldBash (对相邻最低HP敌人)"
+            - "Archer: 攻击范围内 ≥ 2 敌人 → Volley (以最密集区域为目标)"
+            - "Knight: HP < 50% → Charge (向最远敌人方向移动突击)"
+            - "Mage: HP > 60% → Fireball (对最高HP敌人)"
+            - "冷却中 → 返回 null (走普攻)"
+          - "executeTurn 修改: 每个 enemyUnit 先检查 evaluateSkillUsage"
+            - "技能可用 → 使用技能, 添加到 EnemyAction, 标记"
+            - "技能不可用 → 走原有普攻/移动逻辑 (Phase 5 A* 逻辑)"
+          - "getSkillTarget(unit, abilityType): Unit | null — 根据技能类型选择目标"
+          - "已使用技能的 EnemyAction 记录: { unit, action: 'skill', target, abilityType, abilityResult }"
+
+      - path: "src/main.ts"
+        loc: 40
+        change: "AbilitySystem 注入 EnemyAI; processEnemyActions 处理 'skill' action; 冷却推进"
+        details:
+          - "创建 AbilitySystem 实例 (若尚未创建)"
+          - "创建 EnemyAI 时传入 abilitySystem 实例"
+          - "更新 processEnemyActions: case 'skill' → 处理技能动画/闪烁效果"
+          - "'skill' action: 显示技能名称/效果, 闪烁目标, 延迟推进"
+          - "Phase 循环 EnemyAI→PlayerMove 转换时调用 abilitySystem.advanceCooldowns(0)"
+          - "冷却推进钩子: onPhaseChange(EnemyAI, PlayerMove) 时触发"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "Warrior (HP > 50%) 使用 ShieldBash 攻击相邻敌人"
+    - "Archer (≥2 目标在攻击范围内) 使用 Volley AoE"
+    - "Knight (HP < 50%) 使用 Charge 移动突击"
+    - "Mage (HP > 60%) 使用 Fireball 攻击高 HP 目标"
+    - "技能冷却期间 Enemy 使用普通攻击"
+    - "完整 5 阶段循环验证通过 (手动游戏测试)"
+    - "skill skipTurn 效果正确 (被 ShieldBash 的目标本回合不能行动)"
+    - "npm test 全部通过"
+
+  # ===== 测试要求 =====
+  testing:
+    test_file: "src/unit/__tests__/EnemyAI.test.ts (扩展)"
+    test_loc: 100
+    new_tests:
+      - "EnemyAI: Warrior HP>50% 使用 ShieldBash"
+      - "EnemyAI: Archer ≥2 目标使用 Volley"
+      - "EnemyAI: Knight HP<50% 使用 Charge"
+      - "EnemyAI: Mage HP>60% 使用 Fireball"
+      - "EnemyAI: 技能冷却时使用普攻"
+      - "EnemyAI: skill action 类型在 EnemyAction 中正确记录"
+      - "EnemyAI: Skill 使用后冷却被设置"
+      - "AbilitySystem: advanceCooldowns 在 EnemyAI→PlayerMove 后触发"
+
+    existing_tests_affected:
+      - "EnemyAI.test.ts: 现有 6 项测试应保持通过 (新逻辑 in addition to 旧逻辑)"
+      - "executeTurn 扩展而非重构"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥8)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_EnemyAI_executeTurn:
+      - "循环 enemyUnits → 远程? 直接攻击 : 移动→攻击 : idle"
+      - "EnemyAction.action: 'move' | 'attack' | 'idle'"
+      - "无技能使用能力"
+
+    existing_EnemyAI_constructors:
+      - "constructor(grid: MapGrid, unitManager: UnitManager, combatFn?: CombatFn)"
+
+    existing_main_processEnemyActions:
+      - "递归处理 action 列表"
+      - "attack → 闪烁效果 → 延迟 → 下一个"
+      - "move → 延迟 → 下一个"
+      - "idle → 延迟 → 下一个"
+
+    skill_strategy_thresholds:
+      - "Warrior: HP > 50 (max 100)"
+      - "Knight: HP < 45 (max 90, 即 <50%)"
+      - "Mage: HP > 36 (max 60, 即 >60%)"
+      - "Archer: ≥2 敌人在攻击范围内"
+
+    existing_test_summary:
+      total_tests: 60
+      EnemyAI_tests: 6
+
+  complexity: large
+  estimated_loc: 125
+  test_loc: 100

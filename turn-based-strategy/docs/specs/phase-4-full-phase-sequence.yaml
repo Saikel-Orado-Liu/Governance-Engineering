@@ -1,0 +1,147 @@
+# Phase 4: Full Phase Sequence — PlayerCombat as Real Phase
+# 版本: 1.0.0
+# 上游: gameplay-framework.yaml (已批准)
+# 下游: developer-agent (sonnet)
+
+spec:
+  id: 4
+  name: "Full Phase Sequence — PlayerCombat as Real Phase"
+  version: "1.0.0"
+  last_updated: "2026-05-14"
+
+  description: >
+    移除 canTransitionTo 中 PlayerMove→EnemyAI 跳过规则，实现完整 5 阶段循环
+    (Deploy→PlayerMove→PlayerCombat→EnemyAI→End→loop)。
+    PlayerMove 移动后不再自动攻击。PlayerCombat 作为独立阶段，实现可选目标普攻交互。
+    这是游戏循环的核心变更 — 从 3 阶段 (PlayerMove→EnemyAI→loop) 变为完整 5 阶段。
+
+  # ===== 依赖项 =====
+  dependencies:
+    phases: ["Phase 3 (DeployManager + 初始状态 Deploy)"]
+    existing_modules:
+      - "src/unit/PhaseTypes.ts — Phase 枚举 + PHASE_SEQUENCE + canTransitionTo (含 skip 规则)"
+      - "src/unit/TurnManager.ts — 当前 state 管理, endPlayerTurn→EnemyAI, startPlayerTurn→PlayerMove"
+      - "src/unit/CombatSystem.ts — executeCombat 纯函数"
+      - "src/unit/UnitManager.ts — moveUnit/removeUnit/getUnitsByTeam"
+      - "src/unit/MovementEngine.ts — getReachableCells"
+      - "src/unit/Unit.ts — movedThisTrackPhase (Phase 6 新增, 此处先用现有)"
+      - "src/main.ts — onClick 回调, 当前 PlayerMove 移动后自动攻击"
+
+  # ===== 设计决策 =====
+  design_decisions:
+    - {id: "DD-004", title: "PlayerCombat 从跳过阶段变为独立选择目标阶段", rationale: "技能系统需要独立战斗阶段。移除 PlayerMove 自动攻击。"}
+
+  # ===== 全局约束 =====
+  constraints:
+    - "TypeScript 5.6 strict mode, ES2020 target"
+    - "无外部运行时依赖"
+    - "现有 60 测试必须保持通过 (TurnManager.test.ts 需适配 endPlayerTurn 行为)"
+    - "npm run build + npm test 必须通过"
+    - "2 空格缩进"
+    - "增量演进, 不重写 main.ts, 只添加新逻辑"
+
+  # ===== 文件清单 =====
+  files:
+    modify:
+      - path: "src/unit/PhaseTypes.ts"
+        loc: 10
+        change: "删除 PlayerMove→EnemyAI skip 规则; 保留循环规则 (End→PlayerMove, EnemyAI→PlayerMove)"
+        details:
+          - "删除第24-25行: `if (current === Phase.PlayerMove && next === Phase.EnemyAI) return true;`"
+          - "保留: End→PlayerMove 和 EnemyAI→PlayerMove 循环规则"
+          - "保留: nextIndex === currentIndex + 1 顺序规则"
+          - "结果: PlayerMove→EnemyAI=false, PlayerMove→PlayerCombat=true"
+
+      - path: "src/unit/TurnManager.ts"
+        loc: 80
+        change: "添加 actedUnits 跟踪; endPlayerTurn 转入 PlayerCombat; 新增 endPlayerCombat; 单位 act 管理"
+        details:
+          - "添加 `private actedUnits: Set<Unit> = new Set()`"
+          - "添加 `markUnitActed(unit: Unit): void` — 标记单位本回合已行动"
+          - "添加 `hasActed(unit: Unit): boolean`"
+          - "添加 `clearActedUnits(): void` — 回合开始时清空"
+          - "修改 endPlayerTurn(): 改为 nextPhase(Phase.PlayerCombat) 而非 nextPhase(Phase.EnemyAI)"
+          - "添加 endPlayerCombat(): 调用 nextPhase(Phase.EnemyAI), 返回 EnemyAction[] — 复用现有 enemyAI.executeTurn()"
+          - "startPlayerTurn(): 清空 actedUnits"
+          - "注: endPlayerTurn 不再触发 EnemyAI 执行 — 那是 endPlayerCombat 的职责"
+          - "保持 isGameOver() 不变"
+          - "更新 actionHistory 记录"
+
+      - path: "src/main.ts"
+        loc: 120
+        change: "PlayerMove 移动后不自动攻击; PlayerCombat 交互 (选中单位→点击敌人攻击); 攻击范围红色高亮"
+        details:
+          - "导入 Phase.PlayerCombat 用于状态判断"
+          - "PlayerMove onClick: 移动后不自动攻击, 仅移动+清理选择"
+          - "PlayerCombat onClick: 选中己方单位 → 显示攻击范围内敌人 (红色高亮)"
+          - "PlayerCombat 中点击高亮敌人 → executeCombat → 标记 acted"
+          - "添加 attackRangeCells 更新逻辑 (根据 selectedUnit.attackRange)"
+          - "PlayerCombat 中点击空/己方格 → 取消/切换选择"
+          - "End Turn 按钮: PlayerMove 阶段按钮文字 'End Movement', PlayerCombat 阶段 'End Combat'"
+          - "End Turn 在 PlayerMove 时 → endPlayerTurn() (转入 PlayerCombat)"
+          - "End Turn 在 PlayerCombat 时 → endPlayerCombat() (转入 EnemyAI)"
+          - "更新 PHASE_GUIDES: PlayerCombat 改为 '点击己方单位 → 点击红色高亮敌人攻击', PlayerMove 改为 '点击己方单位选中 → 点击高亮格移动 → End Turn 结束移动'"
+          - "Phase 变更监听: PlayerCombat enter→ 清选择/清高亮; EnemyAI enter→ 自动执行"
+
+  # ===== 验收标准 =====
+  acceptance:
+    - "canTransitionTo(PlayerMove, EnemyAI) === false (移除 skip)"
+    - "canTransitionTo(PlayerMove, PlayerCombat) === true"
+    - "PlayerMove: 移动后标记 acted, 不自动攻击"
+    - "PlayerMove: 点击 End Turn 转入 PlayerCombat"
+    - "PlayerCombat: 选中己方单位后, 攻击范围内敌人红色高亮"
+    - "PlayerCombat: 点击高亮敌人 → executeCombat → 单位标记 acted"
+    - "PlayerCombat: 所有单位 acted 后或点击 End Turn → 转入 EnemyAI"
+    - "所有现有测试通过 (TurnManager.test.ts 适配 endPlayerTurn 行为)"
+    - "npm run build + npm test 通过"
+
+  # ===== 测试要求 =====
+  testing:
+    new_tests:
+      - "TurnManager: endPlayerTurn 后 state === Phase.PlayerCombat (非 EnemyAI)"
+      - "TurnManager: endPlayerCombat 后 state === Phase.EnemyAI"
+      - "TurnManager: markUnitActed 正确标记"
+      - "TurnManager: hasActed 正确查询"
+      - "TurnManager: clearActedUnits 正确清空"
+      - "PhaseTypes: canTransitionTo(PlayerMove, EnemyAI) === false"
+      - "PhaseTypes: canTransitionTo(PlayerMove, PlayerCombat) === true"
+
+    test_loc: 100
+    existing_tests_modified:
+      - "TurnManager.test.ts: 'changes state to enemy after endPlayerTurn' → 改为 state === Phase.PlayerCombat"
+      - "TurnManager.test.ts: 'enemy moves toward nearest...' → 需要通过 endPlayerCombat() 触发 EnemyAI"
+      - "TurnManager.test.ts: 'enemy attacks adjacent...' → 同上"
+      - "TurnManager.test.ts: 'sets gameOver when all player units eliminated' → 适配新的 Phase 链"
+      - "TurnManager.test.ts: 'sets gameOver when all enemy units eliminated' → 同上"
+
+  # ===== 构建验证 =====
+  build_verification:
+    commands:
+      - "npm run build 2>&1"
+      - "npm test 2>&1"
+    expected:
+      - "TypeScript 编译无错误"
+      - "全部测试通过 (现有 60 + 新增 ≥7, 适配现有)"
+
+  # ===== 当前代码库上下文 =====
+  codebase_context:
+    existing_TurnManager:
+      - "endPlayerTurn(): 调用 nextPhase(EnemyAI), 执行 enemyAI.executeTurn(), 返回 action[]"
+      - "startPlayerTurn(): 调用 nextPhase(PlayerMove)"
+      - "isGameOver(): 检查两队单位数量"
+      - "当前 no actedUnits tracking"
+
+    existing_main_interaction:
+      - "PlayerMove click: 选己方单位 → 显示 reachableCells → 点击高亮格移动 → 移动后自动攻击相邻敌人"
+      - "End Turn 按钮: 只在 PlayerMove 可用, 触发 endPlayerTurn()"
+      - "PHASE_GUIDES[PlayerCombat]: '移动后自动攻击相邻最弱敌人' (将删除/替换)"
+      - "Phase loop: PlayerMove→EnemyAI→PlayerMove→..."
+
+    test_summary:
+      total_tests: 60
+      TurnManager_tests: 6
+        - 全部需要检查: 初始状态(Phase 3已改), endPlayerTurn 行为变更
+
+  complexity: large
+  estimated_loc: 210
+  test_loc: 100
