@@ -1,0 +1,19 @@
+summarize_report:
+  task: "integrate 模块 — 蒙特卡洛积分（高维）+ 稀疏网格积分（Smolyak，中等维度）"
+
+  knowledge_updates:
+    - file: "docs/ai/modules/integrate.yaml"
+      change: >
+        补充 design_decisions（函数式 API vs OOP、auto 分界 d=4、局部 RNG）、
+        known_issues（sparse_grid error_estimate=0.0）、
+        constraints（fun 签名、bounds 形状、sparse_grid d>4 限制、
+        _smolyak_multi_index 要求 level>=d）、
+        dependents（空列表）、last_updated
+    - file: "docs/ai/MODULE_INDEX.yaml"
+      change: "integrate 模块描述从'梯形法则、Simpson、Gauss 求积'更新为实际实现的算法"
+
+  memory_updates: []
+
+  lessons: []
+
+  next_actions: []

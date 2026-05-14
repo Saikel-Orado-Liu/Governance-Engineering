@@ -28,6 +28,29 @@ def _validate_matrix(A: ArrayLike, name: str = "A") -> np.ndarray:
     return A
 
 
+def _validate_square(A: ArrayLike, name: str = "A") -> np.ndarray:
+    """Validate and convert input to a square 2D numpy array.
+
+    Args:
+        A: Input array-like object.
+        name: Name of the parameter for error messages.
+
+    Returns:
+        A square 2D numpy array.
+
+    Raises:
+        TypeError: If the input is not or cannot be converted to a 2D array.
+        ValueError: If the matrix is not square.
+    """
+    A_arr = _validate_matrix(A, name)
+    n, m = A_arr.shape
+    if n != m:
+        raise ValueError(
+            f"{name} must be a square matrix, got {n} x {m}"
+        )
+    return A_arr
+
+
 def matrix_multiply(A: ArrayLike, B: ArrayLike) -> np.ndarray:
     """Multiply two matrices.
 
@@ -190,14 +213,8 @@ def determinant(A: ArrayLike) -> float:
     except ValueError:
         return 0.0
 
-    # Compute sign of permutation matrix P
-    perm = np.argmax(P, axis=1)
-    inv_count = 0
-    for i in range(n):
-        for j in range(i + 1, n):
-            if perm[i] > perm[j]:
-                inv_count += 1
-    sign = -1.0 if inv_count % 2 else 1.0
+    # Compute sign of permutation matrix P via its determinant
+    sign = float(np.linalg.det(P))
 
     # det(L) = 1 (unit diagonal), det(U) = product of diagonal entries
     return float(sign * np.prod(np.diag(U)))
@@ -246,3 +263,209 @@ def eigenvalues_2x2(A: ArrayLike) -> np.ndarray:
     return np.array(
         [(trace + sqrt_cplx) / 2.0, (trace - sqrt_cplx) / 2.0]
     )
+
+
+_NORM_ORD_MAP: dict[str, int | float] = {
+    "l1": 1,
+    "l2": 2,
+    "linf": np.inf,
+}
+
+
+def vector_norm(x: np.ndarray, ord: str = "l2") -> float:
+    """Compute the vector norm of a 1D array.
+
+    Supports l1, l2, and infinity (linf) norms via numpy.linalg.norm.
+
+    Args:
+        x: 1D input array.
+        ord: Norm order. One of ``"l1"``, ``"l2"``, ``"linf"``.
+            Defaults to ``"l2"``.
+
+    Returns:
+        The computed norm as a float.
+
+    Raises:
+        TypeError: If *x* is not a 1D array.
+        ValueError: If *ord* is not a recognized norm order.
+    """
+    if not isinstance(x, np.ndarray):
+        x = np.asarray(x)
+    if x.ndim != 1:
+        raise TypeError(
+            f"Input must be a 1D array, got ndim={x.ndim}"
+        )
+    if ord not in _NORM_ORD_MAP:
+        raise ValueError(
+            f"Unrecognized norm order '{ord}'. "
+            f"Supported values: {', '.join(sorted(_NORM_ORD_MAP))}"
+        )
+    return float(np.linalg.norm(x, ord=_NORM_ORD_MAP[ord]))
+
+
+_MATRIX_NORM_ORD_MAP: dict[str, int | float | None] = {
+    "fro": None,
+    "l1": 1,
+    "linf": np.inf,
+    "l2": 2,
+}
+
+
+def eig(A: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
+    """Compute eigenvalues and eigenvectors of a square matrix.
+
+    Delegates to numpy.linalg.eig.
+
+    Args:
+        A: Square matrix with shape (n, n).
+
+    Returns:
+        A tuple (w, v) where w is the eigenvalues and v is the
+        eigenvectors. The eigenvalues are not guaranteed to be in
+        any specific order.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+        ValueError: If A is not square or eigenvalue computation fails.
+    """
+    A_arr = _validate_square(A)
+    try:
+        w, v = np.linalg.eig(A_arr)
+    except np.linalg.LinAlgError as e:
+        raise ValueError(str(e)) from e
+    return (w, v)
+
+
+def matrix_inverse(A: ArrayLike) -> np.ndarray:
+    """Compute the inverse of a square matrix.
+
+    Delegates to numpy.linalg.inv.
+
+    Args:
+        A: Square matrix with shape (n, n).
+
+    Returns:
+        The inverse matrix.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+        ValueError: If A is not square or is singular.
+    """
+    A_arr = _validate_square(A)
+    try:
+        return np.linalg.inv(A_arr)
+    except np.linalg.LinAlgError as e:
+        raise ValueError("Matrix is singular") from e
+
+
+def qr_decomposition(A: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
+    """Compute the QR decomposition of a matrix.
+
+    Delegates to numpy.linalg.qr with mode='reduced'.
+    Returns Q (orthogonal) and R (upper triangular) such that
+    A = Q @ R.
+
+    Args:
+        A: Matrix with shape (m, n).
+
+    Returns:
+        A tuple (Q, R) of numpy arrays.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+    """
+    A_arr = _validate_matrix(A)
+    Q, R_arr = np.linalg.qr(A_arr, mode="reduced")
+    return (Q, R_arr)
+
+
+def cholesky_decomposition(A: ArrayLike) -> np.ndarray:
+    """Compute the Cholesky decomposition of a matrix.
+
+    Delegates to numpy.linalg.cholesky.
+    Returns L such that A = L @ L^T where L is lower triangular.
+
+    The matrix must be symmetric (Hermitian) positive-definite.
+
+    Args:
+        A: Square positive-definite matrix with shape (n, n).
+
+    Returns:
+        The lower triangular Cholesky factor.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+        ValueError: If A is not square or not positive-definite.
+    """
+    A_arr = _validate_square(A)
+    try:
+        return np.linalg.cholesky(A_arr)
+    except np.linalg.LinAlgError as e:
+        raise ValueError(str(e)) from e
+
+
+def matrix_norm(A: ArrayLike, ord: str = "fro") -> float:
+    """Compute the norm of a matrix.
+
+    Delegates to numpy.linalg.norm.
+    Supports Frobenius (``"fro"``), l1, linf, and spectral (``"l2"``)
+    norms. Note that ``"l2"`` for matrices computes the spectral norm
+    (largest singular value), which differs from the vector l2 norm.
+
+    Args:
+        A: 2D input matrix.
+        ord: Norm order. One of ``"fro"``, ``"l1"``, ``"l2"``,
+            ``"linf"``. Defaults to ``"fro"``.
+
+    Returns:
+        The computed norm as a float.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+        ValueError: If *ord* is not a recognized norm order.
+    """
+    A_arr = _validate_matrix(A)
+    if ord not in _MATRIX_NORM_ORD_MAP:
+        raise ValueError(
+            f"Unrecognized norm order '{ord}'. "
+            f"Supported values: {', '.join(sorted(_MATRIX_NORM_ORD_MAP))}"
+        )
+    return float(np.linalg.norm(A_arr, ord=_MATRIX_NORM_ORD_MAP[ord]))
+
+
+def matrix_transpose(A: ArrayLike) -> np.ndarray:
+    """Compute the transpose of a matrix.
+
+    Delegates to numpy.transpose.
+
+    Args:
+        A: 2D input matrix with shape (m, n).
+
+    Returns:
+        The transposed matrix with shape (n, m).
+
+    Raises:
+        TypeError: If A is not a 2D array.
+    """
+    A_arr = _validate_matrix(A)
+    return np.transpose(A_arr)
+
+
+def trace(A: ArrayLike) -> float:
+    """Compute the trace of a square matrix.
+
+    Delegates to numpy.trace. The trace is the sum of diagonal
+    elements.
+
+    Args:
+        A: Square matrix with shape (n, n).
+
+    Returns:
+        The trace as a float.
+
+    Raises:
+        TypeError: If A is not a 2D array.
+        ValueError: If A is not square.
+    """
+    A_arr = _validate_square(A)
+    return float(np.trace(A_arr))

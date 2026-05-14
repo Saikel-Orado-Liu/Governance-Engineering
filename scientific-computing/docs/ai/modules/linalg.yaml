@@ -25,6 +25,30 @@ public_interface:
   - name: eigenvalues_2x2
     signature: "eigenvalues_2x2(A: ArrayLike) -> np.ndarray"
     description: 2x2 矩阵特征值二次公式解析解，支持实数与复数特征值。仅限 2x2
+  - name: vector_norm
+    signature: "vector_norm(x: np.ndarray, ord: str = 'l2') -> float"
+    description: 向量范数计算。支持 l1、l2、linf 范数，委托 numpy.linalg.norm 实现。输入必须是 1D 数组
+  - name: eig
+    signature: "eig(a: ArrayLike) -> tuple[np.ndarray, np.ndarray]"
+    description: 方阵特征值与特征向量计算。委托 numpy.linalg.eig，捕获 LinAlgError 重抛为 ValueError
+  - name: matrix_inverse
+    signature: "matrix_inverse(a: ArrayLike) -> np.ndarray"
+    description: 方阵求逆。委托 numpy.linalg.inv，奇异矩阵 raise ValueError('Matrix is singular')
+  - name: qr_decomposition
+    signature: "qr_decomposition(a: ArrayLike) -> tuple[np.ndarray, np.ndarray]"
+    description: QR 分解，返回 (Q, R) 满足 A = Q @ R。委托 numpy.linalg.qr(mode='reduced')
+  - name: cholesky_decomposition
+    signature: "cholesky_decomposition(a: ArrayLike) -> np.ndarray"
+    description: Cholesky 分解，返回 L 满足 A = L @ L^T。矩阵必须对称正定，非正定 raise ValueError
+  - name: matrix_norm
+    signature: "matrix_norm(a: ArrayLike, ord: str = 'fro') -> float"
+    description: 矩阵范数计算。支持 fro、l1、l2（谱范数）、linf。与 vector_norm 共用相同 ord 字符串接口但语义不同（l2=谱范数）
+  - name: matrix_transpose
+    signature: "matrix_transpose(a: ArrayLike) -> np.ndarray"
+    description: 矩阵转置。委托 numpy.transpose，验证 2D 输入
+  - name: trace
+    signature: "trace(a: ArrayLike) -> float"
+    description: 方阵迹（对角元素和）。委托 numpy.trace，验证方阵输入
 
 precision:
   max_relative_error: 1e-12
@@ -56,6 +80,46 @@ functions:
     loc: 24
     design: "二次公式闭式解，判别式分支处理实数/复数"
     validated: true
+  - name: vector_norm
+    category: utility
+    loc: 26
+    design: "委托 numpy.linalg.norm，只做校验封装 + ord 字符串映射"
+    validated: true
+  - name: eig
+    category: property
+    loc: 22
+    design: "委托 numpy.linalg.eig，_validate_square 校验 + LinAlgError 异常转换"
+    validated: true
+  - name: matrix_inverse
+    category: basic
+    loc: 20
+    design: "委托 numpy.linalg.inv，_validate_square 校验 + LinAlgError→ValueError('Matrix is singular')"
+    validated: true
+  - name: qr_decomposition
+    category: decomposition
+    loc: 18
+    design: "委托 numpy.linalg.qr(mode='reduced')，_validate_matrix 校验 2D"
+    validated: true
+  - name: cholesky_decomposition
+    category: decomposition
+    loc: 22
+    design: "委托 numpy.linalg.cholesky，_validate_square 校验 + LinAlgError→ValueError"
+    validated: true
+  - name: matrix_norm
+    category: utility
+    loc: 25
+    design: "委托 numpy.linalg.norm，_validate_matrix 校验 + _MATRIX_NORM_ORD_MAP 字符串映射，独立于 _NORM_ORD_MAP"
+    validated: true
+  - name: matrix_transpose
+    category: utility
+    loc: 14
+    design: "委托 numpy.transpose，_validate_matrix 校验 2D"
+    validated: true
+  - name: trace
+    category: property
+    loc: 16
+    design: "委托 numpy.trace，_validate_square 校验方阵"
+    validated: true
 
 design_decisions:
   - topic: 单文件 vs 多文件
@@ -73,11 +137,12 @@ known_issues:
     mitigation: "使用动态容差 n * eps * ||A||_1，对极端病态矩阵建议用户直接用 numpy.linalg"
     severity: low
   - issue: "eigenvalues_2x2 仅支持 2x2，对更大矩阵没有 fallback"
-    mitigation: "设计上明确限定 2x2，n>2 的应用应另外实现或使用 numpy.linalg.eigvals"
+    mitigation: "设计上明确限定 2x2，n>2 的应用应另外实现或使用 numpy.linalg.eigvals。通用替代: eig"
     severity: low
 
 constraints:
-  - "所有公共函数输入必须是 2D 矩阵（matrix_multiply 对两个参数均检查）"
+  - "矩阵运算函数（matrix_multiply, lu_decomposition, solve_linear_system, determinant, eigenvalues_2x2）输入必须是 2D 矩阵"
+  - "vector_norm 输入必须是 1D 数组"
   - "浮点精度上限 float64，不保证 float32 输入的精度"
 
-last_updated: "2026-05-12"
+last_updated: "2026-05-14"

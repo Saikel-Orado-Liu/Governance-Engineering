@@ -1,0 +1,90 @@
+# optimize — 最优化模块
+
+module: optimize
+path: src/scicomp/optimize/
+status: active
+
+dependencies:
+  - numpy
+
+dependents: []
+
+public_interface:
+  - name: OptimizeResult
+    signature: "OptimizeResult(x: np.ndarray, fun: float, nit: int, success: bool, message: str)"
+    description: 优化结果数据类。包含最终点 x、函数值 fun、迭代次数 nit、成功标志 success、终止消息 message
+  - name: Minimizer
+    signature: "Minimizer(max_iter: int = 1000, tol: float = 1e-6)"
+    description: 无约束优化算法抽象基类。定义 minimize 抽象方法，提供 _check_convergence（梯度无穷范数收敛检测）和 _max_iter_reached（最大迭代终止）共享方法
+  - name: GradientDescent
+    signature: "GradientDescent(max_iter=1000, tol=1e-6, step_size=None, use_armijo=True, c=1e-4, rho=0.5, alpha_0=1.0)"
+    description: 梯度下降优化器。支持固定步长（use_armijo=False）和 Armijo 回溯线搜索（use_armijo=True）两种模式。收敛准则为无穷范数梯度范数 < tol。固定步长模式必须提供 step_size，否则 minimize 时 raise ValueError
+  - name: NewtonMethod
+    signature: "NewtonMethod(hess: Callable[[np.ndarray], np.ndarray], max_iter=1000, tol=1e-6)"
+    description: 牛顿法优化器。需要用户提供 Hessian 矩阵函数，每步求解牛顿系统 H*p = -grad。奇异 Hessian 返回 success=False 而非 raise
+
+precision:
+  max_relative_error: 1e-8
+  reference: scipy.optimize
+
+functions:
+  - name: OptimizeResult
+    category: result
+    loc: 15
+    design: "dataclass 数据类，结构化替代裸 dict。四必填字段 x/fun/nit/success + message"
+    validated: true
+  - name: Minimizer
+    category: base
+    loc: 55
+    design: "ABC 基类模式。_check_convergence（梯度无穷范数 < tol → success）和 _max_iter_reached（nit == max_iter → success=False）作为共享方法被子类复用。minimize 留为 @abstractmethod"
+    validated: true
+  - name: GradientDescent
+    category: algorithm
+    loc: 80
+    design: "继承 Minimizer。核心循环：_compute_gradient → _check_convergence → 更新步（Armijo 回溯或固定步长）。Armijo 内最多 50 次退火，超限返回 success=False"
+    validated: true
+  - name: NewtonMethod
+    category: algorithm
+    loc: 50
+    design: "继承 Minimizer。每步计算梯度 + Hessian，求解 np.linalg.solve(H, -grad)。LinAlgError→返回 success=False('Singular Hessian')"
+    validated: true
+  - name: _compute_gradient
+    category: utility (private)
+    loc: 30
+    design: "中心有限差分近似梯度，步长 1.5e-8（float64 machine epsilon 的平方根）。逐个坐标扰动 x[i] ± eps"
+    validated: true
+  - name: _validate_vector
+    category: utility (private)
+    loc: 18
+    design: "输入转换为 float64 1D ndarray。非 ndarray 自动 np.asarray，非 1D 抛 TypeError"
+    validated: true
+
+design_decisions:
+  - topic: ABC 基类 vs 函数式 API
+    choice: Minimizer ABC 基类 + 具体子类
+    rationale: "优化算法天然有公共行为（收敛检测、最大迭代终止）和差异化行为（更新步策略）。ABC 让公共逻辑在基类共享，差异化通过 abstractmethod enforce。相较 scipy.optimize 的函数式统一入口+method 参数，ABC 更适合小型库的状态保持和渐进扩展——新算法继承 Minimizer 即可，不修改现有代码"
+  - topic: 有限差分数值梯度 vs 要求解析梯度
+    choice: 中心有限差分数值梯度（默认调用方不需要提供梯度函数）
+    rationale: "降低用户使用门槛——仅需提供目标函数 fun 和初值 x0。有限差分精度对教学演示和中等规模问题足够。NewtonMethod 仍需用户提供 Hessian（无法稳定数值近似二阶导数）"
+  - topic: Armijo 线搜索默认开启
+    choice: GradientDescent 默认 use_armijo=True
+    rationale: "固定步长需要先验知识（最优步长未知），不当的固定步长导致发散或收敛极慢。Armijo 回溯自动确定步长，更鲁棒。高级用户可通过 use_armijo=False + step_size 精确控制"
+
+known_issues:
+  - issue: "_compute_gradient 有限差分为 O(n) 次 fun 调用，高维问题性能差"
+    mitigation: "超过 100 维建议使用解析梯度子类覆盖 _compute_gradient。当前设计对 <=10 维问题性能可接受"
+    severity: medium
+  - issue: "有限差分步长 1.5e-8 对缩放差异大的目标函数可能不准确"
+    mitigation: "函数值动态范围极大时建议使用解析梯度。后续可添加 eps 参数支持自定义步长"
+    severity: low
+  - issue: "NewtonMethod 要求用户提供 Hessian，无自动数值 Hessian 替代"
+    mitigation: "不提供自动数值 Hessian（O(n^2) 次 fun 调用太慢且数值不稳定）。用户可在外部实现 FiniteDiffHessian 包装器，不在本模块范围内"
+    severity: medium
+
+constraints:
+  - "所有优化器的 x0 和目标函数 fun 必须兼容 1D float64 ndarray 接口"
+  - "GradientDescent(use_armijo=False) 必须在构造函数中提供 step_size，否则 minimize 调用时 raise ValueError"
+  - "NewtonMethod 构造函数必需参数 hess，无默认值"
+  - "浮点精度上限 float64，不保证 float32 输入的精度"
+
+last_updated: "2026-05-14"

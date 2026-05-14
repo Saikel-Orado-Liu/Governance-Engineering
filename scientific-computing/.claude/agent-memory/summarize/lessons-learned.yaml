@@ -20,3 +20,20 @@ entries:
       2) 如不确定或文件深度层级较深，在新类自己的头文件中直接声明所需宏；
       3) 对日志类别使用独立的 DECLARE_LOG_CATEGORY_EXTERN，不依赖外部头文件传递；
       4) 若使用模块级日志类别（如 LogTest），确保其在每个使用位置都能找到定义。
+
+  - id: LL-019
+    date: "2026-05-14"
+    category: logic
+    title: "原地梯度差分在异常时污染输入数组"
+    description: >
+      GradientDescent._compute_gradient 改用原地修改+恢复模式（x[i] = original + eps
+      → fun(x) → x[i] = original - eps → fun(x) → x[i] = original）替代旧版 x.copy()
+      以避免每步分配 n 个额外数组。但若 fun(x) 在修改后抛出异常，x[i] 无法恢复为
+      original 值，调用方传入的 x 数组被污染，后续使用产生不可预测结果。
+    root_cause: "未使用 try/finally 确保异常路径的状态恢复"
+    prevention: >
+      原地修改模式必须用 try/finally 包裹恢复逻辑：
+      try: x[i] = original + eps; f_plus = fun(x); x[i] = original - eps;
+      f_minus = fun(x) finally: x[i] = original。
+      或在性能可接受时回退到 x.copy() 方案。
+    resolved: false

@@ -2,12 +2,74 @@
 
 module: interp
 path: src/scicomp/interp/
-status: stub
+status: active
 
 dependencies:
   - numpy
   - scipy
 
-public_interface: []
+dependents: []
 
-functions: []
+public_interface:
+  - CubicSpline
+  - spline_interpolate
+
+functions:
+  - name: CubicSpline
+    signature: "CubicSpline(x, y) -> CubicSpline"
+    description: >
+      Natural cubic spline interpolation.  Constructs a piecewise cubic
+      polynomial interpolant S(x) through the given data points (x_i, y_i)
+      with natural boundary conditions (zero second derivative at endpoints).
+      Supports evaluation via .evaluate(x_eval) and .derivative(x_eval).
+
+  - name: spline_interpolate
+    signature: "spline_interpolate(x, y, x_eval) -> np.ndarray"
+    description: >
+      Convenience function equivalent to CubicSpline(x, y).evaluate(x_eval).
+      Returns the interpolated values at x_eval.
+
+design_decisions:
+  - topic: 类 API vs 函数式 API
+    choice: 类 CubicSpline + 便捷函数 spline_interpolate 双入口
+    rationale: >
+      样条插值需要存储系数（构造开销 O(n)，每次评价 O(log n)），
+      类 API 允许构造一次后重复调用 .evaluate()/.derivative()，
+      便捷函数适合单次插值。与 integrate 模块的函数式策略不同，
+      interp 的类设计是由"构造-评价"两阶段特性驱动的。
+
+  - topic: 自然边界 vs 固定/自由边界
+    choice: 自然边界（端点二阶导为零）
+    rationale: >
+      自然边界是最常用的默认条件，产生"最平滑"的插值曲线
+      （最小化曲率）。固定边界需要用户提供端点导数（实际中
+      通常未知），完整边界条件支持可留待以后扩展。
+
+  - topic: 托马斯算法 vs np.linalg.solve
+    choice: 自实现托马斯算法（O(n) 时间，O(1) 额外空间）
+    rationale: >
+      三对角系统是稀疏的，通用稠密求解器 O(n^3) 过度。
+      托马斯算法专用于三对角系统，O(n) 时间且无需额外内存。
+
+  - topic: searchsorted 区间定位
+    choice: np.searchsorted(x, x_eval, side='right') - 1
+    rationale: >
+      NumPy 的 searchsorted 使用二分查找，对每个求值点 O(log n)。
+      side='right' 确保在数据点重合时落入右侧区间，
+      减 1 后 clip 到 [0, n-2] 确保端点正确。
+
+known_issues:
+  - issue: "非均匀 h_i 时数值稳定性"
+    mitigation: >
+      当 h_i 差异很大时（如 x = [0, 1, 1000]），三对角系统可能
+      病态。当前实现使用 float64 和严格单调检查。
+      极端非均匀网格建议使用 scipy.interpolate.CubicSpline。
+    severity: low
+
+constraints:
+  - "x 必须严格递增（diff(x) > 0），至少 3 个点"
+  - "外推不被允许；x_eval 必须在 [x[0], x[-1]] 内"
+  - "边界条件固定为自然边界（c_0 = c_{n-1} = 0）"
+  - "内部使用 float64 精度"
+
+last_updated: "2026-05-14"

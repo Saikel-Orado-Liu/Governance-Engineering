@@ -39,9 +39,9 @@ rules:
     - "Server RPC 必须带 WithValidation 和 _Validate 函数"
 
   module_build:
-    - "跨模块引用必须在 .Build.cs 中声明"
-    - "公开头文件引用 → PublicDependencyModuleNames"
-    - "仅 .cpp 引用 → PrivateDependencyModuleNames"
+    - "跨模块引用必须在 {{BUILD_CONFIG}} 中声明"
+    - "公开头文件引用 → {{PUBLIC_DEPS}}"
+    - "仅 .cpp 引用 → {{PRIVATE_DEPS}}"
     - "公开接口类标注 <MODULE>_API 导出宏"
     - "禁止模块间循环依赖"
 

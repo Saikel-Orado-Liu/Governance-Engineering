@@ -17,6 +17,6 @@ modules:
     references: scipy.interpolate
 
   integrate:
-    description: 数值积分 — 梯形法则、Simpson、Gauss 求积
+    description: 数值积分 — 蒙特卡洛积分（高维）+ Smolyak 稀疏网格（中等维度）
     path: src/scicomp/integrate/
     references: scipy.integrate

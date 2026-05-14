@@ -2,12 +2,77 @@
 
 module: integrate
 path: src/scicomp/integrate/
-status: stub
+status: active
 
 dependencies:
   - numpy
   - scipy
 
-public_interface: []
+dependents: []
 
-functions: []
+public_interface:
+  - IntegrateResult
+  - monte_carlo_integrate
+  - sparse_grid_integrate
+  - integrate
+
+functions:
+  - name: monte_carlo_integrate
+    signature: "monte_carlo_integrate(fun, bounds, n_samples=100000, seed=None) -> IntegrateResult"
+    description: >
+      Monte Carlo integration over a hyper-rectangle.  Draws uniform random
+      samples, estimates the integral as volume * mean(f), with error
+      estimate volume * std(f) / sqrt(n).  Uses a local default_rng so the
+      global NumPy state is never modified.
+
+  - name: sparse_grid_integrate
+    signature: "sparse_grid_integrate(fun, bounds, level=2) -> IntegrateResult"
+    description: >
+      Smolyak sparse grid integration.  Combines tensor-product
+      Gauss-Legendre rules over a multi-index set with combinatorial
+      coefficients.  Efficient for moderate dimensions (d <= 4).
+
+  - name: integrate
+    signature: "integrate(fun, bounds, method='auto', **kwargs) -> IntegrateResult"
+    description: >
+      Dispatch function.  auto: sparse_grid for d <= 4, monte_carlo for
+      d >= 5.  kwargs are forwarded to the specific routine.
+
+design_decisions:
+  - topic: 函数式 API vs 面向对象策略模式
+    choice: 统一的函数式入口 integrate(fun, bounds, method=...)
+    rationale: >
+      integrate 模块仅有两种算法且共享相同的签名模式（fun + bounds），
+      不需要像 optimize 那样通过 ABC 管理共享状态（max_iter、tol 等超参数）。
+      函数式 API 使单步调用更简洁：integrate(f, bounds) 一步完成，无需先构造实例再调用。
+
+  - topic: auto 模式的分界维度
+    choice: d <= 4 用 sparse_grid，d >= 5 用 monte_carlo
+    rationale: >
+      Smolyak 稀疏网格虽然缓解了 curse of dimensionality，但 d > 4 时
+      即使 level=2，网格点数也随维度的组合数快速膨胀。
+      蒙特卡洛积分收敛速度 O(1/sqrt(n)) 与维度无关，适合高维积分。
+
+  - topic: 局部 RNG 设计
+    choice: 使用 np.random.default_rng(seed) 而非 np.random.seed
+    rationale: >
+      每次调用 monte_carlo_integrate 创建独立的 Generator 实例，
+      不修改 numpy 的全局随机状态，避免并发或连续调用的副作用。
+      调用方可通过 seed 参数获得可重复结果。
+
+known_issues:
+  - issue: "sparse_grid_integrate 的 error_estimate 始终返回 0.0"
+    mitigation: >
+      Smolyak 稀疏网格的误差估计需要额外的嵌套网格或外推策略，
+      当前实现未包含。调用方应通过对比相邻 level 的结果来估计误差，
+      或在 d=1 时使用更成熟的 1D 自适应求积。
+    severity: medium
+
+constraints:
+  - "fun 参数接受形状 (d,) 的 1D float64 数组（逐点求值）或形状 (n, d) 的 2D 数组（向量化批量求值），返回标量或 1D 数组"
+  - "bounds 必须是形状 (d, 2) 的数值数组"
+  - "sparse_grid_integrate 仅在 d <= 4 时计算可行；d > 4 时 level=2 以上网格点数可能爆炸"
+  - "monte_carlo_integrate 误差以 O(1/sqrt(n)) 收敛，达到高精度需要大量采样"
+  - "_smolyak_multi_index 要求 level >= d 才能产生非空索引集；level < d 时 raise ValueError"
+
+last_updated: "2026-05-14"
