@@ -304,7 +304,7 @@ const renderer = new MapRenderer({
 
     const clickedUnit = manager.getUnitAt(row, col);
 
-    if (clickedUnit && clickedUnit.team === 0 && !clickedUnit.effects.some(e => e.type === 'skipTurn')) {
+    if (clickedUnit && clickedUnit.team === 0 && !clickedUnit.movedThisTurn && !clickedUnit.effects.some(e => e.type === 'skipTurn')) {
       // Clicked own unit — select and show reachable cells
       selectedUnit = clickedUnit;
       renderer.setSelectedUnit(clickedUnit);
@@ -314,6 +314,7 @@ const renderer = new MapRenderer({
       // Clicked a highlighted cell — move unit there (no auto-attack)
       const moved = manager.moveUnit(selectedUnit, row, col);
       if (moved) {
+        selectedUnit.movedThisTurn = true;
         selectedUnit = null;
         renderer.setSelectedUnit(null);
         reachableCells = [];
