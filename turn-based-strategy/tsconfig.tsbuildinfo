@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/map/mapgenerator.ts","./src/map/mapgrid.ts","./src/map/maprenderer.ts","./src/map/tiletype.ts","./src/map/__tests__/mapgrid.test.ts"],"version":"5.6.3"}
+{"root":["./src/main.ts","./src/map/mapgenerator.ts","./src/map/mapgrid.ts","./src/map/maprenderer.ts","./src/map/tiletype.ts","./src/map/__tests__/mapgrid.test.ts","./src/unit/unit.ts","./src/unit/unitmanager.ts","./src/unit/unittype.ts","./src/unit/__tests__/unit.test.ts","./src/unit/__tests__/unitmanager.test.ts"],"version":"5.6.3"}

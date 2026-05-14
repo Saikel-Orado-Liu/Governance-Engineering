@@ -15,11 +15,12 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调
+  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits 单位渲染
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
   - "MapRenderer.render()"     # 在 Canvas 上绘制地图
+  - "MapRenderer.renderUnits()" # 在 Canvas 上绘制单位（圆形+颜色+字符+队伍边框）
   - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，替代 console.log 调试
 
 components:

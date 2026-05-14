@@ -1,0 +1,45 @@
+# ADR-002: 单位系统 — 类型枚举、克制对称设计与管理器分层
+
+status: accepted
+date: 2026-05-14
+
+## 背景
+
+FR-02 要求实现 4 种单位类型（Warrior/Archer/Knight/Mage），每类具有独立的 HP/ATK/DEF/Range/Move 属性，单位间存在克制关系，并需要管理器统一管理单位的创建、移动和查询。
+
+## 决策
+
+1. **UnitType const enum + UNIT_CONFIGS 属性表**：延续 TileType 模式，const enum 提供编译期零开销类型分发，属性表作为 Record<UnitType, UnitConfig> 集中管理所有单位属性，便于后续扩展新单位类型（const enum 会带来一些运行时限制，但当前 4 种固定类型下收益大于成本）。
+
+2. **克制对称设计 (1.5 / 0.67)**：克制方乘数 1.5，被克制方乘数 0.67（即 1/1.5 的近似值），保证双向乘数乘积 ≈ 1。使用二维对象查找表 COUNTER_TABLE，而非链式 if-else 或 switch。
+
+3. **伤害公式 max(1, atk - def) * counterMultiplier**：(atk - def) 为基础伤害，min(1) 保底确保即使 atk ≤ def 也能造成伤害；克制乘数在基础伤害计算后应用。此公式与后续 FR-05 对齐。
+
+4. **Unit 实体类封装**：row/col/hp 使用 private + getter 模式，拒绝 public readonly。setPosition 和 takeDamage 作为唯一的受控修改入口，便于未来添加事件派发或日志。
+
+5. **UnitManager 分层**：构造函数注入 MapGrid 引用，持有 Unit[] 集合。spawnUnit（创建+放置校验）与 moveUnit（纯位置变更）职责分离。所有集合查询方法自动过滤死亡单位（isAlive === false）。
+
+6. **renderUnits 方法追加模式**：在 MapRenderer 上新增独立方法，不修改 render() 签名，保持向后兼容。renderUnits 内部前置 filter(isAlive) 避免循环内条件判断。
+
+## 备选方案
+
+| 方案 | 放弃理由 |
+|------|---------|
+| 克制双向查找分离（两张表） | 单张二维表更简洁，查找复杂度 O(1) |
+| 克制乘数 2.0 / 0.5 | 1.5x 差值更温和，避免一击必杀，策略深度更好 |
+| Unit.create 静态工厂 | 额外间接层无收益，new Unit() 配合 UNIT_CONFIGS 已足够 |
+| 单位销毁（从集合删除） | 死亡单位需保留在场景中（显示尸体或死亡动画），过滤在查询层处理 |
+
+## 影响
+
+- 正面：克制表集中管理，测试覆盖 4×4=16 种组合中的 3 种关键路径（克制/被克制/无关系）
+- 正面：伤害公式统一，FR-05 可直接复用无需重构
+- 正面：Unit 封装 + Manager 分层，职责清晰，每个类单一职责
+- 约束：UnitType const enum 不可运行时扩展，新增类型需修改枚举定义和属性表
+- 约束：renderUnits 依赖 MapRenderer 内部实现（Canvas 绘图上下文），测试需模拟 canvas
+
+## 相关
+
+- module: "docs/ai/modules/unit.yaml"
+- standards: "docs/ai/standards/naming.yaml" (PascalCase 类名, camelCase 方法)
+- ADR-001: "docs/ai/decisions/ADR-001.yaml" (延续 const enum + 属性表模式)

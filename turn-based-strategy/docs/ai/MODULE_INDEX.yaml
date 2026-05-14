@@ -13,7 +13,13 @@ modules:
     type: "feature"
     description: "8x8 网格地图系统，含数据模型、随机生成、Canvas 渲染、路径保证"
     card: "docs/ai/modules/map.yaml"
-    last_updated: "2026-05-12"
+    last_updated: "2026-05-14"
+  unit:
+    path: "src/unit/"
+    type: "feature"
+    description: "单位系统 — 4种单位类型(Warrior/Archer/Knight/Mage) + 属性 + 克制关系 + UnitManager 管理器 + MapRenderer 单位渲染"
+    card: "docs/ai/modules/unit.yaml"
+    last_updated: "2026-05-14"
 
 standards:
   - "docs/ai/standards/architecture.yaml"
@@ -21,3 +27,4 @@ standards:
 
 decisions:
   - "docs/ai/decisions/ADR-001.yaml"
+  - "docs/ai/decisions/ADR-002.yaml"

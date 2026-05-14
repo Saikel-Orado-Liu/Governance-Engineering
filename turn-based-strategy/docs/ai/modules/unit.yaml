@@ -1,0 +1,62 @@
+# Module Card: unit
+# 单位系统 — 4种单位类型、属性、克制关系与管理器
+
+module: unit
+path: "src/unit/"
+type: feature
+language: TypeScript 5.6
+framework: Canvas 2D
+
+dependencies:
+  external: []
+  internal:
+    - "src/map/MapGrid.ts"            # UnitManager 持有 MapGrid 引用做位置校验
+    - "src/map/MapRenderer.ts"        # renderUnits 接收 Unit[] 在 Canvas 上绘制单位
+
+public_interface:
+  - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）
+  - "Unit"                            # 单位实体类，row/col/hp 私有，getter 只读访问
+  - "UnitManager"                     # 管理器，通过构造函数注入 MapGrid 引用
+
+exports:
+  - "UnitType (const enum)"           # Warrior/Archer/Knight/Mage
+  - "UNIT_CONFIGS"                    # 属性表：HP60-100, ATK22-35, DEF3-15
+  - "COUNTER_TABLE"                   # 克制表：Archer→Knight, Knight→Mage, Mage→Warrior, Warrior→Archer
+  - "getCounterMultiplier()"          # 返回 1.5（克制）/ 0.67（被克制）/ 1.0（无关系）
+  - "UnitManager.spawnUnit()"         # 放置单位（含通行/占用/越界校验）
+  - "UnitManager.moveUnit()"          # 移动单位（含通行/占用/越界校验）
+  - "UnitManager.getUnitAt()"         # 单格查询
+  - "UnitManager.getAllUnits()"       # 全量查询（过滤已死亡）
+  - "UnitManager.getUnitsByTeam()"    # 按队伍过滤（过滤已死亡）
+
+components:
+  - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
+  - "Unit.ts":                        # Unit 实体类，row/col/hp 私有 + getter，setPosition/takeDamage 受控修改，克制乘数计算，isAlive
+  - "UnitManager.ts":                 # 管理器，spawnUnit/moveUnit 含边界检查，getAllUnits/getUnitsByTeam 过滤死亡单位
+  - "__tests__/Unit.test.ts":         # 10 项测试：构造函数验证4种单位属性、takeDamage伤害减免(min1)、克制乘数(1.5/0.67)、isAlive
+  - "__tests__/UnitManager.test.ts":  # 10 项测试：spawnUnit通行/不可通行/占用/越界，getUnitAt/getUnitsByTeam过滤/移动合法性
+
+constraints:
+  - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"
+  - "克制关系对称设计：getCounterMultiplier 返回 1.5/0.67/1.0"
+  - "伤害公式：max(1, atk - def) * counterMultiplier — FR-05 对齐"
+  - "单位位置绑定 8x8 网格，行列范围 [0,7]"
+  - "死亡单位（hp ≤ 0）过滤在所有全量查询中，不直接销毁"
+
+known_issues: []
+
+development_notes:
+  - "Unit 使用 new Unit() 直接构造，无静态工厂方法"
+  - "row/col/hp 私有 + getter 保证外部只读，通过 setPosition/takeDamage 受控修改"
+  - "renderUnits 前置 filter(isAlive) 避免循环内条件判断"
+  - "UnitManager 构造函数注入 MapGrid，不持有 MapGrid 的创建权"
+
+lessons_learned:
+  - "克制表使用对称数据结构（[attacker][defender] 二维对象查找），避免链式 if-else"
+  - "伤害公式中的 min(1) 保证即使 atk ≤ def 也至少造成 1 点伤害，防止僵局"
+  - "UnitManager 分离 spawn（创建+放置）与 move（仅位置变更），职责清晰"
+  - "死亡单位过滤放在集合查询层（getAllUnits/getUnitsByTeam），而不是调用方"
+  - "renderUnits 作为 MapRenderer 的独立方法追加，不修改既有 render 签名，向后兼容"
+  - "private + getter 模式替代 public readonly，后续可在 setter 添加校验而不破坏调用方"
+
+last_updated: "2026-05-14"

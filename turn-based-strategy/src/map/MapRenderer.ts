@@ -1,5 +1,7 @@
 import { TileType } from './TileType';
 import { MapGrid, GRID_SIZE } from './MapGrid';
+import type { Unit } from '../unit/Unit';
+import { UNIT_CONFIGS } from '../unit/UnitType';
 
 const TILE_SIZE = 80;
 const CANVAS_SIZE = GRID_SIZE * TILE_SIZE; // 640
@@ -37,6 +39,35 @@ export class MapRenderer {
         this.onClick?.(row, col, type);
       }
     });
+  }
+
+  renderUnits(units: Unit[]): void {
+    const alive = units.filter(u => u.isAlive());
+    const radius = TILE_SIZE / 3;
+
+    for (const unit of alive) {
+      const cx = unit.col * TILE_SIZE + TILE_SIZE / 2;
+      const cy = unit.row * TILE_SIZE + TILE_SIZE / 2;
+      const config = UNIT_CONFIGS[unit.type];
+
+      // Circle background
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      this.ctx.fillStyle = config.color;
+      this.ctx.fill();
+
+      // Team border (blue/red)
+      this.ctx.strokeStyle = unit.team === 0 ? '#2980b9' : '#e74c3c';
+      this.ctx.lineWidth = 3;
+      this.ctx.stroke();
+
+      // Symbol text
+      this.ctx.fillStyle = '#fff';
+      this.ctx.font = 'bold 24px monospace';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(config.symbol, cx, cy);
+    }
   }
 
   render(grid: MapGrid): void {
