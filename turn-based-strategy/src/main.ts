@@ -3,6 +3,9 @@ import { MapRenderer } from './map/MapRenderer';
 import { UnitManager } from './unit/UnitManager';
 import { MovementEngine } from './unit/MovementEngine';
 import { executeCombat } from './unit/CombatSystem';
+import { useAbility } from './unit/AbilitySystem';
+import { AbilityType, ABILITY_CONFIGS } from './unit/AbilityConfig';
+import type { AbilityConfig } from './unit/AbilityConfig';
 import { TurnManager, type EnemyAction } from './unit/TurnManager';
 import { Phase } from './unit/PhaseTypes';
 import { GRID_SIZE } from './map/MapGrid';
@@ -24,6 +27,9 @@ let selectedUnit: Unit | null = null;
 let reachableCells: { row: number; col: number }[] = [];
 let attackTargets: { row: number; col: number }[] = [];
 let combatInProgress = false;
+let selectedSkill: AbilityType | null = null;
+let skillRangeCells: { row: number; col: number }[] = [];
+let skillTargetCells: { row: number; col: number }[] = [];
 
 function getAdjacentEnemies(unit: Unit): Unit[] {
   const enemies: Unit[] = [];
@@ -36,6 +42,39 @@ function getAdjacentEnemies(unit: Unit): Unit[] {
     }
   }
   return enemies;
+}
+
+function getAbilityRangeCells(caster: Unit, config: AbilityConfig): { row: number; col: number }[] {
+  const cells: { row: number; col: number }[] = [];
+  for (let dr = -config.range; dr <= config.range; dr++) {
+    for (let dc = -config.range; dc <= config.range; dc++) {
+      if (Math.abs(dr) + Math.abs(dc) > config.range) continue;
+      const nr = caster.row + dr;
+      const nc = caster.col + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        cells.push({ row: nr, col: nc });
+      }
+    }
+  }
+  return cells;
+}
+
+function getAbilityTargetsForSkill(
+  caster: Unit,
+  skill: AbilityType,
+  config: AbilityConfig,
+  unitManager: UnitManager,
+): { row: number; col: number }[] {
+  const enemies = unitManager.getUnitsByTeam(1).filter(u => u.isAlive());
+  return enemies.filter(enemy => {
+    const dist = Math.abs(caster.row - enemy.row) + Math.abs(caster.col - enemy.col);
+    if (dist > config.range) return false;
+    // Charge requires straight line (same row or same column)
+    if (skill === AbilityType.Charge) {
+      if (caster.row !== enemy.row && caster.col !== enemy.col) return false;
+    }
+    return true;
+  }).map(u => ({ row: u.row, col: u.col }));
 }
 
 function processEnemyActions(actions: EnemyAction[], index: number): void {
@@ -77,6 +116,10 @@ function updateView(): void {
   renderer.render(grid);
   renderer.renderAttackHighlights(attackTargets);
   renderer.renderHighlights(reachableCells);
+  if (selectedSkill !== null) {
+    renderer.renderAbilityRange(skillRangeCells, 'rgba(41, 128, 185, 0.2)');
+    renderer.renderAbilityTargets(skillTargetCells);
+  }
   renderer.renderUnits(manager.getAllUnits());
 }
 
@@ -89,6 +132,92 @@ const renderer = new MapRenderer({
     if (state === Phase.PlayerCombat) {
       const clickedUnit = manager.getUnitAt(row, col);
 
+      // --- Skill mode ---
+      if (selectedSkill !== null) {
+        // Click on skill target enemy -> execute ability
+        if (clickedUnit && clickedUnit.team !== 0 && clickedUnit.isAlive() &&
+            skillTargetCells.some(t => t.row === row && t.col === col)) {
+          if (!selectedUnit || !selectedUnit.isAlive() || turnManager.hasUnitActed(selectedUnit)) {
+            // Invalid state — reset
+            selectedSkill = null;
+            skillRangeCells = [];
+            skillTargetCells = [];
+            selectedUnit = null;
+            renderer.setSelectedUnit(null);
+            attackTargets = [];
+            updateView();
+            renderSkillBar();
+            return;
+          }
+          const config = ABILITY_CONFIGS[selectedSkill];
+          useAbility(selectedUnit, clickedUnit, selectedSkill, config, manager);
+          turnManager.markUnitActed(selectedUnit);
+          selectedSkill = null;
+          skillRangeCells = [];
+          skillTargetCells = [];
+          attackTargets = [];
+          renderer.setFlashingUnits([clickedUnit]);
+          updateView();
+
+          const gameOver = turnManager.isGameOver();
+          combatInProgress = true;
+
+          setTimeout(() => {
+            try {
+              renderer.clearFlashingUnits();
+              updateView();
+              renderSkillBar();
+              if (gameOver) {
+                turnManager.endPlayerCombat();
+                const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
+              } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
+                const actions = turnManager.endPlayerCombat();
+                if (turnManager.getState() === Phase.End) {
+                  const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                  setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
+                } else {
+                  processEnemyActions(actions, 0);
+                }
+              }
+            } finally {
+              combatInProgress = false;
+            }
+          }, 400);
+          return;
+        }
+
+        // Click on own unacted unit -> switch selection, recalculate skill
+        if (clickedUnit && clickedUnit.team === 0 && clickedUnit.isAlive() && !turnManager.hasUnitActed(clickedUnit)) {
+          selectedUnit = clickedUnit;
+          renderer.setSelectedUnit(clickedUnit);
+          const config = ABILITY_CONFIGS[selectedSkill];
+          skillRangeCells = getAbilityRangeCells(clickedUnit, config);
+          skillTargetCells = getAbilityTargetsForSkill(clickedUnit, selectedSkill, config, manager);
+          attackTargets = [];
+          updateView();
+          renderSkillBar();
+          return;
+        }
+
+        // Click on empty space or acted unit -> cancel skill mode, return to basic attack mode
+        selectedSkill = null;
+        skillRangeCells = [];
+        skillTargetCells = [];
+        if (selectedUnit && selectedUnit.isAlive() && !turnManager.hasUnitActed(selectedUnit)) {
+          // Keep unit selected, show attack targets (return to basic attack)
+          attackTargets = getAdjacentEnemies(selectedUnit).map(u => ({ row: u.row, col: u.col }));
+        } else {
+          selectedUnit = null;
+          renderer.setSelectedUnit(null);
+          attackTargets = [];
+        }
+        updateView();
+        renderSkillBar();
+        return;
+      }
+
+      // --- Basic attack mode (selectedSkill === null) ---
       if (clickedUnit && clickedUnit.team === 0 && clickedUnit.isAlive() && !turnManager.hasUnitActed(clickedUnit)) {
         // Clicked own unit — select and show adjacent enemies as attack targets
         selectedUnit = clickedUnit;
@@ -110,23 +239,27 @@ const renderer = new MapRenderer({
           combatInProgress = true;
 
           setTimeout(() => {
-            renderer.clearFlashingUnits();
-            updateView();
-            if (gameOver) {
-              turnManager.endPlayerCombat();
-              const playerAlive = manager.getUnitsByTeam(0).length > 0;
-              alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
-            } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
-              // Auto-advance to EnemyAI when all units have acted
-              const actions = turnManager.endPlayerCombat();
-              if (turnManager.getState() === Phase.End) {
+            try {
+              renderer.clearFlashingUnits();
+              updateView();
+              renderSkillBar();
+              if (gameOver) {
+                turnManager.endPlayerCombat();
                 const playerAlive = manager.getUnitsByTeam(0).length > 0;
-                setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
-              } else {
-                processEnemyActions(actions, 0);
+                alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
+              } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
+                // Auto-advance to EnemyAI when all units have acted
+                const actions = turnManager.endPlayerCombat();
+                if (turnManager.getState() === Phase.End) {
+                  const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                  setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
+                } else {
+                  processEnemyActions(actions, 0);
+                }
               }
+            } finally {
+              combatInProgress = false;
             }
-            combatInProgress = false;
           }, 400);
         } else {
           // Clicked elsewhere — clear selection
@@ -260,7 +393,7 @@ const PHASE_NAMES: Record<string, string> = {
 
 const PHASE_GUIDES: Record<string, { text: string; color: string }> = {
   [Phase.PlayerMove]: { text: '点击己方单位选中 → 点击高亮格移动', color: '#ccc' },
-  [Phase.PlayerCombat]: { text: '点击己方单位 → 点击红色高亮敌人攻击', color: '#ccc' },
+  [Phase.PlayerCombat]: { text: '点击己方单位 → 攻击或点击下方技能栏使用技能', color: '#ccc' },
   [Phase.EnemyAI]: { text: '敌方回合中，请等待...', color: '#e74c3c' },
   [Phase.End]: { text: '游戏结束，刷新页面重新开始', color: '#ccc' },
 };
@@ -336,6 +469,67 @@ endTurnBtn.addEventListener('click', () => {
   }
 });
 
+// --- Skill Bar ---
+const skillBar = document.createElement('div');
+skillBar.id = 'skill-bar';
+skillBar.style.display = 'none';
+document.body.appendChild(skillBar);
+
+function renderSkillBar(): void {
+  skillBar.innerHTML = '';
+  const state = turnManager.getState();
+  if (state !== Phase.PlayerCombat) {
+    skillBar.style.display = 'none';
+    return;
+  }
+  skillBar.style.display = 'flex';
+
+  const unactedUnits = manager.getUnitsByTeam(0).filter(u => u.isAlive() && !turnManager.hasUnitActed(u));
+  if (unactedUnits.length === 0) {
+    skillBar.style.display = 'none';
+    return;
+  }
+  for (const unit of unactedUnits) {
+    const btn = document.createElement('button');
+    const skillConfig = ABILITY_CONFIGS[unit.skill];
+    const name = UNIT_TYPE_NAMES[unit.type] ?? unit.type;
+    const cooldownText = unit.skillCooldown > 0 ? ` (CD:${unit.skillCooldown})` : '';
+    btn.textContent = `${name}: ${skillConfig.name}${cooldownText}`;
+
+    if (unit.skillCooldown > 0) {
+      btn.className = 'skill-btn on-cooldown';
+      btn.disabled = true;
+    } else {
+      btn.className = 'skill-btn';
+      if (selectedUnit === unit && selectedSkill === unit.skill) {
+        btn.classList.add('selected');
+      }
+      btn.addEventListener('click', () => {
+        // Toggle: same button clicked again -> cancel
+        if (selectedUnit === unit && selectedSkill === unit.skill) {
+          selectedSkill = null;
+          selectedUnit = null;
+          renderer.setSelectedUnit(null);
+          skillRangeCells = [];
+          skillTargetCells = [];
+          attackTargets = [];
+        } else {
+          selectedUnit = unit;
+          renderer.setSelectedUnit(unit);
+          selectedSkill = unit.skill;
+          const config = ABILITY_CONFIGS[unit.skill];
+          skillRangeCells = getAbilityRangeCells(unit, config);
+          skillTargetCells = getAbilityTargetsForSkill(unit, unit.skill, config, manager);
+          attackTargets = [];
+        }
+        updateView();
+        renderSkillBar();
+      });
+    }
+    skillBar.appendChild(btn);
+  }
+}
+
 // Subscribe to phase changes for UI state updates
 turnManager.onPhaseChange.add((_from, to) => {
   if (to === Phase.PlayerMove || to === Phase.PlayerCombat) {
@@ -343,6 +537,15 @@ turnManager.onPhaseChange.add((_from, to) => {
     endTurnBtn.textContent = to === Phase.PlayerMove ? 'End Moves' : 'End Combat';
   } else {
     endTurnBtn.disabled = true;
+  }
+  if (to === Phase.PlayerCombat) {
+    renderSkillBar();
+  }
+  if (_from === Phase.PlayerCombat) {
+    selectedSkill = null;
+    skillRangeCells = [];
+    skillTargetCells = [];
+    skillBar.style.display = 'none';
   }
   updatePhaseUI(to);
 });

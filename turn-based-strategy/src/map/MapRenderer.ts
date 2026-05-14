@@ -125,6 +125,14 @@ export class MapRenderer {
     }
   }
 
+  renderAbilityRange(cells: { row: number; col: number }[], fillStyle: string): void {
+    this.renderCells(cells, fillStyle);
+  }
+
+  renderAbilityTargets(cells: { row: number; col: number }[]): void {
+    this.renderCells(cells, 'rgba(41, 128, 185, 0.5)');
+  }
+
   setFlashingUnits(units: Unit[]): void {
     this.flashingUnits = new Set(units);
   }

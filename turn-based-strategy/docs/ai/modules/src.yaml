@@ -9,7 +9,11 @@ framework: Vite 6 + Canvas 2D
 
 dependencies:
   external: []
-  internal: []
+  internal:
+    - "src/map/"           # MapGenerator + MapRenderer 地图生成与渲染
+    - "src/unit/"          # UnitManager/MovementEngine/CombatSystem/AbilitySystem/TurnManager/DeployManager/PhaseTypes
+    - "src/config/"        # GameConfig 配置常量
+    - "src/core/"          # Coordinate.DIRECTION_OFFSETS 方向偏移
 
 public_interface:
   - "main.ts"           # 游戏入口，初始化 Canvas 和游戏循环
@@ -23,7 +27,20 @@ constraints:
   - "混合渲染：Canvas 2D 地图/单位图形 + DOM HUD 文本（Phase指示器/操作指引/工具提示）"
   - "HUD DOM 元素均设置 pointer-events: none，避免拦截 Canvas 点击事件"
   - "单入口 HTML 文件 (index.html)"
+  - "技能栏 (#skill-bar) 在 PlayerCombat 阶段显示，固定定位在底部中间 (bottom:60px, translateX(-50%))，flex 布局水平排列单位技能按钮；创建一次、通过 display:none/flex 切换可见性"
+  - "技能按钮三种状态：默认 (.skill-btn: #2c3e50 背景白字)、选中 (.selected: 金色边框 #ffd700 + box-shadow 发光)、冷却中 (.on-cooldown: #555 灰底 #999 灰字 disabled)"
+  - "onClick 双模式：selectedSkill===null 为普攻模式（与 Phase 6 逻辑一致），selectedSkill!==null 为技能模式（显示技能范围+技能目标，点击目标执行 useAbility）"
+  - "技能模式点击未选中己方单位可切换选中目标并重新计算技能范围/目标；点击空地或已行动单位取消技能模式回到普攻模式"
+  - "技能按钮 toggle 行为：点击已选中的同单位同技能取消技能模式（selectedSkill=null），返回普攻模式"
+  - "getAbilityRangeCells 使用 Manhattan 菱形距离（|dr|+|dc| ≤ config.range），与 Phase 6 Volley AoE 菱形区域相同的距离度量；Charge 额外要求同行或同列（getAbilityTargetsForSkill 中过滤）"
 
 known_issues: []
 
-last_updated: "2026-05-11"
+development_notes:
+  - "skill bar 每次调用 renderSkillBar 重建 DOM（innerHTML='' + appendChild），按钮数 ≤3 时性能可忽略，但重构会丢失事件监听需重新绑定"
+  - "技能状态变量（selectedSkill/skillRangeCells/skillTargetCells）与普攻状态变量（selectedUnit/attackTargets）同级共存；技能模式与普攻模式共享 selectedUnit"
+  - "skill bar 生命周期绑定 onPhaseChange：进入 PlayerCombat 时 renderSkillBar，离开 PlayerCombat 时 display:none 并清理技能状态"
+  - "renderSkillBar 在多个时间点调用：onClick 各分支、setTimeout 战斗动画回调、phase change 事件——确保技能栏始终反映最新的单位状态（行动/冷却/阵亡）"
+  - "getAbilityRangeCells 复用 Phase 6 的 Manhattan 2D 循环（|dr|+|dc| ≤ range），与 Volley AoE 的实现结构相同但应用于不同语义（范围显示 vs 伤害区域），两者共享同样的距离度量"
+
+last_updated: "2026-05-15"

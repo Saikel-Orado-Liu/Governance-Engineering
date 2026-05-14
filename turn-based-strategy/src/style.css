@@ -62,3 +62,41 @@ body {
   white-space: nowrap;
   line-height: 1.5;
 }
+
+#skill-bar {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+}
+
+.skill-btn {
+  background: #2c3e50;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-family: monospace;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.skill-btn:hover {
+  border-color: #888;
+}
+
+.skill-btn.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+.skill-btn.on-cooldown {
+  background: #555;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #444;
+}
