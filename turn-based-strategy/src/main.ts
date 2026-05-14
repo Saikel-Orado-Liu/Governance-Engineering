@@ -21,6 +21,8 @@ const deployManager = new DeployManager(manager, DEFAULT_GAME_CONFIG);
 
 let selectedUnit: Unit | null = null;
 let reachableCells: { row: number; col: number }[] = [];
+let attackTargets: { row: number; col: number }[] = [];
+let combatInProgress = false;
 
 const DIRECTION_OFFSETS: [number, number][] = [
   [-1, 0], [1, 0], [0, -1], [0, 1],
@@ -76,6 +78,7 @@ function processEnemyActions(actions: EnemyAction[], index: number): void {
 
 function updateView(): void {
   renderer.render(grid);
+  renderer.renderAttackHighlights(attackTargets);
   renderer.renderHighlights(reachableCells);
   renderer.renderUnits(manager.getAllUnits());
 }
@@ -83,7 +86,77 @@ function updateView(): void {
 const renderer = new MapRenderer({
   canvas,
   onClick: (row: number, col: number) => {
-    if (turnManager.getState() !== Phase.PlayerMove) return;
+    const state = turnManager.getState();
+
+    // --- PlayerCombat phase ---
+    if (state === Phase.PlayerCombat) {
+      const clickedUnit = manager.getUnitAt(row, col);
+
+      if (clickedUnit && clickedUnit.team === 0 && clickedUnit.isAlive() && !turnManager.hasUnitActed(clickedUnit)) {
+        // Clicked own unit — select and show adjacent enemies as attack targets
+        selectedUnit = clickedUnit;
+        renderer.setSelectedUnit(clickedUnit);
+        attackTargets = getAdjacentEnemies(clickedUnit).map(u => ({ row: u.row, col: u.col }));
+        updateView();
+      } else if (selectedUnit && selectedUnit.isAlive() && !turnManager.hasUnitActed(selectedUnit)) {
+        // Check if clicked on an attack target (red-highlighted enemy)
+        const target = manager.getUnitAt(row, col);
+        if (target && target.team !== 0 && attackTargets.some(t => t.row === row && t.col === col)) {
+          // Execute combat
+          executeCombat(selectedUnit, target, manager);
+          turnManager.markUnitActed(selectedUnit);
+          attackTargets = [];
+          renderer.setFlashingUnits([target]);
+          updateView();
+
+          const gameOver = turnManager.isGameOver();
+          combatInProgress = true;
+
+          setTimeout(() => {
+            renderer.clearFlashingUnits();
+            updateView();
+            if (gameOver) {
+              turnManager.endPlayerCombat();
+              const playerAlive = manager.getUnitsByTeam(0).length > 0;
+              alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
+            } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
+              // Auto-advance to EnemyAI when all units have acted
+              const actions = turnManager.endPlayerCombat();
+              if (turnManager.getState() === Phase.End) {
+                const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
+              } else {
+                processEnemyActions(actions, 0);
+              }
+            }
+            combatInProgress = false;
+          }, 400);
+        } else {
+          // Clicked elsewhere — clear selection
+          selectedUnit = null;
+          renderer.setSelectedUnit(null);
+          attackTargets = [];
+          updateView();
+        }
+      } else {
+        // Clicked already-acted unit, enemy directly, or empty — clear selection
+        selectedUnit = null;
+        renderer.setSelectedUnit(null);
+        attackTargets = [];
+        updateView();
+      }
+      return;
+    }
+
+    // --- PlayerMove phase ---
+    if (state !== Phase.PlayerMove) {
+      // Not a player-interactive phase — clear selection
+      selectedUnit = null;
+      renderer.setSelectedUnit(null);
+      reachableCells = [];
+      updateView();
+      return;
+    }
 
     const clickedUnit = manager.getUnitAt(row, col);
 
@@ -94,36 +167,13 @@ const renderer = new MapRenderer({
       reachableCells = movementEngine.getReachableCells(grid, clickedUnit);
       updateView();
     } else if (selectedUnit && reachableCells.some(c => c.row === row && c.col === col)) {
-      // Clicked a highlighted cell — move unit there
+      // Clicked a highlighted cell — move unit there (no auto-attack)
       const moved = manager.moveUnit(selectedUnit, row, col);
       if (moved) {
-        const movedUnit = selectedUnit;
         selectedUnit = null;
         renderer.setSelectedUnit(null);
         reachableCells = [];
-
-        // Combat detection after movement
-        const adjacentEnemies = getAdjacentEnemies(movedUnit);
-        if (adjacentEnemies.length > 0) {
-          const target = adjacentEnemies.sort((a, b) => a.hp - b.hp)[0];
-          executeCombat(movedUnit, target, manager);
-          renderer.setFlashingUnits([target]);
-          updateView();
-
-          // Check game over after player attack
-          const gameOver = turnManager.isGameOver();
-
-          setTimeout(() => {
-            renderer.clearFlashingUnits();
-            updateView();
-            if (gameOver) {
-              const playerAlive = manager.getUnitsByTeam(0).length > 0;
-              alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
-            }
-          }, 400);
-        } else {
-          updateView();
-        }
+        updateView();
       }
       // If moveUnit returns false, keep selection intact
     } else {
@@ -213,7 +263,7 @@ const PHASE_NAMES: Record<string, string> = {
 
 const PHASE_GUIDES: Record<string, { text: string; color: string }> = {
   [Phase.PlayerMove]: { text: '点击己方单位选中 → 点击高亮格移动', color: '#ccc' },
-  [Phase.PlayerCombat]: { text: '移动后自动攻击相邻最弱敌人', color: '#ccc' },
+  [Phase.PlayerCombat]: { text: '点击己方单位 → 点击红色高亮敌人攻击', color: '#ccc' },
   [Phase.EnemyAI]: { text: '敌方回合中，请等待...', color: '#e74c3c' },
   [Phase.End]: { text: '游戏结束，刷新页面重新开始', color: '#ccc' },
 };
@@ -241,7 +291,7 @@ function updatePhaseUI(phase: Phase): void {
 
 // Add End Turn button
 const endTurnBtn = document.createElement('button');
-endTurnBtn.textContent = 'End Turn';
+endTurnBtn.textContent = 'End Moves';
 endTurnBtn.style.cssText = [
   'position: fixed',
   'top: 12px',
@@ -258,31 +308,49 @@ endTurnBtn.style.cssText = [
 document.body.appendChild(endTurnBtn);
 
 endTurnBtn.addEventListener('click', () => {
-  if (turnManager.getState() !== Phase.PlayerMove) return;
+  const state = turnManager.getState();
 
-  // Clear selection when ending player turn
-  renderer.setSelectedUnit(null);
+  if (state === Phase.PlayerMove) {
+    // Clear selection when ending player move
+    renderer.setSelectedUnit(null);
+    selectedUnit = null;
+    reachableCells = [];
 
-  const actions = turnManager.endPlayerTurn();
-
-  // Check game over
-  if (turnManager.getState() === Phase.End) {
-    const playerAlive = manager.getUnitsByTeam(0).length > 0;
-    const msg = playerAlive ? 'Player Wins!' : 'Enemy Wins!';
+    turnManager.endPlayerTurn();
     updateView();
-    setTimeout(() => alert(msg), 200);
-    return;
-  }
+  } else if (state === Phase.PlayerCombat) {
+    if (combatInProgress) return;
+    // Clear selection when ending combat
+    renderer.setSelectedUnit(null);
+    selectedUnit = null;
+    attackTargets = [];
 
-  processEnemyActions(actions, 0);
+    const actions = turnManager.endPlayerCombat();
+
+    if (turnManager.getState() === Phase.End) {
+      const playerAlive = manager.getUnitsByTeam(0).length > 0;
+      const msg = playerAlive ? 'Player Wins!' : 'Enemy Wins!';
+      updateView();
+      setTimeout(() => alert(msg), 200);
+      return;
+    }
+
+    processEnemyActions(actions, 0);
+  }
 });
 
 // Subscribe to phase changes for UI state updates
 turnManager.onPhaseChange.add((_from, to) => {
-  endTurnBtn.disabled = to !== Phase.PlayerMove;
+  if (to === Phase.PlayerMove || to === Phase.PlayerCombat) {
+    endTurnBtn.disabled = false;
+    endTurnBtn.textContent = to === Phase.PlayerMove ? 'End Moves' : 'End Combat';
+  } else {
+    endTurnBtn.disabled = true;
+  }
   updatePhaseUI(to);
 });
 endTurnBtn.disabled = turnManager.getState() !== Phase.PlayerMove;
+endTurnBtn.textContent = 'End Moves';
 
 // Execute initial deployment
 deployManager.executeDeploy();

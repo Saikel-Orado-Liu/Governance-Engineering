@@ -109,16 +109,18 @@ export class MapRenderer {
   }
 
   renderHighlights(cells: { row: number; col: number }[]): void {
-    if (cells.length === 0) {
-      return;
-    }
+    this.renderCells(cells, 'rgba(255, 255, 0, 0.3)');
+  }
 
+  renderAttackHighlights(cells: { row: number; col: number }[]): void {
+    this.renderCells(cells, 'rgba(255, 0, 0, 0.4)');
+  }
+
+  private renderCells(cells: { row: number; col: number }[], fillStyle: string): void {
+    if (cells.length === 0) return;
     for (const { row, col } of cells) {
-      if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
-        continue; // Skip out-of-bounds cells silently
-      }
-
-      this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+      if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
+      this.ctx.fillStyle = fillStyle;
       this.ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }

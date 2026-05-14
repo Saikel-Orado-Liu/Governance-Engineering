@@ -25,7 +25,7 @@ describe('TurnManager', () => {
     expect(turnManager.getCurrentTeam()).toBe(0);
   });
 
-  it('changes state to enemy after endPlayerTurn', () => {
+  it('changes state to enemy after full turn cycle (PlayerMove → PlayerCombat → EnemyAI)', () => {
     const { unitManager, turnManager } = makeTurnManager();
     // Spawn both teams so game doesn't end from empty roster
     unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0);
@@ -33,6 +33,10 @@ describe('TurnManager', () => {
 
     turnManager.completeDeploy();
     turnManager.endPlayerTurn();
+
+    expect(turnManager.getState()).toBe(Phase.PlayerCombat);
+
+    turnManager.endPlayerCombat();
 
     expect(turnManager.getState()).toBe(Phase.EnemyAI);
   });
@@ -46,7 +50,8 @@ describe('TurnManager', () => {
     expect(initialDist).toBe(6);
 
     turnManager.completeDeploy();
-    const actions = turnManager.endPlayerTurn();
+    turnManager.endPlayerTurn();
+    const actions = turnManager.endPlayerCombat();
 
     // Enemy should have moved closer
     const moveAction = actions.find(a => a.action === 'move');
@@ -68,7 +73,8 @@ describe('TurnManager', () => {
     const enemy = unitManager.spawnUnit(UnitType.Warrior, 1, 0, 1)!;
 
     turnManager.completeDeploy();
-    const actions = turnManager.endPlayerTurn();
+    turnManager.endPlayerTurn();
+    const actions = turnManager.endPlayerCombat();
 
     const attackAction = actions.find(a => a.action === 'attack');
     expect(attackAction).toBeDefined();
@@ -90,6 +96,7 @@ describe('TurnManager', () => {
 
     turnManager.completeDeploy();
     turnManager.endPlayerTurn();
+    turnManager.endPlayerCombat();
     expect(turnManager.getState()).toBe(Phase.End);
   });
 
@@ -103,6 +110,120 @@ describe('TurnManager', () => {
 
     turnManager.completeDeploy();
     turnManager.endPlayerTurn();
+    turnManager.endPlayerCombat();
+    expect(turnManager.getState()).toBe(Phase.End);
+  });
+
+  it('endPlayerTurn transitions to PlayerCombat state', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0);
+    unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+
+    expect(turnManager.getState()).toBe(Phase.PlayerCombat);
+  });
+
+  it('endPlayerCombat completes full cycle and transitions to EnemyAI', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0);
+    unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+    turnManager.endPlayerCombat();
+
+    expect(turnManager.getState()).toBe(Phase.EnemyAI);
+  });
+
+  it('markUnitActed and hasUnitActed track units correctly', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    const unit = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+    unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+
+    expect(turnManager.hasUnitActed(unit)).toBe(false);
+
+    turnManager.markUnitActed(unit);
+    expect(turnManager.hasUnitActed(unit)).toBe(true);
+  });
+
+  it('isAllUnitsActed returns true only when all friendly units have acted', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    const unit1 = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+    const unit2 = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 1)!;
+    unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+
+    expect(turnManager.isAllUnitsActed()).toBe(false);
+
+    turnManager.markUnitActed(unit1);
+    expect(turnManager.isAllUnitsActed()).toBe(false);
+
+    turnManager.markUnitActed(unit2);
+    expect(turnManager.isAllUnitsActed()).toBe(true);
+  });
+
+  it('getRemainingCombatUnits excludes dead and acted units', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    const aliveUnit = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+    const actedUnit = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 1)!;
+    const deadUnit = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 2)!;
+    unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+
+    // All 3 alive units remain initially
+    expect(turnManager.getRemainingCombatUnits()).toHaveLength(3);
+
+    // Mark one as acted
+    turnManager.markUnitActed(actedUnit);
+    expect(turnManager.getRemainingCombatUnits()).toHaveLength(2);
+
+    // Kill one unit
+    deadUnit.takeDamage(9999);
+    expect(turnManager.getRemainingCombatUnits()).toHaveLength(1);
+
+    // Only aliveUnit should be in remaining
+    const remaining = turnManager.getRemainingCombatUnits();
+    expect(remaining).toContain(aliveUnit);
+    expect(remaining).not.toContain(actedUnit);
+    expect(remaining).not.toContain(deadUnit);
+  });
+
+  it('endPlayerCombat goes to Phase.End when all enemies are eliminated before enemy turn', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0);
+    const enemy = unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7)!;
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+
+    // Remove the only enemy unit before endPlayerCombat
+    unitManager.removeUnit(enemy);
+
+    turnManager.endPlayerCombat();
+    expect(turnManager.getState()).toBe(Phase.End);
+  });
+
+  it('endPlayerCombat goes to Phase.End when all player units die during enemy turn', () => {
+    const { unitManager, turnManager } = makeTurnManager();
+    const player = unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0)!;
+    unitManager.spawnUnit(UnitType.Warrior, 1, 0, 1);
+
+    // Damage player so enemy attack will kill it (HP reduced to 10)
+    player.takeDamage(105);
+
+    turnManager.completeDeploy();
+    turnManager.endPlayerTurn();
+    turnManager.endPlayerCombat();
+
     expect(turnManager.getState()).toBe(Phase.End);
   });
 });

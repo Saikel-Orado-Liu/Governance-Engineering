@@ -2,6 +2,7 @@ import { MapGrid } from '../map/MapGrid';
 import { UnitManager } from './UnitManager';
 import { Phase, canTransitionTo } from './PhaseTypes';
 import { EnemyAI, type EnemyAction, type CombatFn } from './EnemyAI';
+import type { Unit } from './Unit';
 
 export type TurnState = Phase;
 
@@ -16,6 +17,9 @@ export class TurnManager {
   onPhaseChange: Set<(from: Phase, to: Phase) => void> = new Set();
 
   actionHistory: { from: Phase; to: Phase; timestamp: number }[] = [];
+
+  /** Tracks units that have performed combat in the current PlayerCombat phase */
+  private actedUnits: Set<Unit> = new Set();
 
   constructor(
     grid: MapGrid,
@@ -36,13 +40,48 @@ export class TurnManager {
     return -1;
   }
 
+  /** End player move phase and advance to PlayerCombat */
   endPlayerTurn(): EnemyAction[] {
+    this.nextPhase(Phase.PlayerCombat);
+    this.actedUnits.clear();
+    return [];
+  }
+
+  /** End player combat phase and advance to EnemyAI */
+  endPlayerCombat(): EnemyAction[] {
+    // Game over check before advancing to EnemyAI
+    if (this.isGameOver()) {
+      this.nextPhase(Phase.End);
+      return [];
+    }
     this.nextPhase(Phase.EnemyAI);
+    this.actedUnits.clear();
     const actions = this.enemyAI.executeTurn();
     if (this.isGameOver()) {
       this.nextPhase(Phase.End);
     }
     return actions;
+  }
+
+  /** Mark a unit as having acted (attacked) this combat phase */
+  markUnitActed(unit: Unit): void {
+    this.actedUnits.add(unit);
+  }
+
+  /** Check if a unit has already acted this combat phase */
+  hasUnitActed(unit: Unit): boolean {
+    return this.actedUnits.has(unit);
+  }
+
+  /** Check if all alive player units have acted */
+  isAllUnitsActed(): boolean {
+    const alivePlayerUnits = this.unitManager.getUnitsByTeam(0);
+    return alivePlayerUnits.length > 0 && alivePlayerUnits.every(u => this.actedUnits.has(u));
+  }
+
+  /** Get remaining player units that can still act this combat phase (alive and not acted) */
+  getRemainingCombatUnits(): Unit[] {
+    return this.unitManager.getUnitsByTeam(0).filter(u => u.isAlive() && !this.actedUnits.has(u));
   }
 
   startPlayerTurn(): void {

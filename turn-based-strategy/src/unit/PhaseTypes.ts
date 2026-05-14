@@ -21,7 +21,7 @@ export function canTransitionTo(current: Phase, next: Phase): boolean {
   if (current === Phase.End && next === Phase.PlayerMove) return true;
   // Allow loop: EnemyAI → PlayerMove (turn cycle)
   if (current === Phase.EnemyAI && next === Phase.PlayerMove) return true;
-  // Allow skip: PlayerMove → EnemyAI (current game loop skips PlayerCombat)
-  if (current === Phase.PlayerMove && next === Phase.EnemyAI) return true;
+  // Allow game over: PlayerCombat → End (skip EnemyAI when one side is eliminated)
+  if (current === Phase.PlayerCombat && next === Phase.End) return true;
   return nextIndex === currentIndex + 1;
 }
