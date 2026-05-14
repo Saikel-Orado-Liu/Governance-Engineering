@@ -8,10 +8,9 @@ export type TurnState = Phase;
 export type { EnemyAction };
 
 export class TurnManager {
-  private state: Phase = Phase.PlayerMove;
+  private state: Phase = Phase.Deploy;
   private unitManager: UnitManager;
   private enemyAI: EnemyAI;
-
   onPhaseEnter: Set<(phase: Phase) => void> = new Set();
   onPhaseExit: Set<(phase: Phase) => void> = new Set();
   onPhaseChange: Set<(from: Phase, to: Phase) => void> = new Set();
@@ -54,6 +53,12 @@ export class TurnManager {
     if (this.unitManager.getUnitsByTeam(0).length === 0) return true;
     if (this.unitManager.getUnitsByTeam(1).length === 0) return true;
     return false;
+  }
+
+  completeDeploy(): boolean {
+    if (this.state !== Phase.Deploy) return false;
+    this.nextPhase(Phase.PlayerMove);
+    return true;
   }
 
   private nextPhase(target: Phase): void {

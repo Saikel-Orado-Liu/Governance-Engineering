@@ -19,9 +19,9 @@ function makeTurnManager() {
 }
 
 describe('TurnManager', () => {
-  it('initial state is player', () => {
+  it('initial state is deploy', () => {
     const { turnManager } = makeTurnManager();
-    expect(turnManager.getState()).toBe(Phase.PlayerMove);
+    expect(turnManager.getState()).toBe(Phase.Deploy);
     expect(turnManager.getCurrentTeam()).toBe(0);
   });
 
@@ -31,6 +31,7 @@ describe('TurnManager', () => {
     unitManager.spawnUnit(UnitType.Warrior, 0, 0, 0);
     unitManager.spawnUnit(UnitType.Warrior, 1, 7, 7);
 
+    turnManager.completeDeploy();
     turnManager.endPlayerTurn();
 
     expect(turnManager.getState()).toBe(Phase.EnemyAI);
@@ -44,6 +45,7 @@ describe('TurnManager', () => {
     const initialDist = Math.abs(enemy.row - player.row) + Math.abs(enemy.col - player.col);
     expect(initialDist).toBe(6);
 
+    turnManager.completeDeploy();
     const actions = turnManager.endPlayerTurn();
 
     // Enemy should have moved closer
@@ -65,6 +67,7 @@ describe('TurnManager', () => {
     // Enemy adjacent to the low-HP unit
     const enemy = unitManager.spawnUnit(UnitType.Warrior, 1, 0, 1)!;
 
+    turnManager.completeDeploy();
     const actions = turnManager.endPlayerTurn();
 
     const attackAction = actions.find(a => a.action === 'attack');
@@ -85,6 +88,7 @@ describe('TurnManager', () => {
     // Manually eliminate the only player unit
     unitManager.removeUnit(player);
 
+    turnManager.completeDeploy();
     turnManager.endPlayerTurn();
     expect(turnManager.getState()).toBe(Phase.End);
   });
@@ -97,6 +101,7 @@ describe('TurnManager', () => {
     // Manually eliminate the only enemy unit
     unitManager.removeUnit(enemy);
 
+    turnManager.completeDeploy();
     turnManager.endPlayerTurn();
     expect(turnManager.getState()).toBe(Phase.End);
   });

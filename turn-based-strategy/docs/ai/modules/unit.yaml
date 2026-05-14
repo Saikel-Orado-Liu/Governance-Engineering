@@ -13,6 +13,7 @@ dependencies:
     - "src/map/MapGrid.ts"            # UnitManager 持 MapGrid 引用做位置校验; TurnManager + EnemyAI 持 MapGrid 做通行/边界检查
     - "src/unit/PhaseTypes.ts"        # TurnManager 使用 Phase 枚举管理回合阶段
     - "src/unit/EnemyAI.ts"           # TurnManager 通过依赖注入持有 EnemyAI 实例
+    - "src/config/GameConfig.ts"      # DeployManager 使用 GameConfig 接口做部署配置（编队/坐标/队伍大小）
 
 public_interface:
   - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）
@@ -28,6 +29,9 @@ public_interface:
   - "PHASE_SEQUENCE"                  # Phase 有序数组，用于 transition 校验
   - "canTransitionTo"                 # 阶段转换校验函数，含 loop（End→PlayerMove）和 skip（PlayerMove→EnemyAI）
   - "EnemyAI"                         # 敌方 AI 类：贪心 Manhattan 策略，纯动作生成器
+  - "DeployManager"                   # 部署管理器类，接收 UnitManager + GameConfig，executeDeploy 返回 DeployResult
+  - "DeployResult"                    # 部署结果接口：{ deployed: Unit[], failed: FailedDeploy[] }
+  - "FailedDeploy"                    # 部署失败记录：{ team, index, type, intendedRow, intendedCol, reason }
 
 exports:
   - "UnitType (const enum)"           # Warrior/Archer/Knight/Mage
@@ -57,6 +61,10 @@ exports:
   - "EnemyAI.findNearest()"          # Manhattan 距离找最近目标
   - "EnemyAI.getAdjacentEnemies()"   # 4 方向相邻敌人查询
   - "EnemyAI.findBestAdjacentMove()" # 4 方向贪心单步移动
+  - "DeployManager"                   # 类，new DeployManager(unitManager, config)；executeDeploy() 返回 DeployResult
+  - "DeployResult (interface)"        # { deployed: Unit[], failed: FailedDeploy[] }
+  - "FailedDeploy (interface)"        # { team, index, type, intendedRow, intendedCol, reason }
+  - "TurnManager.completeDeploy()"    # 从 Phase.Deploy 过渡到 Phase.PlayerMove，返回 boolean；失败条件：当前 Phase 非 Deploy
 
 components:
   - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
@@ -73,6 +81,8 @@ components:
   - "__tests__/CombatSystem.test.ts": # 9 项测试：基础伤害、反击、阵亡(双方向)、克制/被克制乘数、最小伤害、死亡移除、回合存活保护
   - "__tests__/TurnManager.test.ts":  # 7 项测试：初始状态、状态切换、敌方贪心移动、最低HP相邻攻击、全灭GameOver(双方向)
   - "__tests__/EnemyAI.test.ts":      # 5 项测试：findNearest 距离、findBestAdjacentMove 有效性、getAdjacentEnemies 相邻过滤、executeTurn 移动/攻击/空结果
+  - "DeployManager.ts":               # DeployManager 类：executeDeploy 部署两队单位，trySpawnFallback 8 方向相邻回退（先四方后对角）处理占用/不可通行，DeployResult/FailedDeploy 接口
+  - "__tests__/DeployManager.test.ts": # 6 项测试：部署数量、编队类型匹配、部署坐标正确、占用回退、不可通行回退、完全阻塞失败报告
 
 constraints:
   - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"
@@ -83,9 +93,10 @@ constraints:
   - "战斗：攻击方先手->反击(仅相邻近战)->阵亡方移除；反击仅在防御方存活时触发"
   - "相邻判定使用 4 方向（DIRECTION_OFFSETS），与 MovementEngine 一致"
   - "敌方 AI：Manhattan 距离找最近目标 -> 贪心单步接近 -> 攻击最低HP相邻敌人"
-  - "Phase 周期：Deploy→PlayerMove→PlayerCombat→EnemyAI→End→PlayerMove（循环）"
-  - "Phase 跳过规则：PlayerMove→EnemyAI 跳过 PlayerCombat（当前游戏循环未实现独立战斗阶段）"
+  - "Phase 周期：Deploy(部署)→PlayerMove→PlayerCombat→EnemyAI→End→PlayerMove（循环）；Deploy 为初始阶段，PlayerCombat 被跳过"
+  - "Phase 跳过规则：PlayerMove→EnemyAI 跳过 PlayerCombat（战斗在玩家移动后即时触发，非独立阶段）"
   - "Phase 循环规则：EnemyAI→PlayerMove（回合循环）、End→PlayerMove（游戏重启）"
+  - "部署按 team 顺序执行，单个坐标失败时 8 方向回退（先四方后对角）；全部失败仍继续后续部署，失败详情记录在 DeployResult.failed[] 中"
 
 known_issues:
   - "CombatSystem.executeCombat 调用 Unit.takeDamage(atkDamage + defender.def) 使用 reverse-calculation 抵消内部伤害减免，调用方与 Unit 内部分式形成隐含耦合；若 Unit.takeDamage 修改公式，CombatSystem 需同步调整"
@@ -108,6 +119,10 @@ development_notes:
   - "事件钩子系统使用 Set<callback> 替代 callback[]：Set 自动去重同一回调多次注册；onPhaseEnter/onPhaseExit/onPhaseChange 三个钩子覆盖进入/退出/变更三种粒度；actionHistory 数组记录每次 transition 的时间戳，用于调试和回放"
   - "TurnManager.endPlayerTurn() 现在返回 EnemyAction[]（之前为 void），调用方根据 actions 序列驱动 UI 动画（main.ts 中 processEnemyActions 递归处理逐一行动）"
   - "TurnManager.startPlayerTurn() 为新增方法，在 EnemyAI 行动全部处理完毕后由 main.ts 调用恢复玩家阶段"
+  - "TurnManager 初始状态为 Phase.Deploy（此前为 Phase.PlayerMove）；构造函数不再立刻进入玩家回合，需要外部先调用 deployManager.executeDeploy() 部署单位，再调 turnManager.completeDeploy() 过渡到 PlayerMove"
+  - "completeDeploy() 为轻量方法：仅校验当前为 Deploy 阶段 → 调用 nextPhase(PlayerMove)；不关心实际部署状态（由调用方保证先执行部署），返回 boolean 表示 transition 是否发生"
+  - "DeployManager 职责单一：读取 GameConfig 的 deployCoordinates/formations/teamSize，遍历每个 team 的部署坐标调用 unitManager.spawnUnit()；主坐标失败时 trySpawnFallback 按 8 方向回退（[0,1][1,0][0,-1][-1,0] 四方优先，[1,1][1,-1][-1,1][-1,-1] 对角次之）；回退失败记录 FailedDeploy，不中断后续部署"
+  - "DeployManager 与 TurnManager 分离设计——部署逻辑不侵入回合状态机；main.ts 中两行调用（executeDeploy → completeDeploy）清晰表达了初始化流程的两步走模式"
 
 lessons_learned:
   - "克制表使用对称数据结构（[attacker][defender] 二维对象查找），避免链式 if-else"
@@ -118,4 +133,4 @@ lessons_learned:
   - "private + getter 模式替代 public readonly，后续可在 setter 添加校验而不破坏调用方"
   - "CombatSystem 使用 reverse-calculation 调用 takeDamage(atkDamage + def) 以精确传递预计算伤害——此模式在 Unit.takeDamage 与 CombatSystem.executeCombat 间形成了隐蔽的耦合契约，若取消防御抵消逻辑需同步修改两处"
 
-last_updated: "2026-05-14"
+last_updated: "2026-05-15"
