@@ -58,3 +58,26 @@ entries:
       2) 在 Unit.takeDamage 的注释中注明其公式可能被外部反向利用；
       3) 考虑为精确伤害传递添加独立方法（如 Unit.applyDamage(amount)）以消除耦合；
       4) 修改 takeDamage 公式时 grep 所有调用方确认是否有 reverse-calculation 用法。
+  - id: LL-021
+    date: "2026-05-15"
+    task: "MapGenerator 全连通性保证"
+    category: logic
+    lesson: >
+      MapGenerator.generate() 原只保证 (0,0) 到 (7,7) 存在一条路径，
+      但敌方单位可生在任意可通行格上。若孤立可通行格被山脉+水域组合地形
+      包围（本身可通行但不可达），敌方单位将无法移动。
+      修复方案：在 finalize 阶段新增 forceFullConnectivity()，
+      用 bfsReachable 从 (0,0) 标记可达区域 → 收集孤立可通行格 →
+      对每个孤立格 BFS（无视通行性）找到到主连通分量的最短路径 →
+      打通路径上的 Mountain/Water 障碍为 Plain → 将原孤立可通行格转为 Forest
+      保持地形比例平衡。
+    symptom: >
+      敌方单位生成在 passable 但不可达的孤立地形上，无法进行任何移动，
+      导致回合卡死。原 BFS 路径保证仅覆盖 (0,0)->(7,7) 两点，
+      未覆盖所有可通行格的连通性。
+    prevention: >
+      地图生成器中若有消费者依赖"所有可通行位置互相可达"，
+      必须显式验证全连通性而非仅两点间路径。
+      力推FullConnectivity 的通用解法：从种子点 BFS 标记主分量 →
+      扫描孤立可通行格 → BFS 任意地形找最短打通路径 → 平衡处理。
+    resolved: true

@@ -1,4 +1,20 @@
 # Verified Patterns
 # 由 summarize-agent 维护
 
-patterns: []
+patterns:
+  - pattern_id: P-1
+    date: "2026-05-15"
+    name: "Core Utility Separation — Pathfinding vs MovementEngine"
+    description: >
+      Pathfinding (src/core/) 是通用 A* 加权寻路工具，
+      与 MovementEngine (src/unit/) 职责分离：
+      Pathfinding 提供点对点寻路 (findPath) 和移动力范围搜索 (findPathInRange)，
+      通过 isOccupied 回调解耦，不依赖任何游戏实体；
+      MovementEngine 提供单位移动范围计算 (getReachableCells)，
+      绑定 UnitManager 做占用查询。
+      Pathfinding 适用于 AI 决策、路径预览等通用场景；
+      MovementEngine 适用于特定单位的移动范围高亮。
+      二者共享相同的 4 方向 DIRS、key() 字符串键、排除起点等约定。
+    context: "需要网格寻路功能时，区分通用路径搜索 (Pathfinding) 和单位移动范围 (MovementEngine)；新功能优先使用 Pathfinding 以免引入 UnitManager 依赖"
+    verified_count: 1
+    last_used: "2026-05-15"

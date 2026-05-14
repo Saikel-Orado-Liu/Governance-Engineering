@@ -1,0 +1,41 @@
+# Module Card: config
+# 游戏全局配置模块 — 可序列化的常量配置定义
+
+module: config
+path: "src/config/"
+type: utility
+language: TypeScript 5.6
+framework: none (类型定义)
+
+dependencies:
+  external: []
+  internal:
+    - "src/unit/UnitType.ts"    # Formation 类型引用 UnitType[]
+
+public_interface:
+  - "GameConfig"                 # 全局配置接口：teamSize/formations/deployCoordinates，所有字段 readonly
+  - "Formation"                  # 编队类型别名：UnitType[]
+  - "DEFAULT_GAME_CONFIG"        # 默认配置常量：3v3，Warrior/Archer/Knight 编队，team0 (0,0-2) vs team1 (7,7-5)
+
+exports:
+  - "GameConfig (interface)"     # 可扩展的只读配置接口
+  - "Formation (type)"           # UnitType[] 类型别名
+  - "DEFAULT_GAME_CONFIG"        # 应用默认配置
+
+components:
+  - "GameConfig.ts":             # GameConfig 接口 + Formation 类型 + DEFAULT_GAME_CONFIG 常量
+  - "__tests__/GameConfig.test.ts": # 5 项测试验证默认配置完整性
+
+constraints:
+  - "所有字段 readonly，运行时不可修改"
+  - "teamSize 范围隐含为 1-4（UnitType 仅 4 种），当前默认 3"
+  - "deployCoordinates 按 team 索引 (0/1) 分组，行列范围 [0,7]"
+
+known_issues: []
+
+development_notes:
+  - "Formation 为简单类型别名 (UnitType[])，非独立类；编队校验由消费者（如 main.ts deploy 阶段）负责"
+  - "DEFAULT_GAME_CONFIG 使用对象字面量直接赋值，未使用 as const 断言——GameConfig 接口 readonly 在编译层提供不可变性"
+  - "config 模块无运行时逻辑，纯类型定义 + 常量；适合未来扩展为 JSON 导入/热重载配置"
+
+last_updated: "2026-05-15"

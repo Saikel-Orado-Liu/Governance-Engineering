@@ -13,13 +13,25 @@ modules:
     type: "feature"
     description: "8x8 网格地图系统，含数据模型、随机生成、Canvas 渲染、路径保证"
     card: "docs/ai/modules/map.yaml"
-    last_updated: "2026-05-14"
+    last_updated: "2026-05-15"
   unit:
     path: "src/unit/"
     type: "feature"
     description: "单位系统 — 4种单位类型(Warrior/Archer/Knight/Mage) + 属性 + 克制关系 + UnitManager 管理器 + MapRenderer 单位渲染"
     card: "docs/ai/modules/unit.yaml"
     last_updated: "2026-05-14"
+  config:
+    path: "src/config/"
+    type: "utility"
+    description: "游戏全局配置 — GameConfig 接口 + Formation 类型 + DEFAULT_GAME_CONFIG 常量"
+    card: "docs/ai/modules/config.yaml"
+    last_updated: "2026-05-15"
+  core:
+    path: "src/core/"
+    type: "utility"
+    description: "核心工具 — Pathfinding A* 加权寻路类 (findPath + findPathInRange)"
+    card: "docs/ai/modules/core.yaml"
+    last_updated: "2026-05-15"
 
 standards:
   - "docs/ai/standards/architecture.yaml"

@@ -1,0 +1,50 @@
+# Module Card: core
+# 核心工具模块 — 通用算法与基础设施，不依赖游戏实体
+
+module: core
+path: "src/core/"
+type: utility
+language: TypeScript 5.6
+framework: none (纯算法)
+
+dependencies:
+  external: []
+  internal:
+    - "src/map/MapGrid.ts"          # Pathfinding 持 MapGrid 引用做通行/移动力查询
+
+public_interface:
+  - "Pathfinding"                   # 通用 A* 加权寻路类，findPath + findPathInRange
+  - "PathNode"                      # A* 寻路节点接口（row/col/g/h/f/parent）
+  - "HeuristicFn"                   # 启发函数类型签名
+
+exports:
+  - "Pathfinding.findPath()"        # A* 寻路，返回不含起点的路径数组，无可达路径返回 null
+  - "Pathfinding.findPathInRange()" # BFS 范围搜索，返回移动力范围内所有可达格（不含起点）
+  - "PathNode (interface)"          # 导出于 A* 实现公开
+  - "HeuristicFn (type)"            # 允许外部注入自定义启发函数
+
+components:
+  - "Pathfinding.ts":               # A* 寻路类（findPath）+ BFS 范围搜索（findPathInRange），4 方向扩展，O(n) openList 线性查找，可注入 isOccupied 回调解耦
+  - "__tests__/Pathfinding.test.ts": # 10 项测试：全 Plain 路径/障碍绕行/排除起点/完全阻塞/起点不可通行/Manhattan 范围/占用地块/加权地形 Forest/range=0 边界
+
+constraints:
+  - "使用 4 方向移动（上下左右，DIRS = [[-1,0],[1,0],[0,-1],[0,1]]），不支持斜向"
+  - "openList 使用 Array.find() 线性查找最小 f 值节点（非优先队列），适合 8x8 网格（最大 64 节点）"
+  - "findPathInRange 使用 BFS（queue.shift），非 A*——无需目标启发函数"
+
+known_issues:
+  - "findPath 的 openList 使用线性查找 O(n)，在 8x8 网格（最大 64 节点）上不会有性能问题；若未来支持更大网格（如 64x64），应替换为二叉堆优先队列"
+  - "reconstructPath 使用 path.unshift() 从父链构建路径，单次 unshift O(n)；总复杂度 O(n^2)，在 8x8 上无问题，大网格可改用双端队列或数组反转"
+
+development_notes:
+  - "Pathfinding 与 MovementEngine (src/unit/) 职责分离：Pathfinding 是通用寻路工具（点对点 A* + 范围 BFS），通过 isOccupied 回调解耦游戏实体；MovementEngine 是单位移动范围计算引擎，绑定 UnitManager 做占用查询"
+  - "findPath 返回路径不含起始格，与 MovementEngine.getReachableCells 排除起点的约定一致"
+  - "reconstructPath 使用 unshift 正向构建路径（从起始相邻格到终点），而非 push+reverse——可读性更好但大网格下 reverse 性能更优"
+  - "启发函数默认可注入 (HeuristicFn)，当前使用 Manhattan 距离与 MovementEngine 一致"
+  - "isOccupied 回调可选；未提供时不做占用检查，仅依靠 getMoveCost < 0 判断通行性"
+
+lessons_learned:
+  - "Pathfinding 与 MovementEngine 使用相同的 4 方向 DIRS 和 key() 字符串键模式——保持一致利于未来合并或重构"
+  - "findPathInRange 的 BFS 用 queue.shift() 而非 index 指针；shift() O(n) 在 8x8 上可忽略，大网格应改为环形缓冲区或 index 游标"
+
+last_updated: "2026-05-15"

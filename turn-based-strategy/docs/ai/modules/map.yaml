@@ -29,7 +29,7 @@ exports:
 components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
-  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ BFS (0,0)->(7,7) 可达性保证
+  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ forceFullConnectivity 全连通性保证 + BFS (0,0)->(7,7) 路径保证
   - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线；options 对象构造函数，公开 onClick 点击回调；setFlashingUnits/clearFlashingUnits 控制受击闪烁；setSelectedUnit 选中高亮；renderUnits 支持发光/边框/HP条/选择覆盖层
   - "__tests__/MapGrid.test.ts": # 13 项 vitest 测试（通行/移动力/边界/生成/路径保证）
 
@@ -37,7 +37,7 @@ constraints:
   - "固定 8x8 网格，不可在运行时 resize"
   - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
-  - "BFS 路径保证最多重试 100 次，超出视为无法生成"
+  - "先保证 (0,0)->(7,7) 有通路（bfsHasPath/bfsFindAnyPath），再保证所有可通行格构成单一连通分量（forceFullConnectivity BFS）"
   - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
   - "ctx.shadowBlur 每次调用后手动重置为 0，否则会污染后续 draw call（Canvas 2D 状态不自动清除）"
   - "HP 条在单位圆正下方绘制（cy+18），宽度 20px 高度 3px，背景 #555，前景绿红渐变基于 hpRatio"
@@ -64,5 +64,6 @@ lessons_learned:
   - "移除 console.log 改为公开 onClick 回调，保持编码规范同时提供消费者自定义处理能力"
   - "options 对象构造函数模式（new MapRenderer({ canvas, onClick? })），避免参数位置依赖，便于扩展"
   - "受击闪烁使用 Set<Unit> + renderUnits 分支判断模式：不修改 Unit 实体、不增加渲染管线开销、不产生额外副作用"
+  - "全连通性保证：仅保证 (0,0)->(7,7) 单路径不足，所有可通行格必须互相可达（forceFullConnectivity 两阶段 BFS 打通隔离区域再转 Forest 平衡地形）"
 
 last_updated: "2026-05-15"
