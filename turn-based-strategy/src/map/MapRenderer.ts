@@ -16,6 +16,7 @@ export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
   private currentGrid: MapGrid | null = null;
   private flashingUnits: Set<Unit> = new Set();
+  private selectedUnit: Unit | null = null;
   onClick: ((row: number, col: number, type: TileType) => void) | null = null;
 
   constructor(options: { canvas: HTMLCanvasElement; onClick?: (row: number, col: number, type: TileType) => void }) {
@@ -41,28 +42,69 @@ export class MapRenderer {
     });
   }
 
+  setSelectedUnit(unit: Unit | null): void {
+    this.selectedUnit = unit;
+  }
+
   renderUnits(units: Unit[]): void {
     const alive = units.filter(u => u.isAlive());
-    const radius = 12;
+    const radius = 16;
 
     for (const unit of alive) {
       const cx = unit.col * TILE_SIZE + TILE_SIZE / 2;
       const cy = unit.row * TILE_SIZE + TILE_SIZE / 2;
 
-      // Flashing units render in red
-      if (this.flashingUnits.has(unit)) {
-        this.ctx.beginPath();
-        this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#ff0000';
-        this.ctx.fill();
-        continue;
+      const isFlashing = this.flashingUnits.has(unit);
+
+      if (!isFlashing) {
+        // Glow effect (skip for flashing units to avoid visual conflict)
+        this.ctx.shadowBlur = 6;
+        this.ctx.shadowColor = unit.team === 0 ? 'rgba(41,128,185,0.5)' : 'rgba(231,76,60,0.5)';
       }
 
       // Team-color filled circle
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      this.ctx.fillStyle = unit.team === 0 ? '#2980b9' : '#e74c3c';
+      this.ctx.fillStyle = isFlashing ? '#ff0000' : (unit.team === 0 ? '#2980b9' : '#e74c3c');
       this.ctx.fill();
+
+      // Dark border (always drawn, including flashing units)
+      this.ctx.strokeStyle = unit.team === 0 ? '#1a5276' : '#a93226';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
+
+      // Reset shadow before HP bar (prevent glow pollution on HP bar)
+      this.ctx.shadowBlur = 0;
+
+      // HP bar (always drawn, including flashing units)
+      const barY = cy + 18;
+      const barWidth = 20;
+      const barHeight = 3;
+      // Background
+      this.ctx.fillStyle = '#555';
+      this.ctx.fillRect(cx - barWidth / 2, barY, barWidth, barHeight);
+      // Foreground — gradient green to red based on hpRatio
+      const hpRatio = unit.hp / unit.maxHp;
+      const hpColor = hpRatio > 0.5
+        ? `rgb(${Math.round(255 * (1 - hpRatio) * 2)},255,0)`
+        : `rgb(255,${Math.round(255 * hpRatio * 2)},0)`;
+      this.ctx.fillStyle = hpColor;
+      this.ctx.fillRect(cx - barWidth / 2, barY, barWidth * hpRatio, barHeight);
+
+      // Reset shadow after each unit (critical: prevents shadow pollution on grid/highlights)
+      this.ctx.shadowBlur = 0;
+    }
+
+    // Selection highlight (gold ring) drawn on top of all units
+    if (this.selectedUnit && this.selectedUnit.isAlive()) {
+      const su = this.selectedUnit;
+      const cx = su.col * TILE_SIZE + TILE_SIZE / 2;
+      const cy = su.row * TILE_SIZE + TILE_SIZE / 2;
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      this.ctx.strokeStyle = '#ffd700';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
     }
   }
 

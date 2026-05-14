@@ -105,6 +105,7 @@ const renderer = new MapRenderer({
     if (clickedUnit && clickedUnit.team === 0) {
       // Clicked own unit — select and show reachable cells
       selectedUnit = clickedUnit;
+      renderer.setSelectedUnit(clickedUnit);
       reachableCells = movementEngine.getReachableCells(grid, clickedUnit);
       updateView();
     } else if (selectedUnit && reachableCells.some(c => c.row === row && c.col === col)) {
@@ -113,6 +114,7 @@ const renderer = new MapRenderer({
       if (moved) {
         const movedUnit = selectedUnit;
         selectedUnit = null;
+        renderer.setSelectedUnit(null);
         reachableCells = [];
 
         // Combat detection after movement
@@ -142,11 +144,115 @@ const renderer = new MapRenderer({
     } else {
       // Clicked empty or enemy cell — clear selection
       selectedUnit = null;
+      renderer.setSelectedUnit(null);
       reachableCells = [];
       updateView();
     }
   },
 });
+
+// --- Phase label and guide label ---
+const phaseLabel = document.getElementById('phase-label') || (() => {
+  const el = document.createElement('div');
+  el.id = 'phase-label';
+  document.body.appendChild(el);
+  return el;
+})();
+
+const guideLabel = document.getElementById('guide-label') || (() => {
+  const el = document.createElement('div');
+  el.id = 'guide-label';
+  document.body.appendChild(el);
+  return el;
+})();
+
+// --- Tooltip ---
+const tooltip = document.getElementById('tooltip') || (() => {
+  const el = document.createElement('div');
+  el.id = 'tooltip';
+  document.body.appendChild(el);
+  return el;
+})();
+
+const TILE_SIZE = 80;
+const UNIT_TYPE_NAMES: Record<number, string> = { 0: '战士', 1: '弓手', 2: '骑士', 3: '法师' };
+
+canvas.addEventListener('mousemove', (e: MouseEvent) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const col = Math.floor(x / TILE_SIZE);
+  const row = Math.floor(y / TILE_SIZE);
+
+  if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+    const u = manager.getUnitAt(row, col);
+    if (u && u.isAlive()) {
+      const name = UNIT_TYPE_NAMES[u.type] ?? u.type;
+      tooltip.innerHTML = `${name}<br>HP: ${u.hp}/${u.maxHp}  ATK: ${u.atk}  DEF: ${u.def}`;
+      tooltip.style.display = 'block';
+
+      // Position with viewport clamping
+      let left = e.clientX + 12;
+      let top = e.clientY + 12;
+      const tipWidth = 180;
+      const tipHeight = 50;
+      if (left + tipWidth > window.innerWidth) {
+        left = e.clientX - tipWidth - 12;
+      }
+      left = Math.max(0, left);
+      if (top + tipHeight > window.innerHeight) {
+        top = e.clientY - tipHeight - 12;
+      }
+      top = Math.max(0, top);
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    } else {
+      tooltip.style.display = 'none';
+    }
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});
+
+const PHASE_NAMES: Record<string, string> = {
+  [Phase.Deploy]: '部署阶段',
+  [Phase.PlayerMove]: '玩家移动阶段',
+  [Phase.PlayerCombat]: '战斗阶段',
+  [Phase.EnemyAI]: '敌方回合',
+  [Phase.End]: '游戏结束',
+};
+
+const PHASE_GUIDES: Record<string, { text: string; color: string }> = {
+  [Phase.PlayerMove]: { text: '点击己方单位选中 → 点击高亮格移动', color: '#ccc' },
+  [Phase.PlayerCombat]: { text: '移动后自动攻击相邻最弱敌人', color: '#ccc' },
+  [Phase.EnemyAI]: { text: '敌方回合中，请等待...', color: '#e74c3c' },
+  [Phase.End]: { text: '游戏结束，刷新页面重新开始', color: '#ccc' },
+};
+
+function updatePhaseUI(phase: Phase): void {
+  // Phase emoji mapping
+  const iconMap: Record<string, string> = {
+    [Phase.Deploy]: '',
+    [Phase.PlayerMove]: '\u{1F3AE}',
+    [Phase.PlayerCombat]: '\u{2694}\u{FE0F}',
+    [Phase.EnemyAI]: '\u{1F47E}',
+    [Phase.End]: '\u{1F3C1}',
+  };
+  const icon = iconMap[phase] || '';
+  phaseLabel.textContent = icon ? `${icon} ${PHASE_NAMES[phase] || phase}` : PHASE_NAMES[phase] || phase;
+
+  const guide = PHASE_GUIDES[phase];
+  if (guide) {
+    guideLabel.textContent = guide.text;
+    guideLabel.style.color = guide.color;
+  } else {
+    guideLabel.textContent = '';
+  }
+}
 
 // Add End Turn button
 const endTurnBtn = document.createElement('button');
@@ -154,7 +260,7 @@ endTurnBtn.textContent = 'End Turn';
 endTurnBtn.style.cssText = [
   'position: fixed',
   'top: 12px',
-  'right: 12px',
+  'left: 12px',
   'padding: 10px 20px',
   'font-size: 16px',
   'z-index: 100',
@@ -168,6 +274,9 @@ document.body.appendChild(endTurnBtn);
 
 endTurnBtn.addEventListener('click', () => {
   if (turnManager.getState() !== Phase.PlayerMove) return;
+
+  // Clear selection when ending player turn
+  renderer.setSelectedUnit(null);
 
   const actions = turnManager.endPlayerTurn();
 
@@ -186,6 +295,7 @@ endTurnBtn.addEventListener('click', () => {
 // Subscribe to phase changes for UI state updates
 turnManager.onPhaseChange.add((_from, to) => {
   endTurnBtn.disabled = to !== Phase.PlayerMove;
+  updatePhaseUI(to);
 });
 endTurnBtn.disabled = turnManager.getState() !== Phase.PlayerMove;
 
@@ -196,5 +306,8 @@ trySpawn(UnitType.Warrior, 0, 0, 0);
 trySpawn(UnitType.Archer, 1, 7, 7);
 trySpawn(UnitType.Mage, 1, 7, 0);
 trySpawn(UnitType.Knight, 1, 0, 7);
+
+// Initial UI state
+updatePhaseUI(turnManager.getState());
 
 updateView();

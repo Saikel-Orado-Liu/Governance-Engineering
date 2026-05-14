@@ -1,5 +1,5 @@
 # Module Card: unit
-# 单位系统 — 4种单位类型、属性、克制关系与管理器
+# 单位系统 — 4种单位类型、属性、克制关系、战斗系统与回合管理
 
 module: unit
 path: "src/unit/"
@@ -10,45 +10,85 @@ framework: Canvas 2D
 dependencies:
   external: []
   internal:
-    - "src/map/MapGrid.ts"            # UnitManager 持有 MapGrid 引用做位置校验
-    - "src/map/MapRenderer.ts"        # renderUnits 接收 Unit[] 在 Canvas 上绘制单位
+    - "src/map/MapGrid.ts"            # UnitManager 持 MapGrid 引用做位置校验; TurnManager + EnemyAI 持 MapGrid 做通行/边界检查
+    - "src/unit/PhaseTypes.ts"        # TurnManager 使用 Phase 枚举管理回合阶段
+    - "src/unit/EnemyAI.ts"           # TurnManager 通过依赖注入持有 EnemyAI 实例
 
 public_interface:
   - "UnitConfig"                      # 单位配置接口（name/hp/atk/def/range/move）
   - "Unit"                            # 单位实体类，row/col/hp 私有，getter 只读访问
   - "UnitManager"                     # 管理器，通过构造函数注入 MapGrid 引用
   - "MovementEngine"                  # BFS/Dijkstra 加权图移动范围计算引擎，构造函数注入 UnitManager
+  - "executeCombat"                   # 战斗执行纯函数：攻击->反击->阵亡移除，返回 CombatResult
+  - "CombatResult"                    # 战斗结果：伤害、阵亡标志、执行日志
+  - "TurnManager"                     # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统
+  - "TurnState"                       # Phase 的类型别名（向后兼容）
+  - "EnemyAction"                     # 敌方行动记录：move/attack/idle，定义移至 EnemyAI.ts
+  - "Phase"                           # 五阶段枚举：Deploy/PlayerMove/PlayerCombat/EnemyAI/End
+  - "PHASE_SEQUENCE"                  # Phase 有序数组，用于 transition 校验
+  - "canTransitionTo"                 # 阶段转换校验函数，含 loop（End→PlayerMove）和 skip（PlayerMove→EnemyAI）
+  - "EnemyAI"                         # 敌方 AI 类：贪心 Manhattan 策略，纯动作生成器
 
 exports:
   - "UnitType (const enum)"           # Warrior/Archer/Knight/Mage
   - "UNIT_CONFIGS"                    # 属性表：HP60-100, ATK22-35, DEF3-15
-  - "COUNTER_TABLE"                   # 克制表：Archer→Knight, Knight→Mage, Mage→Warrior, Warrior→Archer
+  - "COUNTER_TABLE"                   # 克制表：Archer->Knight, Knight->Mage, Mage->Warrior, Warrior->Archer
   - "getCounterMultiplier()"          # 返回 1.5（克制）/ 0.67（被克制）/ 1.0（无关系）
   - "UnitManager.spawnUnit()"         # 放置单位（含通行/占用/越界校验）
   - "UnitManager.moveUnit()"          # 移动单位（含通行/占用/越界校验）
   - "UnitManager.getUnitAt()"         # 单格查询
   - "UnitManager.getAllUnits()"       # 全量查询（过滤已死亡）
   - "UnitManager.getUnitsByTeam()"    # 按队伍过滤（过滤已死亡）
+  - "UnitManager.removeUnit()"        # 从集合中移除单位（战斗阵亡后调用）
+  - "UnitManager.getGrid()"           # 返回持有的 MapGrid 引用
+  - "UnitManager.isOccupied()"        # 单格占用查询（过滤已死亡）
   - "MovementEngine.getReachableCells()"  # BFS 加权图可达范围计算，返回 {row,col}[]
   - "MovementEngine"                 # 类，构造函数 new MovementEngine(unitManager)
+  - "executeCombat()"                # 战斗执行纯函数，导入即可调用
+  - "CombatResult"                    # { attacker, defender, damageDealt, damageReceived, attackerDied, defenderDied, log }
+  - "TurnManager"                     # 类，new TurnManager(grid, unitManager, combatFn?)
+  - "TurnState"                       # = Phase（向后兼容的类型别名）
+  - "EnemyAction"                     # { unit, action, target?, from?, to?, combatResult? }
+  - "Phase (enum)"                   # Deploy/PlayerMove/PlayerCombat/EnemyAI/End（字符串值）
+  - "PHASE_SEQUENCE"                  # 有序数组：Deploy→PlayerMove→PlayerCombat→EnemyAI→End
+  - "canTransitionTo()"              # 阶段转换校验（含 loop/skip 规则）
+  - "EnemyAI"                        # 类，new EnemyAI(grid, unitManager, combatFn?)
+  - "EnemyAI.executeTurn()"          # 执行全部敌方行动，返回 EnemyAction[]
+  - "EnemyAI.findNearest()"          # Manhattan 距离找最近目标
+  - "EnemyAI.getAdjacentEnemies()"   # 4 方向相邻敌人查询
+  - "EnemyAI.findBestAdjacentMove()" # 4 方向贪心单步移动
 
 components:
   - "UnitType.ts":                    # UnitType const enum, UnitConfig 接口, UNIT_CONFIGS 属性表, COUNTER_TABLE 克制表, getCounterMultiplier 纯函数
   - "Unit.ts":                        # Unit 实体类，row/col/hp 私有 + getter，setPosition/takeDamage 受控修改，克制乘数计算，isAlive
-  - "UnitManager.ts":                 # 管理器，spawnUnit/moveUnit 含边界检查，getAllUnits/getUnitsByTeam 过滤死亡单位
+  - "UnitManager.ts":                 # 管理器，spawnUnit/moveUnit 含边界检查，getAllUnits/getUnitsByTeam 过滤死亡单位，removeUnit 物理移除
   - "MovementEngine.ts":             # BFS/Dijkstra 加权图移动计算引擎，getReachableCells 返回可达单元格列表
+  - "CombatSystem.ts":               # executeCombat 纯函数：攻击->反击->阵亡移除，DIRECTION_OFFSETS 4方向相邻判定，reverse-calculation 伤害交付
+  - "TurnManager.ts":                # 回合状态机：Phase 状态 + EnemyAI 委托 + 事件钩子系统（onPhaseEnter/onPhaseExit/onPhaseChange + actionHistory）
+  - "PhaseTypes.ts":                 # Phase 字符串枚举（5阶段）、PHASE_SEQUENCE 有序数组、canTransitionTo 转换校验（含 loop/skip 规则）
+  - "EnemyAI.ts":                    # EnemyAI 类：贪心 Manhattan 策略，executeTurn/findNearest/getAdjacentEnemies/findBestAdjacentMove；EnemyAction 接口 + CombatFn 类型
   - "__tests__/Unit.test.ts":         # 10 项测试：构造函数验证4种单位属性、takeDamage伤害减免(min1)、克制乘数(1.5/0.67)、isAlive
   - "__tests__/UnitManager.test.ts":  # 10 项测试：spawnUnit通行/不可通行/占用/越界，getUnitAt/getUnitsByTeam过滤/移动合法性
   - "__tests__/MovementEngine.test.ts": # 6 项测试：全Plain 24格可达、Forest加权成本、不可通行阻塞、单位占用、moveRange=0边界、完全包围
+  - "__tests__/CombatSystem.test.ts": # 9 项测试：基础伤害、反击、阵亡(双方向)、克制/被克制乘数、最小伤害、死亡移除、回合存活保护
+  - "__tests__/TurnManager.test.ts":  # 7 项测试：初始状态、状态切换、敌方贪心移动、最低HP相邻攻击、全灭GameOver(双方向)
+  - "__tests__/EnemyAI.test.ts":      # 5 项测试：findNearest 距离、findBestAdjacentMove 有效性、getAdjacentEnemies 相邻过滤、executeTurn 移动/攻击/空结果
 
 constraints:
   - "固定4种单位类型（Warrior/Archer/Knight/Mage），不可运行时添加"
   - "克制关系对称设计：getCounterMultiplier 返回 1.5/0.67/1.0"
-  - "伤害公式：max(1, atk - def) * counterMultiplier — FR-05 对齐"
+  - "伤害公式：Math.round(max(1, atk - def) * counterMultiplier) — FR-05 对齐"
   - "单位位置绑定 8x8 网格，行列范围 [0,7]"
-  - "死亡单位（hp ≤ 0）过滤在所有全量查询中，不直接销毁"
+  - "死亡单位（hp <= 0）立即从 UnitManager 移除（removeUnit），不保留尸体在网格上"
+  - "战斗：攻击方先手->反击(仅相邻近战)->阵亡方移除；反击仅在防御方存活时触发"
+  - "相邻判定使用 4 方向（DIRECTION_OFFSETS），与 MovementEngine 一致"
+  - "敌方 AI：Manhattan 距离找最近目标 -> 贪心单步接近 -> 攻击最低HP相邻敌人"
+  - "Phase 周期：Deploy→PlayerMove→PlayerCombat→EnemyAI→End→PlayerMove（循环）"
+  - "Phase 跳过规则：PlayerMove→EnemyAI 跳过 PlayerCombat（当前游戏循环未实现独立战斗阶段）"
+  - "Phase 循环规则：EnemyAI→PlayerMove（回合循环）、End→PlayerMove（游戏重启）"
 
-known_issues: []
+known_issues:
+  - "CombatSystem.executeCombat 调用 Unit.takeDamage(atkDamage + defender.def) 使用 reverse-calculation 抵消内部伤害减免，调用方与 Unit 内部分式形成隐含耦合；若 Unit.takeDamage 修改公式，CombatSystem 需同步调整"
 
 development_notes:
   - "Unit 使用 new Unit() 直接构造，无静态工厂方法"
@@ -58,13 +98,24 @@ development_notes:
   - "MovementEngine 构造函数注入 UnitManager（非 MapGrid），用于 isOccupied 占用查询"
   - "BFS 使用 Map<string,number> bestCost 替代 visited Set，支持加权地形（Forest cost=2）下最优路径"
   - "bestCost 在占用检查前更新，避免同格被多方向重复处理；getReachableCells 返回结果不含起点自身"
+  - "CombatSystem 为纯函数模块（非类），executeCombat 接收 attacker/defender/unitManager 三参数，无内部状态"
+  - "伤害 reverse-calculation 模式：CombatSystem 预先计算伤害值后调用 takeDamage(atkDamage + def)，利用 takeDamage 内部的 max(1, raw - def) 抵消，确保实际伤害 = 预计算值"
+  - "TurnManager 构造函数接收可选 combatFn 参数用于依赖注入，测试可传入 mock 战斗函数替代 executeCombat"
+  - "MapRenderer.setFlashingUnits/clearFlashingUnits 使用 Set<Unit> 控制受击闪烁：renderUnits 中提前检查 flashingUnits.has(unit) 决定是否用红色 #ff0000 覆盖队伍色"
+  - "Phase 枚举使用字符串值（如 'deploy'/'playerMove'），确保序列化/反序列化时 JSON 可读，与数字枚举相比调试体验更好"
+  - "canTransitionTo 并非简单 index+1 校验：显式允许 EnemyAI→PlayerMove（回合循环）、End→PlayerMove（重开）、PlayerMove→EnemyAI（跳过 PlayerCombat 阶段），这些规则编码了游戏循环的当前简化设计，新增 Phase 时必须同步更新"
+  - "EnemyAI 为纯动作生成器类：持有 grid/unitManager/combatFn 三依赖，不修改 TurnManager 的 state 字段；executeTurn() 返回 EnemyAction[]，由调用方（TurnManager）根据 actions 更新状态——这种分离使 EnemyAI 可独立测试（5 个测试不依赖 TurnManager 实例）"
+  - "事件钩子系统使用 Set<callback> 替代 callback[]：Set 自动去重同一回调多次注册；onPhaseEnter/onPhaseExit/onPhaseChange 三个钩子覆盖进入/退出/变更三种粒度；actionHistory 数组记录每次 transition 的时间戳，用于调试和回放"
+  - "TurnManager.endPlayerTurn() 现在返回 EnemyAction[]（之前为 void），调用方根据 actions 序列驱动 UI 动画（main.ts 中 processEnemyActions 递归处理逐一行动）"
+  - "TurnManager.startPlayerTurn() 为新增方法，在 EnemyAI 行动全部处理完毕后由 main.ts 调用恢复玩家阶段"
 
 lessons_learned:
   - "克制表使用对称数据结构（[attacker][defender] 二维对象查找），避免链式 if-else"
-  - "伤害公式中的 min(1) 保证即使 atk ≤ def 也至少造成 1 点伤害，防止僵局"
+  - "伤害公式中的 min(1) 保证即使 atk <= def 也至少造成 1 点伤害，防止僵局"
   - "UnitManager 分离 spawn（创建+放置）与 move（仅位置变更），职责清晰"
-  - "死亡单位过滤放在集合查询层（getAllUnits/getUnitsByTeam），而不是调用方"
+  - "死亡单位过滤放在集合查询层（getAllUnits/getUnitsByTeam），同时战斗后调用 removeUnit 物理移除腾出网格位置，二者互为补充"
   - "renderUnits 作为 MapRenderer 的独立方法追加，不修改既有 render 签名，向后兼容"
   - "private + getter 模式替代 public readonly，后续可在 setter 添加校验而不破坏调用方"
+  - "CombatSystem 使用 reverse-calculation 调用 takeDamage(atkDamage + def) 以精确传递预计算伤害——此模式在 Unit.takeDamage 与 CombatSystem.executeCombat 间形成了隐蔽的耦合契约，若取消防御抵消逻辑需同步修改两处"
 
 last_updated: "2026-05-14"

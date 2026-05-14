@@ -37,3 +37,24 @@ entries:
       （如 onClick: ((row, col, type) => void) | null）；2) 构造函数使用 options
       对象模式接收可选回调，避免参数位置依赖；3) 在 development_notes 中记录
       此类设计决策供后续维护参考；4) 代码审查时重点检查 console.log 残留。
+  - id: ll-020
+    date: "2026-05-14"
+    task: "回合制战斗系统"
+    category: logic
+    lesson: >
+      CombatSystem.executeCombat 调用 Unit.takeDamage(atkDamage + defender.def)
+      采用 reverse-calculation 模式：预先计算伤害值后，将 defender.def 加回 rawDamage 参数，
+      利用 takeDamage 内部 Math.max(1, rawDamage - def) 抵消，确保实际伤害 = 预计算值。
+      此模式在 CombatSystem 和 Unit 间形成了隐蔽耦合契约——takeDamage 的防御减免公式
+      被 CombatSystem 反向利用。若未来修改 takeDamage（如引入百分比减免、护甲穿透等），
+      CombatSystem 也需同步调整。
+    symptom: >
+      CombatSystem 中 defender.takeDamage(atkDamage + defender.def) 的写法对不熟悉
+      内部实现的新开发者造成困惑——rawDamage 传入明显高于预期，需要对照 Unit.takeDamage
+      的实现才能理解意图。测试中同样使用 takeDamage（如 warrior.takeDamage(95)）但语义不同
+      （预伤害用 rawDamage 含义 vs 战斗用 reverse 含义），两处调用语义不一致。
+    prevention: >
+      在依赖内部公式抵消时：1) 在调用处添加注释解释参数为何放大（+def 的原因）；
+      2) 在 Unit.takeDamage 的注释中注明其公式可能被外部反向利用；
+      3) 考虑为精确伤害传递添加独立方法（如 Unit.applyDamage(amount)）以消除耦合；
+      4) 修改 takeDamage 公式时 grep 所有调用方确认是否有 reverse-calculation 用法。

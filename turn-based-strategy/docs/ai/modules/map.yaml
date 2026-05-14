@@ -15,19 +15,21 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights 渲染方法
+  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/setFlashingUnits/clearFlashingUnits 渲染方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
   - "MapRenderer.render()"     # 在 Canvas 上绘制地图
-  - "MapRenderer.renderUnits()" # 在 Canvas 上绘制单位（圆形+颜色+字符+队伍边框）
+  - "MapRenderer.renderUnits()" # 在 Canvas 上绘制单位（圆形+颜色+队伍色）
   - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，替代 console.log 调试
+  - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（红色 #ff0000 渲染）
+  - "MapRenderer.clearFlashingUnits()" # 清除所有闪烁标记
 
 components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
-  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ BFS (0,0)→(7,7) 可达性保证
-  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线；options 对象构造函数，公开 onClick 点击回调
+  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ BFS (0,0)->(7,7) 可达性保证
+  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线；options 对象构造函数，公开 onClick 点击回调；setFlashingUnits/clearFlashingUnits 控制受击闪烁
   - "__tests__/MapGrid.test.ts": # 13 项 vitest 测试（通行/移动力/边界/生成/路径保证）
 
 constraints:
@@ -35,12 +37,15 @@ constraints:
   - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
   - "BFS 路径保证最多重试 100 次，超出视为无法生成"
+  - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
 
-known_issues: []
+known_issues:
+  - "setFlashingUnits 使用 Set 引用（非深拷贝），若外部在闪烁期间修改 Unit 引用可能导致意外行为；当前仅 main.ts 在 setTimeout 链中调用，风险可控"
 
 development_notes:
   - "console.log 禁止提交；调试信息通过公开回调（如 onClick）暴露给消费者"
   - "构造函数使用 options 对象模式，便于后续扩展而不破坏调用方签名"
+  - "受击闪烁机制：setFlashingUnits 接收 Unit[] 转为 Set<Unit> 引用存储；renderUnits 中提前分支判断 flashingUnits.has(unit) 决定颜色，避免二次遍历；clearFlashingUnits 由外部 setTimeout 延迟 400ms 后调用清除"
 
 lessons_learned:
   - "移动力成本与通行性分离设计（isPassable 为 boolean gate，getMoveCost 为数值计算）"
@@ -49,5 +54,6 @@ lessons_learned:
   - "地图渲染器无状态设计：每次 render() 从 MapGrid 快照绘制，不与游戏状态耦合"
   - "移除 console.log 改为公开 onClick 回调，保持编码规范同时提供消费者自定义处理能力"
   - "options 对象构造函数模式（new MapRenderer({ canvas, onClick? })），避免参数位置依赖，便于扩展"
+  - "受击闪烁使用 Set<Unit> + renderUnits 分支判断模式：不修改 Unit 实体、不增加渲染管线开销、不产生额外副作用"
 
 last_updated: "2026-05-14"

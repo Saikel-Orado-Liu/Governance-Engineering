@@ -16,3 +16,49 @@ body {
 #game-canvas {
   border: 1px solid #333;
 }
+
+#phase-label {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 14px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+#guide-label {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #ccc;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 13px;
+  z-index: 100;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#tooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 200;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+  line-height: 1.5;
+}

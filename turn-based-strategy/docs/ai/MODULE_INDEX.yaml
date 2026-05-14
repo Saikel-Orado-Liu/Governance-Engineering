@@ -28,3 +28,4 @@ standards:
 decisions:
   - "docs/ai/decisions/ADR-001.yaml"
   - "docs/ai/decisions/ADR-002.yaml"
+  - "docs/ai/decisions/ADR-003.md"
