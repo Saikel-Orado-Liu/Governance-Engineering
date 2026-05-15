@@ -9,36 +9,44 @@ body {
   font-family: 'Segoe UI', sans-serif;
   color: #eee;
   min-height: 100vh;
+  overflow: hidden;
 }
 
-/* ---- Layout ---- */
+/* ---- Full-screen game container ---- */
 
 #game-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  gap: 16px;
-  padding: 16px;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #1a1a2e;
 }
 
 #game-canvas {
-  border: 2px solid #333;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-/* ---- HUD container ---- */
+/* ---- HUD floating overlay ---- */
 
-.huds-container {
-  width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.hud-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-overlay > * {
+  pointer-events: auto;
 }
 
 /* ---- Top bar ---- */
 
 .hud-top-bar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
   background: #16213e;
   border: 1px solid #0f3460;
   border-radius: 6px;
@@ -62,141 +70,25 @@ body {
   border-radius: 4px;
 }
 
-/* ---- Right panel ---- */
-
-.hud-right-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 /* ---- Minimap ---- */
 
 .hud-minimap {
+  position: absolute;
+  top: 52px;
+  right: 8px;
   width: 100px;
   height: 100px;
   border: 1px solid #333;
   border-radius: 4px;
-  align-self: flex-start;
-}
-
-/* ---- Unit panel ---- */
-
-.unit-panel {
-  background: #16213e;
-  border: 1px solid #0f3460;
-  border-radius: 6px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.unit-panel-header {
-  margin-bottom: 2px;
-}
-
-.unit-panel-name {
-  font-size: 18px;
-  font-weight: bold;
-  color: #eee;
-}
-
-.unit-panel-hp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.unit-panel-label {
-  font-size: 12px;
-  color: #aaa;
-  width: 28px;
-  flex-shrink: 0;
-}
-
-.unit-panel-hp-bar-bg {
-  flex: 1;
-  height: 14px;
-  background: #333;
-  border-radius: 7px;
-  overflow: hidden;
-}
-
-.unit-panel-hp-bar-fill {
-  height: 100%;
-  border-radius: 7px;
-  transition: width 0.3s ease;
-  min-width: 0;
-}
-
-.unit-panel-hp-text {
-  font-size: 12px;
-  color: #ccc;
-  min-width: 60px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.unit-panel-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.unit-panel-stat {
-  font-size: 13px;
-  color: #ccc;
-}
-
-.unit-panel-skill {
-  font-size: 13px;
-  color: #aaa;
-}
-
-.unit-panel-skill-name {
-  color: #ffd700;
-}
-
-/* ---- Skill bar ---- */
-
-.skill-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.skill-btn {
-  background: #2c3e50;
-  color: #fff;
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-family: 'Segoe UI', sans-serif;
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.skill-btn:hover {
-  border-color: #888;
-}
-
-.skill-btn.active {
-  border-color: #e94560;
-  box-shadow: 0 0 6px rgba(233, 69, 96, 0.5);
-}
-
-.skill-btn.on-cooldown {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: #555;
-  border-color: #444;
 }
 
 /* ---- Bottom bar ---- */
 
 .hud-bottom-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -232,6 +124,122 @@ body {
 .end-turn-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ---- Action Panel (floating unit info + skills) ---- */
+
+.action-panel {
+  position: fixed;
+  z-index: 50;
+  background: rgba(22, 33, 62, 0.95);
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 240px;
+  max-width: 300px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.ap-header {
+  margin-bottom: 8px;
+}
+
+.ap-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #eee;
+}
+
+.ap-hp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ap-label {
+  font-size: 12px;
+  color: #aaa;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.ap-hp-bar-bg {
+  flex: 1;
+  height: 14px;
+  background: #333;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.ap-hp-bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.3s ease;
+  min-width: 0;
+}
+
+.ap-hp-text {
+  font-size: 12px;
+  color: #ccc;
+  min-width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ap-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.ap-stat {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.ap-skill-row {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 10px;
+}
+
+.ap-skill-name {
+  color: #ffd700;
+}
+
+.ap-skills-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ap-skill-btn {
+  background: #2c3e50;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ap-skill-btn:hover {
+  border-color: #888;
+}
+
+.ap-skill-btn.active {
+  border-color: #e94560;
+  box-shadow: 0 0 6px rgba(233, 69, 96, 0.5);
+}
+
+.ap-skill-btn.on-cooldown {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #555;
+  border-color: #444;
 }
 
 /* ---- Start screen ---- */
@@ -308,7 +316,7 @@ body {
   background: #d63851;
 }
 
-/* ---- Tooltip (kept for existing main.ts compatibility) ---- */
+/* ---- Tooltip ---- */
 
 #tooltip {
   position: fixed;
@@ -329,8 +337,9 @@ body {
 /* ---- Responsive ---- */
 
 @media (max-width: 900px) {
-  #game-container {
-    flex-direction: column;
-    align-items: center;
+  .action-panel {
+    min-width: 200px;
+    max-width: 260px;
+    padding: 12px;
   }
 }

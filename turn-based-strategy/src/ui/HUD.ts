@@ -3,8 +3,6 @@ import type { MapGrid } from '../map/MapGrid';
 import { GRID_SIZE } from '../map/MapGrid';
 import { TileType } from '../map/TileType';
 import { Phase } from '../unit/PhaseTypes';
-import { type AbilityType, ABILITY_CONFIGS } from '../unit/AbilityConfig';
-import { UnitPanel } from './UnitPanel';
 
 const TILE_MINIMAP_COLORS: Record<TileType, string> = {
   [TileType.Plain]: '#4a7c2e',
@@ -14,29 +12,22 @@ const TILE_MINIMAP_COLORS: Record<TileType, string> = {
 };
 
 export interface HUDOptions {
-  container: HTMLElement;
-  unitPanel: UnitPanel;
   onEndTurn: () => void;
   onPause: () => void;
   onRestart: () => void;
-  onSkillSelect: (type: AbilityType) => void;
 }
 
 export class HUD {
   private container: HTMLElement;
-  private unitPanel: UnitPanel;
   private onEndTurn: () => void;
   private onPause: () => void;
   private onRestart: () => void;
-  private onSkillSelect: (type: AbilityType) => void;
 
   private topBar: HTMLElement;
-  private rightPanel: HTMLElement;
   private bottomBar: HTMLElement;
   private phaseText: HTMLElement;
   private teamText: HTMLElement;
   private guideText: HTMLElement;
-  private skillBarEl: HTMLElement;
   private pauseOverlay: HTMLElement | null = null;
   private minimapCanvas: HTMLCanvasElement;
   private endTurnBtn: HTMLButtonElement;
@@ -50,15 +41,13 @@ export class HUD {
   };
 
   constructor(options: HUDOptions) {
-    this.container = options.container;
-    this.unitPanel = options.unitPanel;
     this.onEndTurn = options.onEndTurn;
     this.onPause = options.onPause;
     this.onRestart = options.onRestart;
-    this.onSkillSelect = options.onSkillSelect;
 
-    this.container.className = 'huds-container';
-    this.container.innerHTML = '';
+    this.container = document.createElement('div');
+    this.container.className = 'hud-overlay';
+    document.body.appendChild(this.container);
 
     // -- Top bar: phase + team indicator --
     this.topBar = document.createElement('div');
@@ -70,25 +59,11 @@ export class HUD {
     this.topBar.appendChild(this.phaseText);
     this.topBar.appendChild(this.teamText);
 
-    // -- Right panel: minimap + unit panel + skill bar --
-    this.rightPanel = document.createElement('div');
-    this.rightPanel.className = 'hud-right-panel';
-
-    // Minimap canvas (100x100)
+    // Minimap canvas (100x100) — top right corner
     this.minimapCanvas = document.createElement('canvas');
     this.minimapCanvas.className = 'hud-minimap';
     this.minimapCanvas.width = 100;
     this.minimapCanvas.height = 100;
-    this.rightPanel.appendChild(this.minimapCanvas);
-
-    // Unit panel
-    this.rightPanel.appendChild(this.unitPanel.container);
-
-    // Skill bar
-    this.skillBarEl = document.createElement('div');
-    this.skillBarEl.className = 'skill-bar';
-    this.skillBarEl.style.display = 'none';
-    this.rightPanel.appendChild(this.skillBarEl);
 
     // -- Bottom bar: guide text + end turn button --
     this.bottomBar = document.createElement('div');
@@ -102,7 +77,7 @@ export class HUD {
 
     // Assemble into container
     this.container.appendChild(this.topBar);
-    this.container.appendChild(this.rightPanel);
+    this.container.appendChild(this.minimapCanvas);
     this.container.appendChild(this.bottomBar);
 
     // Listen for Escape key to trigger pause
@@ -121,44 +96,6 @@ export class HUD {
 
   setGuideText(text: string): void {
     this.guideText.textContent = text;
-  }
-
-  updateSkillBar(
-    units: Unit[],
-    actedUnits: Set<Unit>,
-    selectedUnit: Unit | null,
-    selectedSkill: AbilityType | null,
-  ): void {
-    this.skillBarEl.innerHTML = '';
-    const unactedUnits = units.filter(u =>
-      u.isAlive() && !actedUnits.has(u) && !u.effects.some(e => e.type === 'skipTurn'),
-    );
-    if (unactedUnits.length === 0) {
-      this.skillBarEl.style.display = 'none';
-      return;
-    }
-    this.skillBarEl.style.display = 'flex';
-
-    for (const unit of unactedUnits) {
-      const config = ABILITY_CONFIGS[unit.skill];
-      const cooldownText = unit.skillCooldown > 0 ? ` (CD:${unit.skillCooldown})` : '';
-      const btn = document.createElement('button');
-      btn.className = 'skill-btn';
-      btn.textContent = `${config.name}${cooldownText}`;
-
-      if (unit.skillCooldown > 0) {
-        btn.classList.add('on-cooldown');
-        btn.disabled = true;
-      } else {
-        if (selectedUnit === unit && selectedSkill === unit.skill) {
-          btn.classList.add('active');
-        }
-        btn.addEventListener('click', () => {
-          this.onSkillSelect(unit.skill);
-        });
-      }
-      this.skillBarEl.appendChild(btn);
-    }
   }
 
   showPauseMenu(): void {

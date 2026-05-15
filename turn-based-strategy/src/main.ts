@@ -16,10 +16,9 @@ import { DIRECTION_OFFSETS } from './core/Coordinate';
 import type { Unit } from './unit/Unit';
 import { AnimationManager } from './render/AnimationManager';
 import { StartScreen } from './ui/StartScreen';
-import { UnitPanel } from './ui/UnitPanel';
+import { ActionPanel } from './ui/ActionPanel';
 import { HUD } from './ui/HUD';
 import { screenToWorld } from './render/IsometricRenderer';
-import { ORIGIN_X, ORIGIN_Y } from './map/MapRenderer';
 
 const startScreen = new StartScreen(() => {
   startGame();
@@ -29,10 +28,9 @@ startScreen.show();
 function startGame(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const gameContainer = document.getElementById('game-container')!;
-  const hudContainer = document.querySelector('.huds-container') as HTMLElement;
 
   // Show game container
-  gameContainer.style.display = 'flex';
+  gameContainer.style.display = 'block';
 
   const generator = new MapGenerator();
   const grid = generator.generate();
@@ -155,19 +153,56 @@ function startGame(): void {
   // --- Animation Manager ---
   const animationManager = new AnimationManager();
 
-  // --- Unit Panel ---
-  const unitPanelContainer = document.createElement('div');
-  const unitPanel = new UnitPanel(unitPanelContainer);
-
   // --- Helper to build actedUnits set from TurnManager state ---
   function getActedUnits(): Set<Unit> {
     return new Set(manager.getUnitsByTeam(0).filter(u => turnManager.hasUnitActed(u)));
   }
 
+  // --- Action Panel ---
+  const actionPanel = new ActionPanel({
+    onSkillSelect: (skillType: AbilityType) => {
+      const unit = manager.getUnitsByTeam(0).find(u =>
+        u.isAlive() && u.skill === skillType && !turnManager.hasUnitActed(u),
+      );
+      if (!unit) return;
+
+      if (selectedUnit === unit && selectedSkill === skillType) {
+        // Toggle off
+        selectedSkill = null;
+        selectedUnit = null;
+        renderer.setSelectedUnit(null);
+        skillRangeCells = [];
+        skillTargetCells = [];
+        attackTargets = [];
+      } else {
+        selectedUnit = unit;
+        renderer.setSelectedUnit(unit);
+        selectedSkill = skillType;
+        const config = ABILITY_CONFIGS[skillType];
+        skillRangeCells = getAbilityRangeCells(unit, config);
+        skillTargetCells = getAbilityTargetsForSkill(unit, skillType, config, manager);
+        attackTargets = [];
+      }
+      updateView();
+      updateActionPanel();
+    },
+  });
+
+  function updateActionPanel(): void {
+    const playerUnits = manager.getUnitsByTeam(0);
+    const unacted = playerUnits.filter(u =>
+      u.isAlive() && !turnManager.hasUnitActed(u) && !u.effects.some(e => e.type === 'skipTurn'),
+    );
+    actionPanel.update(selectedUnit, false, unacted, getActedUnits(), selectedSkill);
+    if (selectedUnit && selectedUnit.isAlive()) {
+      actionPanel.showAt(selectedUnit.row, selectedUnit.col, canvas, renderer);
+    } else {
+      actionPanel.hide();
+    }
+  }
+
   // --- HUD ---
   const hud = new HUD({
-    container: hudContainer,
-    unitPanel,
     onEndTurn: () => {
       const state = turnManager.getState();
 
@@ -192,7 +227,7 @@ function startGame(): void {
         }
 
         updateView();
-        hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+        updateActionPanel();
       } else if (state === Phase.PlayerCombat) {
         if (combatInProgress) return;
 
@@ -218,78 +253,11 @@ function startGame(): void {
     onRestart: () => {
       location.reload();
     },
-    onSkillSelect: (skillType: AbilityType) => {
-      const unit = manager.getUnitsByTeam(0).find(u =>
-        u.isAlive() && u.skill === skillType && !turnManager.hasUnitActed(u),
-      );
-      if (!unit) return;
-
-      if (selectedUnit === unit && selectedSkill === skillType) {
-        // Toggle off
-        selectedSkill = null;
-        selectedUnit = null;
-        renderer.setSelectedUnit(null);
-        skillRangeCells = [];
-        skillTargetCells = [];
-        attackTargets = [];
-      } else {
-        selectedUnit = unit;
-        renderer.setSelectedUnit(unit);
-        selectedSkill = skillType;
-        const config = ABILITY_CONFIGS[skillType];
-        skillRangeCells = getAbilityRangeCells(unit, config);
-        skillTargetCells = getAbilityTargetsForSkill(unit, skillType, config, manager);
-        attackTargets = [];
-      }
-      updateView();
-      hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
-    },
   });
 
   // --- Tooltip ---
   const tooltip = document.getElementById('tooltip')!;
   const UNIT_TYPE_NAMES: Record<number, string> = { 0: '战士', 1: '弓手', 2: '骑士', 3: '法师' };
-
-  canvas.addEventListener('mousemove', (e: MouseEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const coord = screenToWorld(x, y, ORIGIN_X, ORIGIN_Y);
-    const row = coord.row;
-    const col = coord.col;
-
-    if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
-      const u = manager.getUnitAt(row, col);
-      if (u && u.isAlive()) {
-        const name = UNIT_TYPE_NAMES[u.type] ?? u.type;
-        tooltip.innerHTML = `${name}<br>HP: ${u.hp}/${u.maxHp}  ATK: ${u.atk}  DEF: ${u.def}`;
-        tooltip.style.display = 'block';
-
-        let left = e.clientX + 12;
-        let top = e.clientY + 12;
-        const tipWidth = 180;
-        const tipHeight = 50;
-        if (left + tipWidth > window.innerWidth) {
-          left = e.clientX - tipWidth - 12;
-        }
-        left = Math.max(0, left);
-        if (top + tipHeight > window.innerHeight) {
-          top = e.clientY - tipHeight - 12;
-        }
-        top = Math.max(0, top);
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-      } else {
-        tooltip.style.display = 'none';
-      }
-    } else {
-      tooltip.style.display = 'none';
-    }
-  });
-
-  canvas.addEventListener('mouseleave', () => {
-    tooltip.style.display = 'none';
-  });
 
   // --- Renderer ---
   const renderer = new MapRenderer({
@@ -315,7 +283,7 @@ function startGame(): void {
               renderer.setSelectedUnit(null);
               attackTargets = [];
               updateView();
-              hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+              updateActionPanel();
               return;
             }
             const config = ABILITY_CONFIGS[selectedSkill];
@@ -335,7 +303,7 @@ function startGame(): void {
               try {
                 renderer.clearFlashingUnits();
                 updateView();
-                hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+                updateActionPanel();
                 if (gameOver) {
                   turnManager.endPlayerCombat();
                   const playerAlive = manager.getUnitsByTeam(0).length > 0;
@@ -365,7 +333,7 @@ function startGame(): void {
             skillTargetCells = getAbilityTargetsForSkill(clickedUnit, selectedSkill, config, manager);
             attackTargets = [];
             updateView();
-            hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+            updateActionPanel();
             return;
           }
 
@@ -381,7 +349,7 @@ function startGame(): void {
             attackTargets = [];
           }
           updateView();
-          hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+          updateActionPanel();
           return;
         }
 
@@ -407,7 +375,7 @@ function startGame(): void {
               try {
                 renderer.clearFlashingUnits();
                 updateView();
-                hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+                updateActionPanel();
                 if (gameOver) {
                   turnManager.endPlayerCombat();
                   const playerAlive = manager.getUnitsByTeam(0).length > 0;
@@ -479,6 +447,48 @@ function startGame(): void {
 
   renderer.setAnimationManager(animationManager);
 
+  // --- Tooltip (mousemove/mouseleave) ---
+  canvas.addEventListener('mousemove', (e: MouseEvent) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const coord = screenToWorld(x, y, renderer.originX, renderer.originY);
+    const row = coord.row;
+    const col = coord.col;
+
+    if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+      const u = manager.getUnitAt(row, col);
+      if (u && u.isAlive()) {
+        const name = UNIT_TYPE_NAMES[u.type] ?? u.type;
+        tooltip.innerHTML = `${name}<br>HP: ${u.hp}/${u.maxHp}  ATK: ${u.atk}  DEF: ${u.def}`;
+        tooltip.style.display = 'block';
+
+        let left = e.clientX + 12;
+        let top = e.clientY + 12;
+        const tipWidth = 180;
+        const tipHeight = 50;
+        if (left + tipWidth > window.innerWidth) {
+          left = e.clientX - tipWidth - 12;
+        }
+        left = Math.max(0, left);
+        if (top + tipHeight > window.innerHeight) {
+          top = e.clientY - tipHeight - 12;
+        }
+        top = Math.max(0, top);
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      } else {
+        tooltip.style.display = 'none';
+      }
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+
   // --- Phase change subscription ---
   const guideTexts: Record<string, string> = {
     [Phase.PlayerMove]: '点击己方单位选中 → 点击高亮格移动',
@@ -495,13 +505,14 @@ function startGame(): void {
     hud.setGuideText(guideTexts[to] ?? '');
 
     if (to === Phase.PlayerCombat) {
-      hud.updateSkillBar(manager.getUnitsByTeam(0), getActedUnits(), selectedUnit, selectedSkill);
+      updateActionPanel();
     }
     if (_from === Phase.PlayerCombat) {
       selectedSkill = null;
       skillRangeCells = [];
       skillTargetCells = [];
-      hud.updateSkillBar([], new Set(), null, null);
+      actionPanel.update(null, false, [], new Set(), null);
+      actionPanel.hide();
     }
   });
 
@@ -517,6 +528,13 @@ function startGame(): void {
   const initialTeam = turnManager.getCurrentTeam();
   hud.setPhase(turnManager.getState(), initialTeam);
   hud.setGuideText(guideTexts[turnManager.getState()] ?? '');
+
+  // Resize renderer to fill viewport and listen for resize
+  function onResize(): void {
+    renderer.resize(window.innerWidth, window.innerHeight);
+  }
+  window.addEventListener('resize', onResize);
+  onResize();
 
   updateView();
 }

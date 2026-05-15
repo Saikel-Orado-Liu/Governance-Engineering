@@ -10,10 +10,17 @@ import {
 } from '../render/IsometricRenderer';
 import type { AnimationManager } from '../render/AnimationManager';
 
-export const ORIGIN_X = 320;
-export const ORIGIN_Y = 52;
-const CANVAS_W = 640;
-const CANVAS_H = 360;
+export function calcOrigin(
+  canvasW: number,
+  canvasH: number,
+  _tileW: number,
+  _tileH: number,
+): { originX: number; originY: number } {
+  return {
+    originX: canvasW / 2,
+    originY: canvasH * 0.08,
+  };
+}
 
 const TILE_COLORS: Record<TileType, string> = {
   [TileType.Plain]: '#5a8f3c',
@@ -27,10 +34,13 @@ const PLAIN_DARK = '#4e7e34';
 
 export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement;
   private currentGrid: MapGrid | null = null;
   private flashingUnits: Set<Unit> = new Set();
   private selectedUnit: Unit | null = null;
   private animationManager: AnimationManager | null = null;
+  originX: number;
+  originY: number;
   onClick: ((row: number, col: number, type: TileType) => void) | null = null;
 
   constructor(options: {
@@ -38,24 +48,35 @@ export class MapRenderer {
     onClick?: (row: number, col: number, type: TileType) => void;
   }) {
     const { canvas, onClick } = options;
-    canvas.width = CANVAS_W;
-    canvas.height = CANVAS_H;
+    this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.onClick = onClick ?? null;
+
+    const { originX, originY } = calcOrigin(canvas.width, canvas.height, TILE_W, TILE_H);
+    this.originX = originX;
+    this.originY = originY;
 
     canvas.addEventListener('click', (e: MouseEvent) => {
       if (!this.currentGrid) return;
 
-      const rect = canvas.getBoundingClientRect();
+      const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const { row, col } = screenToWorld(x, y, ORIGIN_X, ORIGIN_Y);
+      const { row, col } = screenToWorld(x, y, this.originX, this.originY);
 
       if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
         const type = this.currentGrid.tiles[row][col];
         this.onClick?.(row, col, type);
       }
     });
+  }
+
+  resize(w: number, h: number): void {
+    this.canvas.width = w;
+    this.canvas.height = h;
+    const { originX, originY } = calcOrigin(w, h, TILE_W, TILE_H);
+    this.originX = originX;
+    this.originY = originY;
   }
 
   setAnimationManager(am: AnimationManager): void {
@@ -87,7 +108,7 @@ export class MapRenderer {
         drawCol = unit.col;
       }
 
-      const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, ORIGIN_X, ORIGIN_Y);
+      const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, this.originX, this.originY);
       const isFlashing = this.flashingUnits.has(unit);
 
       // Draw unit icon
@@ -106,7 +127,7 @@ export class MapRenderer {
     // Selection highlight (gold diamond)
     if (this.selectedUnit && this.selectedUnit.isAlive()) {
       const su = this.selectedUnit;
-      const { x: cx, y: cy } = worldToScreen(su.row, su.col, ORIGIN_X, ORIGIN_Y);
+      const { x: cx, y: cy } = worldToScreen(su.row, su.col, this.originX, this.originY);
       drawDiamondTile(this.ctx, cx, cy, TILE_W, TILE_H, 'rgba(255,215,0,0.15)', '#ffd700');
     }
   }
@@ -222,7 +243,7 @@ export class MapRenderer {
     if (cells.length === 0) return;
     for (const { row, col } of cells) {
       if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
-      const { x, y } = worldToScreen(row, col, ORIGIN_X, ORIGIN_Y);
+      const { x, y } = worldToScreen(row, col, this.originX, this.originY);
       drawDiamondTile(this.ctx, x, y, TILE_W, TILE_H, fillStyle);
     }
   }
@@ -248,7 +269,7 @@ export class MapRenderer {
 
     // Clear canvas with dark background
     this.ctx.fillStyle = '#1a1a2e';
-    this.ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw tiles in painter's order (back to front)
     for (let sum = 0; sum < GRID_SIZE * 2 - 1; sum++) {
@@ -257,7 +278,7 @@ export class MapRenderer {
         if (c < 0 || c >= GRID_SIZE) continue;
 
         const type = grid.tiles[r][c];
-        const { x, y } = worldToScreen(r, c, ORIGIN_X, ORIGIN_Y);
+        const { x, y } = worldToScreen(r, c, this.originX, this.originY);
 
         let baseColor: string;
         if (type === TileType.Plain) {

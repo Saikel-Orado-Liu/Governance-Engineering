@@ -10,56 +10,67 @@ framework: Canvas 2D
 dependencies:
   external: []
   internal:
-    - "src/main.ts"           # 导入 MapGenerator + MapRenderer 并在入口实例化
+    - "src/main.ts"                   # 导入 MapGenerator + MapRenderer 并在入口实例化
+    - "src/render/IsometricRenderer.ts"  # MapRenderer 使用 worldToScreen/screenToWorld/drawDiamondTile/TILE_W/TILE_H
+    - "src/render/AnimationManager.ts"  # MapRenderer 通过 setAnimationManager 桥接
+    - "src/unit/Unit.ts"              # MapRenderer 使用 Unit 类型做单位渲染
 
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit 方法
+  - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager 方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
-  - "MapRenderer.render()"     # 在 Canvas 上绘制地图
-  - "MapRenderer.renderUnits()" # 在 Canvas 上绘制单位：16px 圆 + ctx.shadowBlur=6 发光 + 2px 深色边框 + HP 条(20x3 绿红渐变)；选中单位金色描边覆盖层(#ffd700 r=18)
-  - "MapRenderer.setSelectedUnit()" # 设置/清除选中单位，renderUnits 在绘制全部单位后叠加金色圆环
-  - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，替代 console.log 调试
-  - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（红色 #ff0000 渲染）
+  - "MapRenderer.render()"     # 在 Canvas 上绘制等距菱形网格：Painter's Algorithm (row+col sum 分组)
+  - "MapRenderer.renderUnits()" # 按 (row+col) 深度排序绘制单位：几何符号(盾/弓/V/五角星) + 队伍色(蓝/红) + HP 条(cy-18 上方)；选中镂空金边菱形覆盖层
+  - "MapRenderer.setSelectedUnit()" # 设置/清除选中单位，renderUnits 末尾绘制金边菱形(rgba(255,215,0,0.15) + #ffd700)
+  - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，内部使用 screenToWorld 做等距点击检测
+  - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（#ff0000 覆盖队伍色）
   - "MapRenderer.clearFlashingUnits()" # 清除所有闪烁标记
+  - "MapRenderer.setAnimationManager()" # 注入 AnimationManager 实例用于动画插值
   - "MapRenderer.renderAbilityRange()" # 渲染技能范围（菱形区域），接收自定义 fillStyle 字符串
-  - "MapRenderer.renderAbilityTargets()" # 渲染技能目标（蓝色 rgba(41,128,185,0.5) 高亮）
+  - "MapRenderer.renderAbilityTargets()" # 渲染技能目标（蓝色 rgba(41,128,185,0.5) 菱形高亮）
 
 components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
-  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ forceFullConnectivity 全连通性保证 + BFS (0,0)->(7,7) 路径保证
-  - "MapRenderer.ts":          # 640x640 Canvas 渲染，80px/格，地形颜色 + 网格线；options 对象构造函数，公开 onClick 点击回调；setFlashingUnits/clearFlashingUnits 控制受击闪烁；setSelectedUnit 选中高亮；renderUnits 支持发光/边框/HP条/选择覆盖层
-  - "__tests__/MapGrid.test.ts": # 13 项 vitest 测试（通行/移动力/边界/生成/路径保证）
+  - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ forceFullConnectivity 全连通性 BFS
+  - "MapRenderer.ts":          # 640x360 等距 Canvas 渲染，64x32 菱形瓦片，ORIGIN_X=320/ORIGIN_Y=52；Painter's Algorithm 瓦片排列；Canvas 几何符号单位；screenToWorld 点击检测；options 对象构造函数
 
 constraints:
   - "固定 8x8 网格，不可在运行时 resize"
   - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
   - "先保证 (0,0)->(7,7) 有通路（bfsHasPath/bfsFindAnyPath），再保证所有可通行格构成单一连通分量（forceFullConnectivity BFS）"
+  - "等距渲染：Canvas 640x360，TILE_W=64 / TILE_H=32（2:1 固定比例），ORIGIN_X=320 / ORIGIN_Y=52"
+  - "瓦片渲染使用 Painter's Algorithm：按 row+col sum 从 0→14 递增分组绘制，先远后近保证重叠正确"
+  - "单位渲染按 (row+col) 升序排序，front units draw on top——无需 Canvas depth/Z-buffer"
   - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
-  - "ctx.shadowBlur 每次调用后手动重置为 0，否则会污染后续 draw call（Canvas 2D 状态不自动清除）"
-  - "HP 条在单位圆正下方绘制（cy+18），宽度 20px 高度 3px，背景 #555，前景绿红渐变基于 hpRatio"
-  - "选中单位金色圆环 (r=18) 在 renderUnits 末尾绘制，作为独立覆盖层在所有单位之上"
-  - "技能范围（renderAbilityRange）和技能目标（renderAbilityTargets）复用 renderCells 基础方法，只传不同 fillStyle：技能范围用半透明蓝色 (rgba(41,128,185,0.2))，技能目标用半透明蓝色 (rgba(41,128,185,0.5))——与移动范围 (yellow 0.3) 和攻击目标 (red 0.4) 的视觉层级不同，便于玩家区分四种高亮含义"
+  - "HP 条在单位菱形上方（cy-18），宽度 20px 高度 4px，背景 #555，前景 team0 绿(#2ecc71)/team1 红(#e74c3c)"
+  - "选中单位金边菱形在 renderUnits 末尾绘制，作为独立覆盖层在所有单位之上"
+  - "技能范围（renderAbilityRange）和技能目标（renderAbilityTargets）复用 renderDiamondCells 内部方法，drawDiamondTile 菱形绘制"
+  - "Canvas 纯色背景 #1a1a2e，每次 render() 清空并重绘"
+  - "点击检测使用 screenToWorld 等距逆变换 + 行列边界检查（row/col in [0,7]），不再用矩形除法"
 
 known_issues:
   - "setFlashingUnits 使用 Set 引用（非深拷贝），若外部在闪烁期间修改 Unit 引用可能导致意外行为；当前仅 main.ts 在 setTimeout 链中调用，风险可控"
-  - "ctx.shadowBlur 是 Canvas 2D 状态的一部分，不会在 beginPath/arc/fill 后自动清除；若未来新增渲染方法忘记在调用处重置 shadowBlur=0，可能导致阴影泄漏到不应有发光的绘制元素上"
+  - "等距投影的深度排序依赖于 (row+col) 单一轴——若未来引入单位高度或飞行单位，(row+col) 排序不足以正确处理空中单位与地面单位的遮挡"
 
 development_notes:
   - "console.log 禁止提交；调试信息通过公开回调（如 onClick）暴露给消费者"
   - "构造函数使用 options 对象模式，便于后续扩展而不破坏调用方签名"
-  - "受击闪烁机制：setFlashingUnits 接收 Unit[] 转为 Set<Unit> 引用存储；renderUnits 中提前分支判断 flashingUnits.has(unit) 决定颜色，避免二次遍历；clearFlashingUnits 由外部 setTimeout 延迟 400ms 后调用清除"
-  - "发光效果（shadowBlur=6）在 renderUnits 循环内设置，HP 条绘制前重置 shadowBlur=0；每单位循环末尾再次重置 shadowBlur=0——双重保险确保发光不会泄漏到相邻元素"
-  - "选中单位（setSelectedUnit）使用独立的 Unit | null 字段存储，不混入 alive units 数组；金色圆环在 for 循环外作为单次后置绘制叠加，保证始终在所有单位之上，不受绘制顺序影响"
-  - "HP 条使用条件颜色梯度：hpRatio > 0.5 时从绿色向黄色过渡（R 增加），hpRatio <= 0.5 时从黄色向红色过渡（G 减少），形成绿→黄→红的自然色阶"
-  - "renderUnits 不再在顶部 filter(isAlive)——已改为循环前 filter，避免循环内条件判断；flashing 单位跳过发光但不跳过 HP 条和边框"
-  - "renderAbilityRange 和 renderAbilityTargets 为独立方法（不并入 renderHighlights 或 renderAttackHighlights），原因是它们的生命周期独立于移动范围和攻击目标——技能范围在技能选中后显示、执行或取消后消失，与移动/攻击高亮受不同状态变量控制"
-  - "renderAbilityRange 接受 fillStyle 参数（不硬编码颜色），因为技能范围在 updateView 中使用 `rgba(41,128,185,0.2)`；renderAbilityTargets 固定使用 `rgba(41,128,185,0.5)`，与攻击目标红色 (0.4) 形成视觉区分"
+  - "MapRenderer 不再使用 ctx.shadowBlur 发光效果——原型阶段发光是为了让圆形图标在矩形网格中突出，等距菱形网格+几何符号本身已有视觉区分度"
+  - "受击闪烁机制与原型相同：setFlashingUnits 接收 Unit[] 转为 Set<Unit> 引用存储；renderUnits 中提前分支判断 flashingUnits.has(unit) 决定颜色"
+  - "HP 条从原型 cy+18（单位下方）改为 cy-18（单位上方）——等距菱形图标占据菱形区域，HP 条在上方避免视觉重叠"
+  - "renderUnits 不再使用圆形+字母（原型：16px arc + ctx.fillText），改用 Canvas 几何路径（drawShield/drawBow/drawChevron/drawStarShape）"
+  - "renderUnits 按 (row+col) 升序排序——深度值大的单位后绘制，自然覆盖深度小的单位（更近的覆盖更远的）"
+  - "四种兵种几何符号硬编码路径：Warrior 盾形(半圆8px+梯形)、Archer 弓形(弧±0.4π+弦)、Knight V形(两条直线r=9)、Mage 五角星(内外半径9/4)"
+  - "几何符号使用 ctx.fill + ctx.stroke(lineWidth=2)，内部填充队伍色 + 深色边框——与原型发光效果视觉层级不同但可读性更好"
+  - "选中单位使用 drawDiamondTile 在 renderUnits 末尾二次绘制——半透明金色填充 (rgba(255,215,0,0.15)) + 金色边框 (#ffd700)——保证在所有单位之上"
+  - "renderDiamondCells 内部方法封装了 worldToScreen + drawDiamondTile 循环，被 renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets 调用"
+  - "renderAbilityRange 和 renderAbilityTargets 为独立方法，原因与原型一致：生命周期独立于移动/攻击高亮"
+  - "renderAbilityRange 接受 fillStyle 参数，renderAbilityTargets 固定 rgba(41,128,185,0.5)"
 
 lessons_learned:
   - "移动力成本与通行性分离设计（isPassable 为 boolean gate，getMoveCost 为数值计算）"
@@ -69,6 +80,8 @@ lessons_learned:
   - "移除 console.log 改为公开 onClick 回调，保持编码规范同时提供消费者自定义处理能力"
   - "options 对象构造函数模式（new MapRenderer({ canvas, onClick? })），避免参数位置依赖，便于扩展"
   - "受击闪烁使用 Set<Unit> + renderUnits 分支判断模式：不修改 Unit 实体、不增加渲染管线开销、不产生额外副作用"
-  - "全连通性保证：仅保证 (0,0)->(7,7) 单路径不足，所有可通行格必须互相可达（forceFullConnectivity 两阶段 BFS 打通隔离区域再转 Forest 平衡地形）"
+  - "全连通性保证：仅保证 (0,0)->(7,7) 单路径不足，所有可通行格必须互相可达（forceFullConnectivity 两阶段 BFS）"
+  - "等距菱形网格使用 Painter's Algorithm（按 row+col 升序绘制）保证正确重叠顺序——不同于矩形网格的逐行列遍历"
+  - "几何符号路径硬编码替代字母图标：四种兵种各一独特形状，无需外部资源加载，零依赖"
 
 last_updated: "2026-05-15"
