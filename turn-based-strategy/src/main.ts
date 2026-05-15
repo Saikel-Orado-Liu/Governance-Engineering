@@ -428,7 +428,7 @@ function startGame(): void {
         const fromCol = selectedUnit.col;
         const moved = manager.moveUnit(selectedUnit, row, col);
         if (moved) {
-          animationManager.startMoveAnimation(selectedUnit, fromRow, fromCol, row, col);
+          animationManager.startMoveAnimation(selectedUnit, fromRow, fromCol, row, col, 200, () => updateView());
           selectedUnit.movedThisTurn = true;
           selectedUnit = null;
           renderer.setSelectedUnit(null);
