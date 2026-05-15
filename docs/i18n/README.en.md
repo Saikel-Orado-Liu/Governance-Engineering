@@ -3,9 +3,15 @@
 <h4 align="center">A Management-Methodology Approach to Quality Assurance in AI-Assisted Software Development</h4>
 
 <p align="center">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><!--
-  --><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><!--
-  --><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
+  <a href="../../LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology">
+  </a>
 </p>
 
 <p align="center">
@@ -13,7 +19,7 @@
 </p>
 
 <p align="center">
-  Governance Engineering maps proven management principles — specialization, standardized processes, institutionalized knowledge, explicit requirements, and layered review — into AI-assisted development workflows. It answers <em>what constraint system to build</em>, complementing <a href="https://claude.com/blog/harness-engineering">Harness Engineering</a>'s focus on <em>how to constrain AI behavior</em>.
+  Governance Engineering maps proven management principles — specialization, standardized processes, institutionalized knowledge, explicit requirements, and layered review — into AI-assisted development workflows. It answers <em>what constraint system to build</em>, complementing <a href="https://openai.com/index/harness-engineering/">Harness Engineering</a>'s focus on <em>how to constrain AI behavior</em>.
 </p>
 
 <p align="center">
@@ -85,7 +91,7 @@ If this is true, then the solution is not better prompts or smarter models — i
 | **Explicit Requirements**       | Structured task definitions with acceptance criteria  |
 | **Layered Review**              | Multi-agent review pipelines with distinct concerns   |
 
-Governance Engineering and [Harness Engineering](https://claude.com/blog/harness-engineering) are complementary layers. Harness Engineering provides the mechanisms to constrain AI; Governance Engineering provides the design rationale for which constraints to apply and why.
+Governance Engineering and [Harness Engineering](https://openai.com/index/harness-engineering/) are complementary layers. Harness Engineering provides the mechanisms to constrain AI; Governance Engineering provides the design rationale for which constraints to apply and why.
 
 ### Architecture Features
 

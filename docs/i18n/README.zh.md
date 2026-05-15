@@ -3,9 +3,15 @@
 <h4 align="center">用管理学方法论构建 AI 辅助软件开发的质量保障体系</h4>
 
 <p align="center">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><!--
-  --><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><!--
-  --><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
+  <a href="../../LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology">
+  </a>
 </p>
 
 <p align="center">
@@ -13,7 +19,7 @@
 </p>
 
 <p align="center">
-  治理工程将管理学中经过验证的设计原则——专业化分工、标准化流程、制度化知识、需求明确化、分层审查——映射到 AI 辅助开发工作流中。它回答<em>应该构建什么样的约束体系</em>，与 <a href="https://claude.com/blog/harness-engineering">Harness Engineering</a> 关注的<em>如何约束 AI 的行为</em>形成互补。
+  治理工程将管理学中经过验证的设计原则——专业化分工、标准化流程、制度化知识、需求明确化、分层审查——映射到 AI 辅助开发工作流中。它回答<em>应该构建什么样的约束体系</em>，与 <a href="https://openai.com/index/harness-engineering/">Harness Engineering</a> 关注的<em>如何约束 AI 的行为</em>形成互补。
 </p>
 
 <p align="center">
@@ -85,7 +91,7 @@ cp -r temp/. .
 | **需求明确化** | 含验收标准的结构化任务定义           |
 | **分层审查**   | 关注点分离的多 Agent 审查管道        |
 
-治理工程与 [Harness Engineering](https://claude.com/blog/harness-engineering) 是互补的分层：Harness Engineering 提供约束 AI 的机制，治理工程提供选择哪些约束、为何如此选择的设计理由。
+治理工程与 [Harness Engineering](https://openai.com/index/harness-engineering/) 是互补的分层：Harness Engineering 提供约束 AI 的机制，治理工程提供选择哪些约束、为何如此选择的设计理由。
 
 ### 架构特性
 
