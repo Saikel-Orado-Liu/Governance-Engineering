@@ -160,6 +160,8 @@ Projects built with Governance Engineering methodology:
 | [`scientific-computing/`](scientific-computing/) | Python                   | ODE solver framework with parameter sweep engine              |
 | [`ue5/`](ue5/)                                   | Unreal Engine 5.7 C++20  | UE5 test project with ue-mcp integration & Epic C++ standards |
 
+All example projects were tested with **DeepSeek V4**, where Haiku maps to Flash, Sonnet to Flash[1m], and Opus to Pro[1m].
+
 ---
 
 ## Core Tenet

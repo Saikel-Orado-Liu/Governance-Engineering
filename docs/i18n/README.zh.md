@@ -160,6 +160,8 @@ cp -r temp/. .
 | [`scientific-computing/`](../../scientific-computing/) | Python                   | ODE 求解器框架，含参数扫描引擎               |
 | [`ue5/`](../../ue5/)                                   | Unreal Engine 5.7 C++20  | UE5 测试项目，含 ue-mcp 集成与 Epic C++ 规范 |
 
+所有示例项目均采用 **DeepSeek V4** 模型进行测试，其中 Haiku 为 Flash、Sonnet 为 Flash[1m]、Opus 为 Pro[1m]。
+
 ---
 
 ## 核心信条
