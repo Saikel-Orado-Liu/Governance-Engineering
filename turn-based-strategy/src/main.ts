@@ -452,7 +452,7 @@ function startGame(): void {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const coord = screenToWorld(x, y, renderer.originX, renderer.originY);
+    const coord = screenToWorld(x, y, renderer.originX, renderer.originY, renderer.scale);
     const row = coord.row;
     const col = coord.col;
 

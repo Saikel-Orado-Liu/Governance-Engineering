@@ -16,10 +16,11 @@ export function worldToScreen(
   col: number,
   originX: number,
   originY: number,
+  scale: number = 1,
 ): ScreenPoint {
   return {
-    x: originX + (col - row) * (TILE_W / 2),
-    y: originY + (row + col) * (TILE_H / 2),
+    x: originX + (col - row) * ((TILE_W * scale) / 2),
+    y: originY + (row + col) * ((TILE_H * scale) / 2),
   };
 }
 
@@ -28,9 +29,10 @@ export function screenToWorld(
   sy: number,
   originX: number,
   originY: number,
+  scale: number = 1,
 ): GridCoord {
-  const halfW = TILE_W / 2;
-  const halfH = TILE_H / 2;
+  const halfW = (TILE_W * scale) / 2;
+  const halfH = (TILE_H * scale) / 2;
   const dx = (sx - originX) / halfW;
   const dy = (sy - originY) / halfH;
   const col = (dx + dy) / 2;

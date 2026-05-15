@@ -123,7 +123,7 @@ export class ActionPanel {
     canvas: HTMLCanvasElement,
     mapRenderer: MapRenderer,
   ): void {
-    const { x, y } = worldToScreen(worldRow, worldCol, mapRenderer.originX, mapRenderer.originY);
+    const { x, y } = worldToScreen(worldRow, worldCol, mapRenderer.originX, mapRenderer.originY, mapRenderer.scale);
 
     // Convert canvas-relative coordinates to viewport coordinates
     const rect = canvas.getBoundingClientRect();

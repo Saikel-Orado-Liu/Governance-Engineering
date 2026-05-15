@@ -10,13 +10,20 @@ import {
 } from '../render/IsometricRenderer';
 import type { AnimationManager } from '../render/AnimationManager';
 
+export function calcScale(canvasW: number, canvasH: number): number {
+  const maxScaleW = (canvasW * 0.88) / (GRID_SIZE * TILE_W);
+  const maxScaleH = (canvasH * 0.88) / (GRID_SIZE * TILE_H);
+  return Math.min(maxScaleW, maxScaleH);
+}
+
 export function calcOrigin(
   canvasW: number,
   canvasH: number,
+  scale: number,
 ): { originX: number; originY: number } {
   return {
     originX: canvasW / 2,
-    originY: canvasH * 0.08,
+    originY: canvasH / 2 - ((GRID_SIZE - 1) * TILE_H * scale) / 2,
   };
 }
 
@@ -39,6 +46,7 @@ export class MapRenderer {
   private animationManager: AnimationManager | null = null;
   originX: number;
   originY: number;
+  scale: number;
   onClick: ((row: number, col: number, type: TileType) => void) | null = null;
 
   constructor(options: {
@@ -50,7 +58,8 @@ export class MapRenderer {
     this.ctx = canvas.getContext('2d')!;
     this.onClick = onClick ?? null;
 
-    const { originX, originY } = calcOrigin(canvas.width, canvas.height);
+    this.scale = calcScale(canvas.width, canvas.height);
+    const { originX, originY } = calcOrigin(canvas.width, canvas.height, this.scale);
     this.originX = originX;
     this.originY = originY;
 
@@ -60,7 +69,7 @@ export class MapRenderer {
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const { row, col } = screenToWorld(x, y, this.originX, this.originY);
+      const { row, col } = screenToWorld(x, y, this.originX, this.originY, this.scale);
 
       if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
         const type = this.currentGrid.tiles[row][col];
@@ -72,7 +81,8 @@ export class MapRenderer {
   resize(w: number, h: number): void {
     this.canvas.width = w;
     this.canvas.height = h;
-    const { originX, originY } = calcOrigin(w, h);
+    this.scale = calcScale(w, h);
+    const { originX, originY } = calcOrigin(w, h, this.scale);
     this.originX = originX;
     this.originY = originY;
   }
@@ -106,33 +116,33 @@ export class MapRenderer {
         drawCol = unit.col;
       }
 
-      const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, this.originX, this.originY);
+      const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, this.originX, this.originY, this.scale);
       const isFlashing = this.flashingUnits.has(unit);
 
       // Draw unit icon
       if (isFlashing) {
-        this.drawUnitIcon(cx, cy, unit.type, '#ff0000', '#cc0000');
+        this.drawUnitIcon(cx, cy, unit.type, '#ff0000', '#cc0000', this.scale);
       } else {
         const fillColor = unit.team === 0 ? '#2980b9' : '#e74c3c';
         const strokeColor = unit.team === 0 ? '#1a5276' : '#a93226';
-        this.drawUnitIcon(cx, cy, unit.type, fillColor, strokeColor);
+        this.drawUnitIcon(cx, cy, unit.type, fillColor, strokeColor, this.scale);
       }
 
-      // HP bar at cy - 18 (above unit)
-      this.drawHpBar(cx, cy - 18, unit.hp / unit.maxHp, unit.team);
+      // HP bar at cy - 18 * scale (above unit)
+      this.drawHpBar(cx, cy - 18 * this.scale, unit.hp / unit.maxHp, unit.team);
     }
 
     // Selection highlight (gold diamond)
     if (this.selectedUnit && this.selectedUnit.isAlive()) {
       const su = this.selectedUnit;
-      const { x: cx, y: cy } = worldToScreen(su.row, su.col, this.originX, this.originY);
-      drawDiamondTile(this.ctx, cx, cy, TILE_W, TILE_H, 'rgba(255,215,0,0.15)', '#ffd700');
+      const { x: cx, y: cy } = worldToScreen(su.row, su.col, this.originX, this.originY, this.scale);
+      drawDiamondTile(this.ctx, cx, cy, TILE_W * this.scale, TILE_H * this.scale, 'rgba(255,215,0,0.15)', '#ffd700');
     }
   }
 
   private drawHpBar(cx: number, cy: number, ratio: number, team: number): void {
-    const barWidth = 20;
-    const barHeight = 4;
+    const barWidth = 20 * this.scale;
+    const barHeight = 4 * this.scale;
     // Background
     this.ctx.fillStyle = '#555';
     this.ctx.fillRect(cx - barWidth / 2, cy, barWidth, barHeight);
@@ -147,25 +157,31 @@ export class MapRenderer {
     type: number,
     fillColor: string,
     strokeColor: string,
+    scale: number,
   ): void {
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.scale(scale, scale);
     this.ctx.fillStyle = fillColor;
     this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = 2;
 
     switch (type) {
       case 0: // Warrior — Shield
-        this.drawShield(cx, cy);
+        this.drawShield(0, 0);
         break;
       case 1: // Archer — Bow
-        this.drawBow(cx, cy);
+        this.drawBow(0, 0);
         break;
       case 2: // Knight — Chevron
-        this.drawChevron(cx, cy);
+        this.drawChevron(0, 0);
         break;
       case 3: // Mage — Star
-        this.drawStarShape(cx, cy);
+        this.drawStarShape(0, 0);
         break;
     }
+
+    this.ctx.restore();
   }
 
   private drawShield(cx: number, cy: number): void {
@@ -241,8 +257,8 @@ export class MapRenderer {
     if (cells.length === 0) return;
     for (const { row, col } of cells) {
       if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
-      const { x, y } = worldToScreen(row, col, this.originX, this.originY);
-      drawDiamondTile(this.ctx, x, y, TILE_W, TILE_H, fillStyle);
+      const { x, y } = worldToScreen(row, col, this.originX, this.originY, this.scale);
+      drawDiamondTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, fillStyle);
     }
   }
 
@@ -276,7 +292,7 @@ export class MapRenderer {
         if (c < 0 || c >= GRID_SIZE) continue;
 
         const type = grid.tiles[r][c];
-        const { x, y } = worldToScreen(r, c, this.originX, this.originY);
+        const { x, y } = worldToScreen(r, c, this.originX, this.originY, this.scale);
 
         let baseColor: string;
         if (type === TileType.Plain) {
@@ -286,7 +302,7 @@ export class MapRenderer {
           baseColor = TILE_COLORS[type];
         }
 
-        drawDiamondTile(this.ctx, x, y, TILE_W, TILE_H, baseColor, 'rgba(0,0,0,0.2)');
+        drawDiamondTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, baseColor, 'rgba(0,0,0,0.2)');
       }
     }
   }
