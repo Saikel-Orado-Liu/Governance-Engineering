@@ -43,10 +43,19 @@ const HEIGHT_UNIT = 12;
 
 const TILE_HEIGHTS: Record<TileType, number> = {
   [TileType.Plain]: 1,
-  [TileType.Forest]: 1,
-  [TileType.Mountain]: 3,
+  [TileType.Forest]: 1.5,
+  [TileType.Mountain]: 2,
   [TileType.Water]: 0,
 };
+
+interface UnitRenderInfo {
+  unit: Unit;
+  drawRow: number;
+  drawCol: number;
+  drawX: number;
+  drawY: number;
+  tileType: TileType;
+}
 
 export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -108,59 +117,6 @@ export class MapRenderer {
 
   private getTileHeightPx(tileType: TileType): number {
     return TILE_HEIGHTS[tileType] * HEIGHT_UNIT * this.scale;
-  }
-
-  renderUnits(units: Unit[]): void {
-    const alive = units.filter(u => u.isAlive());
-
-    // Sort by depth (row+col) ascending so front units draw on top
-    const sorted = [...alive].sort((a, b) => (a.row + a.col) - (b.row + b.col));
-
-    for (const unit of sorted) {
-      const pos = this.animationManager?.getVisualPosition(unit);
-      let drawRow: number;
-      let drawCol: number;
-      if (pos && 'vx' in pos) {
-        drawRow = pos.vy;
-        drawCol = pos.vx;
-      } else if (pos) {
-        drawRow = pos.row;
-        drawCol = pos.col;
-      } else {
-        drawRow = unit.row;
-        drawCol = unit.col;
-      }
-
-      const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, this.originX, this.originY, this.scale);
-
-      // Get tile height at unit position for Y offset
-      const unitTileType = this.currentGrid?.tiles[Math.round(drawRow)]?.[Math.round(drawCol)] ?? TileType.Plain;
-      const unitHeightPx = this.getTileHeightPx(unitTileType);
-      const unitY = cy - unitHeightPx;
-
-      const isFlashing = this.flashingUnits.has(unit);
-
-      // Draw unit icon
-      if (isFlashing) {
-        this.drawUnitIcon(cx, unitY, unit.type, '#ff0000', '#cc0000', this.scale);
-      } else {
-        const fillColor = unit.team === 0 ? '#2980b9' : '#e74c3c';
-        const strokeColor = unit.team === 0 ? '#1a5276' : '#a93226';
-        this.drawUnitIcon(cx, unitY, unit.type, fillColor, strokeColor, this.scale);
-      }
-
-      // HP bar above unit — offset by tile height
-      this.drawHpBar(cx, cy - 18 * this.scale - unitHeightPx, unit.hp / unit.maxHp, unit.team);
-    }
-
-    // Selection highlight (gold diamond) — offset by tile height
-    if (this.selectedUnit && this.selectedUnit.isAlive()) {
-      const su = this.selectedUnit;
-      const { x: sx, y: sy } = worldToScreen(su.row, su.col, this.originX, this.originY, this.scale);
-      const selTileType = this.currentGrid?.tiles[su.row][su.col] ?? TileType.Plain;
-      const selHeightPx = this.getTileHeightPx(selTileType);
-      drawDiamondTile(this.ctx, sx, sy - selHeightPx, TILE_W * this.scale, TILE_H * this.scale, 'rgba(255,215,0,0.15)', '#ffd700');
-    }
   }
 
   private drawHpBar(cx: number, cy: number, ratio: number, team: number): void {
@@ -268,6 +224,21 @@ export class MapRenderer {
     this.ctx.stroke();
   }
 
+  private drawUnitAt(info: UnitRenderInfo): void {
+    const heightPx = this.getTileHeightPx(info.tileType);
+    const unitY = info.drawY - heightPx;
+    const isFlashing = this.flashingUnits.has(info.unit);
+    if (isFlashing) {
+      this.drawUnitIcon(info.drawX, unitY, info.unit.type, '#ff0000', '#cc0000', this.scale);
+    } else {
+      const fillColor = info.unit.team === 0 ? '#2980b9' : '#e74c3c';
+      const strokeColor = info.unit.team === 0 ? '#1a5276' : '#a93226';
+      this.drawUnitIcon(info.drawX, unitY, info.unit.type, fillColor, strokeColor, this.scale);
+    }
+    const hpBarY = unitY - 18 * this.scale;
+    this.drawHpBar(info.drawX, hpBarY, info.unit.hp / info.unit.maxHp, info.unit.team);
+  }
+
   renderHighlights(cells: { row: number; col: number }[]): void {
     this.renderDiamondCells(cells, 'rgba(255, 255, 0, 0.3)');
   }
@@ -306,14 +277,41 @@ export class MapRenderer {
     this.flashingUnits.clear();
   }
 
-  render(grid: MapGrid): void {
+  render(grid: MapGrid, units?: Unit[]): void {
     this.currentGrid = grid;
 
     // Clear canvas with dark background
     this.ctx.fillStyle = '#1a1a2e';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw tiles in painter's order (back to front)
+    // Precompute unit render info grouped by sum (painter's order)
+    const unitMap = new Map<number, UnitRenderInfo[]>();
+    if (units) {
+      for (const unit of units) {
+        if (!unit.isAlive()) continue;
+        const pos = this.animationManager?.getVisualPosition(unit);
+        let drawRow: number;
+        let drawCol: number;
+        if (pos && 'vx' in pos) {
+          drawRow = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(pos.vy)));
+          drawCol = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(pos.vx)));
+        } else if (pos) {
+          drawRow = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(pos.row)));
+          drawCol = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(pos.col)));
+        } else {
+          drawRow = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(unit.row)));
+          drawCol = Math.min(GRID_SIZE - 1, Math.max(0, Math.round(unit.col)));
+        }
+        const { x, y } = worldToScreen(drawRow, drawCol, this.originX, this.originY, this.scale);
+        const tileType = grid.tiles[drawRow]?.[drawCol] ?? TileType.Plain;
+        const sum = drawRow + drawCol;
+        const info: UnitRenderInfo = { unit, drawRow, drawCol, drawX: x, drawY: y, tileType };
+        if (!unitMap.has(sum)) unitMap.set(sum, []);
+        unitMap.get(sum)!.push(info);
+      }
+    }
+
+    // Draw tiles in painter's order (back to front), with units on top of their tile
     for (let sum = 0; sum < GRID_SIZE * 2 - 1; sum++) {
       for (let r = 0; r < GRID_SIZE; r++) {
         const c = sum - r;
@@ -335,7 +333,26 @@ export class MapRenderer {
         const sideLColor = darkenColor(baseColor, 0.85);
 
         drawCubeTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, heightPx, baseColor, sideRColor, sideLColor);
+
+        // Draw unit standing on this tile (after the tile, so unit is on top)
+        const unitInfos = unitMap.get(sum);
+        if (unitInfos) {
+          for (const info of unitInfos) {
+            if (info.drawRow === r && info.drawCol === c) {
+              this.drawUnitAt(info);
+            }
+          }
+        }
       }
+    }
+
+    // Selection highlight (gold diamond) — drawn after all tiles and units
+    if (this.selectedUnit && this.selectedUnit.isAlive()) {
+      const su = this.selectedUnit;
+      const { x: sx, y: sy } = worldToScreen(su.row, su.col, this.originX, this.originY, this.scale);
+      const selTileType = this.currentGrid?.tiles[su.row][su.col] ?? TileType.Plain;
+      const selHeightPx = this.getTileHeightPx(selTileType);
+      drawDiamondTile(this.ctx, sx, sy - selHeightPx, TILE_W * this.scale, TILE_H * this.scale, 'rgba(255,215,0,0.15)', '#ffd700');
     }
   }
 }

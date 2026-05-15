@@ -19,13 +19,12 @@ public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
   - "calcOrigin()"            # 动态计算等距投影原点：originX=canvasW/2, originY=canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2（垂直居中），适用于全屏响应式 Canvas
-  - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager/resize 方法
+  - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager/resize 方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
-  - "MapRenderer.render()"     # 在 Canvas 上绘制等距立方体堆叠地形：drawCubeTile + Painter's Algorithm (row+col sum 分组)
-  - "MapRenderer.renderUnits()" # 按 (row+col) 深度排序绘制单位：几何符号(盾/弓/V/五角星) + 队伍色(蓝/红) + 瓦片高度 Y 偏移 + HP 条(cy-18*scale-unitHeightPx 上方)；选中镂空金边菱形覆盖层
-  - "MapRenderer.setSelectedUnit()" # 设置/清除选中单位，renderUnits 末尾绘制金边菱形(rgba(255,215,0,0.15) + #ffd700)
+  - "MapRenderer.render(grid, units?)"  # 在 Canvas 上绘制等距立方体堆叠地形 + 可选单位：drawCubeTile + Painter's Algorithm (row+col sum 分组)，同一 sum 组内 tile 先画→单位后画；后续 sum 组高地形自然遮挡前面组单位下半部分实现部分可见；选中镂空金边菱形在全部绘制完毕后叠加
+  - "MapRenderer.setSelectedUnit()" # 设置/清除选中单位，render 末尾绘制金边菱形覆盖(rgba(255,215,0,0.15) + #ffd700)
   - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，内部使用 screenToWorld 做等距点击检测
   - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（#ff0000 覆盖队伍色）
   - "MapRenderer.clearFlashingUnits()" # 清除所有闪烁标记
@@ -46,11 +45,11 @@ constraints:
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
   - "先保证 (0,0)->(7,7) 有通路（bfsHasPath/bfsFindAnyPath），再保证所有可通行格构成单一连通分量（forceFullConnectivity BFS）"
   - "等距渲染：TILE_W=64 / TILE_H=48，投影原点由 calcOrigin() 动态计算：originX=canvasW/2, originY=canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2（使 8x8 棋盘垂直居中）；scale 由 calcScale() 自动计算使棋盘占视口约 85%"
-  - "地形渲染使用 drawCubeTile 底部齐平立方体堆叠模型：所有瓦片从底座平面（cy）向上堆叠，TILE_HEIGHTS 全为非负（Plain=1/Forest=1/Mountain=3/Water=0），HEIGHT_UNIT=12px；Water 高度 0 回退为平面菱形（无侧面）"
-  - "单位与覆盖层 Y 偏移统一公式 cy - heightPx（坐落在瓦片顶面之上）：renderUnits 单位图标、renderDiamondCells 覆盖层（移动/攻击/技能范围/技能目标）、selectedUnit 选中高亮、HP 条均适用"
+  - "地形渲染使用 drawCubeTile 底部齐平立方体堆叠模型：所有瓦片从底座平面（cy）向上堆叠，TILE_HEIGHTS 全为非负（Plain=1/Forest=1.5/Mountain=2/Water=0），HEIGHT_UNIT=12px；Water 高度 0 回退为平面菱形（无侧面）；Forest 1→1.5、Mountain 3→2 调整形成 Plain→Forest→Mountain 渐变高度"
+  - "单位渲染（含单位图标 + HP 条 + 受击闪烁）整合进 render() 的 Painter's Algorithm 循环中：同一 sum 组内 tile 先画→单位后画，确保单位站立在瓦片之上；后续 sum 组的高地形立方体（如 Mountain）自然覆盖前面组单位的下半部分，实现部分可见遮挡——无需独立 Z-buffer 或裁剪逻辑"
   - "瓦片渲染使用 Painter's Algorithm：按 row+col sum 从 0→14 递增分组绘制，先远后近保证重叠正确"
-  - "单位渲染按 (row+col) 升序排序，front units draw on top——无需 Canvas depth/Z-buffer"
-  - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
+  - "单位渲染已整合进 render() 的 Painter's Algorithm 循环中，不在外部排序；受击闪烁直接在 drawUnitAt 内部判断 flashingUnits.has(unit) 决定颜色"
+  - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，在 drawUnitAt 内部判断处理"
   - "HP 条在单位菱形上方（cy-18），宽度 20px 高度 4px，背景 #555，前景 team0 绿(#2ecc71)/team1 红(#e74c3c)"
   - "选中单位金边菱形在 renderUnits 末尾绘制，作为独立覆盖层在所有单位之上"
   - "技能范围（renderAbilityRange）和技能目标（renderAbilityTargets）复用 renderDiamondCells 内部方法，drawDiamondTile 菱形绘制"

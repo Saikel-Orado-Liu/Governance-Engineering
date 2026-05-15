@@ -139,14 +139,13 @@ function startGame(): void {
   }
 
   function updateView(): void {
-    renderer.render(grid);
+    renderer.render(grid, manager.getAllUnits());
     renderer.renderAttackHighlights(attackTargets);
     renderer.renderHighlights(reachableCells);
     if (selectedSkill !== null) {
       renderer.renderAbilityRange(skillRangeCells, 'rgba(41, 128, 185, 0.2)');
       renderer.renderAbilityTargets(skillTargetCells);
     }
-    renderer.renderUnits(manager.getAllUnits());
     hud.renderMinimap(grid, manager.getAllUnits());
   }
 
