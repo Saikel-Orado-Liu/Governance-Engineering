@@ -3,7 +3,9 @@
 <h4 align="center">用管理学方法论构建 AI 辅助软件开发的质量保障体系</h4>
 
 <p align="center">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><!--
+  --><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><!--
+  --><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
 </p>
 
 <p align="center">

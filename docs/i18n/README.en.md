@@ -3,7 +3,9 @@
 <h4 align="center">A Management-Methodology Approach to Quality Assurance in AI-Assisted Software Development</h4>
 
 <p align="center">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a><!--
+  --><a href="#"><img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status"></a><!--
+  --><a href="#"><img src="https://img.shields.io/badge/methodology-v1.0-orange.svg" alt="Methodology"></a>
 </p>
 
 <p align="center">
