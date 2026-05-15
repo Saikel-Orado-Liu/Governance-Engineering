@@ -5,6 +5,8 @@ import {
   worldToScreen,
   screenToWorld,
   drawDiamondTile,
+  drawBlockTile,
+  darkenColor,
   TILE_W,
   TILE_H,
 } from '../render/IsometricRenderer';
@@ -36,6 +38,15 @@ const TILE_COLORS: Record<TileType, string> = {
 
 const PLAIN_LIGHT = '#5a8f3c';
 const PLAIN_DARK = '#4e7e34';
+
+const HEIGHT_UNIT = 8;
+
+const TILE_HEIGHTS: Record<number, number> = {
+  [TileType.Plain]: 0,
+  [TileType.Forest]: 0,
+  [TileType.Mountain]: 3,
+  [TileType.Water]: -1,
+};
 
 export class MapRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -95,6 +106,10 @@ export class MapRenderer {
     this.selectedUnit = unit;
   }
 
+  private getTileHeightPx(tileType: TileType): number {
+    return TILE_HEIGHTS[tileType] * HEIGHT_UNIT * this.scale;
+  }
+
   renderUnits(units: Unit[]): void {
     const alive = units.filter(u => u.isAlive());
 
@@ -117,26 +132,34 @@ export class MapRenderer {
       }
 
       const { x: cx, y: cy } = worldToScreen(drawRow, drawCol, this.originX, this.originY, this.scale);
+
+      // Get tile height at unit position for Y offset
+      const unitTileType = this.currentGrid?.tiles[Math.round(drawRow)]?.[Math.round(drawCol)] ?? TileType.Plain;
+      const unitHeightPx = this.getTileHeightPx(unitTileType);
+      const unitY = cy - unitHeightPx;
+
       const isFlashing = this.flashingUnits.has(unit);
 
       // Draw unit icon
       if (isFlashing) {
-        this.drawUnitIcon(cx, cy, unit.type, '#ff0000', '#cc0000', this.scale);
+        this.drawUnitIcon(cx, unitY, unit.type, '#ff0000', '#cc0000', this.scale);
       } else {
         const fillColor = unit.team === 0 ? '#2980b9' : '#e74c3c';
         const strokeColor = unit.team === 0 ? '#1a5276' : '#a93226';
-        this.drawUnitIcon(cx, cy, unit.type, fillColor, strokeColor, this.scale);
+        this.drawUnitIcon(cx, unitY, unit.type, fillColor, strokeColor, this.scale);
       }
 
-      // HP bar at cy - 18 * scale (above unit)
-      this.drawHpBar(cx, cy - 18 * this.scale, unit.hp / unit.maxHp, unit.team);
+      // HP bar above unit — offset by tile height
+      this.drawHpBar(cx, cy - 18 * this.scale - unitHeightPx, unit.hp / unit.maxHp, unit.team);
     }
 
-    // Selection highlight (gold diamond)
+    // Selection highlight (gold diamond) — offset by tile height
     if (this.selectedUnit && this.selectedUnit.isAlive()) {
       const su = this.selectedUnit;
-      const { x: cx, y: cy } = worldToScreen(su.row, su.col, this.originX, this.originY, this.scale);
-      drawDiamondTile(this.ctx, cx, cy, TILE_W * this.scale, TILE_H * this.scale, 'rgba(255,215,0,0.15)', '#ffd700');
+      const { x: sx, y: sy } = worldToScreen(su.row, su.col, this.originX, this.originY, this.scale);
+      const selTileType = this.currentGrid?.tiles[su.row][su.col] ?? TileType.Plain;
+      const selHeightPx = this.getTileHeightPx(selTileType);
+      drawDiamondTile(this.ctx, sx, sy - selHeightPx, TILE_W * this.scale, TILE_H * this.scale, 'rgba(255,215,0,0.15)', '#ffd700');
     }
   }
 
@@ -302,7 +325,11 @@ export class MapRenderer {
           baseColor = TILE_COLORS[type];
         }
 
-        drawDiamondTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, baseColor, 'rgba(0,0,0,0.2)');
+        const heightPx = this.getTileHeightPx(type);
+        const sideRColor = darkenColor(baseColor, 0.75);
+        const sideLColor = darkenColor(baseColor, 0.85);
+
+        drawBlockTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, baseColor, heightPx, sideRColor, sideLColor);
       }
     }
   }
