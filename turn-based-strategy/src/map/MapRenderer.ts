@@ -39,7 +39,7 @@ const TILE_COLORS: Record<TileType, string> = {
 const PLAIN_LIGHT = '#5a8f3c';
 const PLAIN_DARK = '#4e7e34';
 
-const HEIGHT_UNIT = 8;
+const HEIGHT_UNIT = 3;
 
 const TILE_HEIGHTS: Record<number, number> = {
   [TileType.Plain]: 0,
