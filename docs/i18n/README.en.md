@@ -3,7 +3,7 @@
 <h4 align="center">A Management-Methodology Approach to Quality Assurance in AI-Assisted Software Development</h4>
 
 <p align="center">
-  <a href="LICENSE">
+  <a href="../../LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License">
   </a>
   <a href="#">
@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/i18n/README.en.md">English</a> · <a href="docs/i18n/README.zh.md">简体中文</a>
+  <a href="README.en.md">English</a> · <a href="README.zh.md">简体中文</a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#architecture-overview">Architecture Overview</a> •
-  <a href="#version--roadmap">Version & Roadmap</a> •
+  <a href="#version-roadmap">Version & Roadmap</a> •
   <a href="#documentation">Documentation</a> •
   <a href="#example-projects">Example Projects</a> •
   <a href="#core-tenet">Core Tenet</a> •
@@ -95,11 +95,11 @@ Governance Engineering and [Harness Engineering](https://claude.com/blog/harness
 
 ### Architecture Features
 
-- 🏛️ **Management-Theoretic Foundation** — Built on verified organizational design principles, not ad-hoc heuristics
+- 🏛️ **Management-Theoretic Foundation** — Based on verified organizational design principles, not ad-hoc heuristics
 - 🤖 **11 Specialized Agents** — Each with a narrow scope, explicit interfaces, and defined communication schemas
 - 🔒 **Stage-Gate Hooks** — Automatic checkpoints that prevent workflow steps from being skipped
 - 🧠 **Structured Memory** — Team-shared memory hierarchy that persists knowledge across sessions
-- 🔌 **Tech-Stack Agnostic** — The methodology applies to any stack; the template generates stack-specific configuration
+- 🔌 **Tech-Stack Agnostic** — Applies to any stack; templates generate stack-specific configuration
 - 📐 **Layered Architecture** — Three-layer model (Orchestrator → Domain → Execution) for scalable complexity
 - 📊 **Model Tiering & Cost Control** — Different agents are assigned models of different capability levels by task complexity, with context-window budgeting as a first-class concern
 
@@ -114,7 +114,7 @@ Governance Engineering and [Harness Engineering](https://claude.com/blog/harness
 
 ### Limitations
 
-- **Upfront investment.** Configuring agents, hooks, and memory structures takes time before you write any feature code.
+- **Upfront investment.** Configuring agents, hooks, and memory structures takes time before writing any feature code.
 - **Not for one-shot scripts.** The overhead is wasted on tasks that fit in a single prompt.
 - **Learning curve.** The methodology assumes familiarity with organizational design concepts.
 - **Claude Code bias.** Current reference implementations target Claude Code; adaptation to other platforms requires translation work.
@@ -140,11 +140,11 @@ The current implementation maps all five management principles: 11 specialized a
 
 ## Documentation
 
-- [Governance Engineering — Theory & Design](docs/theory/governance-engineering-theory.en.md) — Methodology evolution, five design principles, three-layer architecture, model tiering & cost control, and relationship to Harness Engineering
-- [Governance Engineering — UE5 Reference Implementation](docs/implementation/governance-engineering-ue5-impl.en.md) — Complete implementation guide with runnable Claude Code templates
-- [Usage Guide](docs/usage/usage-guide.en.md) — Complete guide from setup to daily workflow
-- [Architecture Analysis](docs/architecture/architecture-analysis.en.md) — In-depth architecture breakdown
-- [CHANGELOG](docs/changelog/CHANGELOG.en.md) — Version history
+- [Governance Engineering — Theory & Design](../theory/governance-engineering-theory.en.md) — Methodology evolution, five design principles, three-layer architecture, model tiering & cost control, and relationship to Harness Engineering
+- [Governance Engineering — UE5 Reference Implementation](../implementation/governance-engineering-ue5-impl.en.md) — Complete implementation guide with runnable Claude Code templates
+- [Usage Guide](../usage/usage-guide.en.md) — Complete guide from setup to daily workflow
+- [Architecture Analysis](../architecture/architecture-analysis.en.md) — In-depth architecture breakdown
+- [CHANGELOG](../changelog/CHANGELOG.en.md) — Version history
 
 ---
 
@@ -152,13 +152,13 @@ The current implementation maps all five management principles: 11 specialized a
 
 Projects built with Governance Engineering methodology:
 
-| Project                                          | Stack                    | Description                                                   |
-| ------------------------------------------------ | ------------------------ | ------------------------------------------------------------- |
-| [`task-board/`](task-board/)                     | React + FastAPI + SQLite | Full-stack task board with complete test suite                |
-| [`turn-based-strategy/`](turn-based-strategy/)   | TypeScript + Canvas      | Turn-based strategy game with AI opponent & combat system     |
-| [`markdown-ssg/`](markdown-ssg/)                 | Node.js CLI              | Static site generator compiling Markdown to HTML              |
-| [`scientific-computing/`](scientific-computing/) | Python                   | ODE solver framework with parameter sweep engine              |
-| [`ue5/`](ue5/)                                   | Unreal Engine 5.7 C++20  | UE5 test project with ue-mcp integration & Epic C++ standards |
+| Project                                                | Stack                    | Description                                                   |
+| ------------------------------------------------------ | ------------------------ | ------------------------------------------------------------- |
+| [`task-board/`](../../task-board/)                     | React + FastAPI + SQLite | Full-stack task board with complete test suite                |
+| [`turn-based-strategy/`](../../turn-based-strategy/)   | TypeScript + Canvas      | Turn-based strategy game with AI opponent & combat system     |
+| [`markdown-ssg/`](../../markdown-ssg/)                 | Node.js CLI              | Static site generator compiling Markdown to HTML              |
+| [`scientific-computing/`](../../scientific-computing/) | Python                   | ODE solver framework with parameter sweep engine              |
+| [`ue5/`](../../ue5/)                                   | Unreal Engine 5.7 C++20  | UE5 test project with ue-mcp integration & Epic C++ standards |
 
 ---
 
@@ -180,7 +180,7 @@ So in late April 2026, I began designing an "organizational AI architecture" —
 
 I am not a professional AI practitioner or architect. The original architecture took only a couple of days — a rough, minimal version. I lack both the capability and the resources to subject this architecture to lab-grade quality validation. The ideal implementation may require rethinking the entire Agent AI stack. I warmly welcome AI experts to fork or improve this project's architecture details, toward completing higher-quality tasks with less time and cost.
 
-There may be earlier papers (I did see at least one similar article before the project was released.) articulating the core ideas of Governance Engineering, but this is genuinely my independent creation. I also hope that these ideas can bring some academic value.
+There may be earlier papers (I did see at least one similar article before the project was released) articulating the core ideas of Governance Engineering, but this is genuinely my independent creation. I also hope that these ideas can bring some academic value.
 
 —— Saikel Orado Liu
 
@@ -188,6 +188,6 @@ There may be earlier papers (I did see at least one similar article before the p
 
 ## License
 
-All documentation (`docs/`), Agent definitions, Skill definitions, Schema definitions, rule files, and all other content in this repository are licensed under [Apache License 2.0](LICENSE).
+All documentation (`docs/`), Agent definitions, Skill definitions, Schema definitions, rule files, and all other content in this repository are licensed under [Apache License 2.0](../../LICENSE).
 
 Copyright © 2026 Saikel

@@ -9,7 +9,7 @@ status: 正式
 author: Saikel
 series: 治理工程
 part: 2/2
-requires: 治理工程 — 理论与设计.md
+requires: theory/governance-engineering-theory.zh.md
 ---
 
 # 治理工程 — UE5 项目参考实现
@@ -22,7 +22,7 @@ requires: 治理工程 — 理论与设计.md
 
 ## 一、概述：从理论到实践
 
-[第 1 部分（理论与设计）](治理工程 — 理论与设计.md) 建立了五大设计原则和三层架构模型。本文档将这些理论映射为一套可运行的 Claude Code 项目配置，目标技术栈为 **Unreal Engine 5.7+ / C++20**。
+[第 1 部分（理论与设计）](../theory/governance-engineering-theory.zh.md) 建立了五大设计原则和三层架构模型。本文档将这些理论映射为一套可运行的 Claude Code 项目配置，目标技术栈为 **Unreal Engine 5.7+ / C++20**。
 
 本文档的配套实现在 `temp/` 目录下，包含：
 
@@ -191,9 +191,9 @@ project/
 
 | 不可以                     | 原因                        | 正确做法                           |
 | -------------------------- | --------------------------- | ---------------------------------- |
-| 不可以塞入完整的编码规范   | 占用数百行 Token            | 写入 `docs/ai/standards/` 独立文件 |
+| 不可以塞入完整的编码规范   | 占用大量上下文空间          | 写入 `docs/ai/standards/` 独立文件 |
 | 不可以列出所有模块的 API   | 随代码变更频繁过期          | 通过 MODULE_INDEX.yaml 索引引用    |
-| 不可以嵌入长段示例代码     | 耗费大量 Token 且信息密度低 | 放入 `docs/ai/patterns/`           |
+| 不可以嵌入长段示例代码     | 耗费大量上下文且信息密度低  | 放入 `docs/ai/patterns/`           |
 | 不可以写"怎么做的"流程细节 | 应由 Skill 和 Agent 定义    | 写入对应 Skill 和 Agent 文件       |
 | 不可以使用模糊语言         | 对 AI 没有约束力            | 使用精确的可验证约束               |
 
