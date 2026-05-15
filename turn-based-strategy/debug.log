@@ -1,0 +1,2 @@
+DEBUG executeTurn START: enemyUnits=1, each alive=true,hp=44,team=1
+DEBUG executeTurn actions: []
