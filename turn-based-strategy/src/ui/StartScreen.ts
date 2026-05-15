@@ -48,6 +48,7 @@ export class StartScreen {
   hide(): void {
     if (!this.overlay) return;
     this.overlay.style.opacity = '0';
+    this.overlay.style.pointerEvents = 'none';
     setTimeout(() => {
       if (this.overlay && this.overlay.parentNode) {
         this.overlay.parentNode.removeChild(this.overlay);

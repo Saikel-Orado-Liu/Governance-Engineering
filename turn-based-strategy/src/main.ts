@@ -531,6 +531,7 @@ function startGame(): void {
   // Resize renderer to fill viewport and listen for resize
   function onResize(): void {
     renderer.resize(window.innerWidth, window.innerHeight);
+    updateView();
   }
   window.addEventListener('resize', onResize);
   onResize();
