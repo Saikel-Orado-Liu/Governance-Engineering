@@ -492,7 +492,7 @@ function startGame(): void {
   // --- Phase change subscription ---
   const guideTexts: Record<string, string> = {
     [Phase.PlayerMove]: '点击己方单位选中 → 点击高亮格移动',
-    [Phase.PlayerCombat]: '点击己方单位 → 攻击或点击下方技能栏使用技能',
+    [Phase.PlayerCombat]: '点击己方单位 → 攻击或使用技能',
     [Phase.EnemyAI]: '敌方回合中，请等待...',
     [Phase.End]: '游戏结束，刷新页面重新开始',
   };

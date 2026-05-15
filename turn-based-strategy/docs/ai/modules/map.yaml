@@ -18,7 +18,8 @@ dependencies:
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager 方法
+  - "calcOrigin()"            # 动态计算等距投影原点：originX=canvasW/2, originY=canvasH*0.08，适用于全屏响应式 Canvas
+  - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager/resize 方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
@@ -36,14 +37,15 @@ components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
   - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ forceFullConnectivity 全连通性 BFS
-  - "MapRenderer.ts":          # 640x360 等距 Canvas 渲染，64x32 菱形瓦片，ORIGIN_X=320/ORIGIN_Y=52；Painter's Algorithm 瓦片排列；Canvas 几何符号单位；screenToWorld 点击检测；options 对象构造函数
+  - "MapRenderer.ts":          # 全屏 Canvas 等距渲染，64x32 菱形瓦片，动态 Origin(canvasW/2, canvasH*0.08)；Painter's Algorithm 瓦片排列；Canvas 几何符号单位；screenToWorld 点击检测；options 对象构造函数；resize() 响应窗口变化
+  - "ActionPanel.ts":          # [跨模块引用] 浮动单位信息+技能面板，跟随选中单位位置并做边界检测，独立于 HUD 生命周期
 
 constraints:
-  - "固定 8x8 网格，不可在运行时 resize"
+  - "Canvas 尺寸全屏填充（position:fixed;inset:0），可通过 MapRenderer.resize() 响应窗口 resize 事件"
   - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
   - "先保证 (0,0)->(7,7) 有通路（bfsHasPath/bfsFindAnyPath），再保证所有可通行格构成单一连通分量（forceFullConnectivity BFS）"
-  - "等距渲染：Canvas 640x360，TILE_W=64 / TILE_H=32（2:1 固定比例），ORIGIN_X=320 / ORIGIN_Y=52"
+  - "等距渲染：TILE_W=64 / TILE_H=32（2:1 固定比例），投影原点由 calcOrigin() 动态计算：originX=canvasW/2, originY=canvasH*0.08；originY 的 8% 比例与 GRID_SIZE=8 + TILE_W:TILE_H=2:1 的视觉居中耦合"
   - "瓦片渲染使用 Painter's Algorithm：按 row+col sum 从 0→14 递增分组绘制，先远后近保证重叠正确"
   - "单位渲染按 (row+col) 升序排序，front units draw on top——无需 Canvas depth/Z-buffer"
   - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
@@ -61,6 +63,10 @@ development_notes:
   - "console.log 禁止提交；调试信息通过公开回调（如 onClick）暴露给消费者"
   - "构造函数使用 options 对象模式，便于后续扩展而不破坏调用方签名"
   - "MapRenderer 不再使用 ctx.shadowBlur 发光效果——原型阶段发光是为了让圆形图标在矩形网格中突出，等距菱形网格+几何符号本身已有视觉区分度"
+  - "calcOrigin() 为模块导出函数（非 MapRenderer 方法），外部代码无需实例化 MapRenderer 即可预测投影原点位置"
+  - "originY = canvasH * 0.08 为经验值：对 8x8 网格和 2:1 菱形瓦片，8% 上边距使棋盘在垂直方向居中；若 GRID_SIZE 或 TILE_W/TILE_H 变更需重新校准"
+  - "resize(w, h) 同时更新 canvas.width/height 和 originX/originY，并保留所有内部状态（selectedUnit/flashingUnits/animationManager）——调用方只需在 resize 事件中调用，无需重建 MapRenderer"
+  - "originX/originY 为公开实例属性（非 private），main.ts 中 tooltip 的 screenToWorld 坐标转换直接读取 renderer.originX/renderer.originY"
   - "受击闪烁机制与原型相同：setFlashingUnits 接收 Unit[] 转为 Set<Unit> 引用存储；renderUnits 中提前分支判断 flashingUnits.has(unit) 决定颜色"
   - "HP 条从原型 cy+18（单位下方）改为 cy-18（单位上方）——等距菱形图标占据菱形区域，HP 条在上方避免视觉重叠"
   - "renderUnits 不再使用圆形+字母（原型：16px arc + ctx.fillText），改用 Canvas 几何路径（drawShield/drawBow/drawChevron/drawStarShape）"
@@ -84,4 +90,4 @@ lessons_learned:
   - "等距菱形网格使用 Painter's Algorithm（按 row+col 升序绘制）保证正确重叠顺序——不同于矩形网格的逐行列遍历"
   - "几何符号路径硬编码替代字母图标：四种兵种各一独特形状，无需外部资源加载，零依赖"
 
-last_updated: "2026-05-15"
+last_updated: "2026-05-15"  # Updated for full-screen responsive layout: added calcOrigin(), resize(), dynamic origin constraints

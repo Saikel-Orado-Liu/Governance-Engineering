@@ -1,5 +1,5 @@
 # Module Card: ui
-# DOM UI 组件系统 — 开始界面、单位信息面板、HUD 编排器
+# DOM UI 组件系统 — 开始界面、浮动操作面板、HUD 编排器
 
 module: ui
 path: "src/ui/"
@@ -10,27 +10,29 @@ framework: DOM + Canvas 2D
 dependencies:
   external: []
   internal:
-    - "src/unit/Unit.ts"              # UnitPanel + HUD 展示单位数据
-    - "src/unit/AbilityConfig.ts"     # HUD 技能栏读取技能配置
+    - "src/unit/Unit.ts"              # HUD + ActionPanel 展示单位数据和渲染小地图
+    - "src/unit/AbilityConfig.ts"     # ActionPanel 技能栏读取技能配置
     - "src/unit/PhaseTypes.ts"        # HUD 阶段文本显示
     - "src/map/MapGrid.ts"            # HUD 小地图读取网格数据
+    - "src/render/IsometricRenderer.ts" # ActionPanel 使用 worldToScreen 做浮动面板坐标定位
+    - "src/map/MapRenderer.ts"        # ActionPanel.showAt 读取 renderer.originX/originY
 
 public_interface:
   - "StartScreen"                     # 全屏 DOM 覆盖层开始界面类
   - "StartScreen.show()"             # 创建并显示开始界面（标题+介绍+开始按钮）
   - "StartScreen.hide()"             # 淡出 300ms 后移除 DOM
-  - "UnitPanel"                       # 侧边单位信息面板类
-  - "UnitPanel.update(unit | null, isEnemy)"  # 更新面板：中文名+HP 条+ATK/DEF+技能冷却
-  - "UnitPanel.container"            # 面板 DOM 元素引用，供 HUD 插入布局
-  - "HUD"                             # HUD 编排器类，options 对象构造函数
+  - "HUD"                             # HUD 编排器类，options 对象构造函数，浮动覆盖层（pointer-events:none 不阻塞 Canvas 交互）
   - "HUD.setPhase(phase, team)"     # 更新顶部阶段指示器
   - "HUD.setGuideText(text)"        # 更新底部引导文本
-  - "HUD.updateSkillBar(units, actedUnits, selectedUnit, selectedSkill)"  # 更新技能按钮栏
   - "HUD.showPauseMenu()"           # 显示暂停菜单（继续/重新开始）
   - "HUD.hidePauseMenu()"           # 移除暂停菜单
   - "HUD.renderMinimap(grid, units)"  # 渲染 100x100 Canvas 小地图
   - "HUD.setEndTurnDisabled(disabled)"  # 启用/禁用结束回合按钮
   - "HUD.setEndTurnText(text)"       # 设置结束回合按钮文本
+  - "ActionPanel"                     # 浮动单位信息+技能面板类，跟随选中单位位置
+  - "ActionPanel.update(unit, isEnemy, unactedUnits, actedUnits, selectedSkill)"  # 更新面板内容：单位名+HP条+ATK/DEF+技能冷却+技能按钮列表
+  - "ActionPanel.showAt(worldRow, worldCol, canvas, mapRenderer)"  # 将面板定位到单位屏幕位置附近，含边界溢出检测（自动左移/上移）
+  - "ActionPanel.hide()"             # 隐藏面板
 
 exports: []
 

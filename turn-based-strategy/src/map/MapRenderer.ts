@@ -13,8 +13,6 @@ import type { AnimationManager } from '../render/AnimationManager';
 export function calcOrigin(
   canvasW: number,
   canvasH: number,
-  _tileW: number,
-  _tileH: number,
 ): { originX: number; originY: number } {
   return {
     originX: canvasW / 2,
@@ -52,7 +50,7 @@ export class MapRenderer {
     this.ctx = canvas.getContext('2d')!;
     this.onClick = onClick ?? null;
 
-    const { originX, originY } = calcOrigin(canvas.width, canvas.height, TILE_W, TILE_H);
+    const { originX, originY } = calcOrigin(canvas.width, canvas.height);
     this.originX = originX;
     this.originY = originY;
 
@@ -74,7 +72,7 @@ export class MapRenderer {
   resize(w: number, h: number): void {
     this.canvas.width = w;
     this.canvas.height = h;
-    const { originX, originY } = calcOrigin(w, h, TILE_W, TILE_H);
+    const { originX, originY } = calcOrigin(w, h);
     this.originX = originX;
     this.originY = originY;
   }
