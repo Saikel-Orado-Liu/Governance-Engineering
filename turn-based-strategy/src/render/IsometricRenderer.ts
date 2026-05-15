@@ -74,67 +74,6 @@ export function darkenColor(hex: string, factor: number): string {
   return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`;
 }
 
-export function drawBlockTile(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  tw: number,
-  th: number,
-  fillColor: string,
-  heightPx: number = 0,
-  sideRightColor?: string,
-  sideLeftColor?: string,
-): void {
-  const rightColor = sideRightColor ?? darkenColor(fillColor, 0.75);
-  const leftColor = sideLeftColor ?? darkenColor(fillColor, 0.85);
-  const strokeColor = 'rgba(0,0,0,0.2)';
-
-  if (heightPx === 0) {
-    drawDiamondTile(ctx, cx, cy, tw, th, fillColor, strokeColor);
-    return;
-  }
-
-  const drawRightFace = (): void => {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + tw / 2, cy + th / 2);
-    ctx.lineTo(cx + tw / 2, cy + th / 2 + heightPx);
-    ctx.lineTo(cx, cy + heightPx);
-    ctx.closePath();
-    ctx.fillStyle = rightColor;
-    ctx.fill();
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  };
-
-  const drawLeftFace = (): void => {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx - tw / 2, cy + th / 2);
-    ctx.lineTo(cx - tw / 2, cy + th / 2 + heightPx);
-    ctx.lineTo(cx, cy + heightPx);
-    ctx.closePath();
-    ctx.fillStyle = leftColor;
-    ctx.fill();
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  };
-
-  if (heightPx > 0) {
-    // Raised: sides first (behind), then top face (in front)
-    drawRightFace();
-    drawLeftFace();
-    drawDiamondTile(ctx, cx, cy, tw, th, fillColor, strokeColor);
-  } else {
-    // Sunk: top face first (behind), then sides (in front)
-    drawDiamondTile(ctx, cx, cy, tw, th, fillColor, strokeColor);
-    drawRightFace();
-    drawLeftFace();
-  }
-}
-
 export function drawCubeTile(
   ctx: CanvasRenderingContext2D,
   cx: number,

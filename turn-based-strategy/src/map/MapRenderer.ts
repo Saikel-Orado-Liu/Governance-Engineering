@@ -239,6 +239,29 @@ export class MapRenderer {
     this.drawHpBar(info.drawX, hpBarY, info.unit.hp / info.unit.maxHp, info.unit.team);
   }
 
+  private drawPainterLayer(grid: MapGrid, sum: number): void {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      const c = sum - r;
+      if (c < 0 || c >= GRID_SIZE) continue;
+
+      const type = grid.tiles[r][c];
+      const { x, y } = worldToScreen(r, c, this.originX, this.originY, this.scale);
+
+      let baseColor: string;
+      if (type === TileType.Plain) {
+        baseColor = (r + c) % 2 === 0 ? PLAIN_LIGHT : PLAIN_DARK;
+      } else {
+        baseColor = TILE_COLORS[type];
+      }
+
+      const heightPx = this.getTileHeightPx(type);
+      const sideRColor = darkenColor(baseColor, 0.75);
+      const sideLColor = darkenColor(baseColor, 0.85);
+
+      drawCubeTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, heightPx, baseColor, sideRColor, sideLColor);
+    }
+  }
+
   renderHighlights(cells: { row: number; col: number }[]): void {
     this.renderDiamondCells(cells, 'rgba(255, 255, 0, 0.3)');
   }
@@ -311,37 +334,15 @@ export class MapRenderer {
       }
     }
 
-    // Draw tiles in painter's order (back to front), with units on top of their tile
+    // Draw tiles in painter's order (back to front)
     for (let sum = 0; sum < GRID_SIZE * 2 - 1; sum++) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        const c = sum - r;
-        if (c < 0 || c >= GRID_SIZE) continue;
+      this.drawPainterLayer(grid, sum);
 
-        const type = grid.tiles[r][c];
-        const { x, y } = worldToScreen(r, c, this.originX, this.originY, this.scale);
-
-        let baseColor: string;
-        if (type === TileType.Plain) {
-          // Checkerboard for Plain tiles
-          baseColor = (r + c) % 2 === 0 ? PLAIN_LIGHT : PLAIN_DARK;
-        } else {
-          baseColor = TILE_COLORS[type];
-        }
-
-        const heightPx = this.getTileHeightPx(type);
-        const sideRColor = darkenColor(baseColor, 0.75);
-        const sideLColor = darkenColor(baseColor, 0.85);
-
-        drawCubeTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, heightPx, baseColor, sideRColor, sideLColor);
-
-        // Draw unit standing on this tile (after the tile, so unit is on top)
-        const unitInfos = unitMap.get(sum);
-        if (unitInfos) {
-          for (const info of unitInfos) {
-            if (info.drawRow === r && info.drawCol === c) {
-              this.drawUnitAt(info);
-            }
-          }
+      // Draw units on top of their tile
+      const unitInfos = unitMap.get(sum);
+      if (unitInfos) {
+        for (const info of unitInfos) {
+          this.drawUnitAt(info);
         }
       }
     }

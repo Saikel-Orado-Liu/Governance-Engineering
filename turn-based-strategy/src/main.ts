@@ -263,6 +263,7 @@ function startGame(): void {
     canvas,
     onClick: (row: number, col: number) => {
       const state = turnManager.getState();
+      const playerUnits = manager.getUnitsByTeam(0);
 
       // --- PlayerCombat phase ---
       if (state === Phase.PlayerCombat) {
@@ -305,12 +306,12 @@ function startGame(): void {
                 updateActionPanel();
                 if (gameOver) {
                   turnManager.endPlayerCombat();
-                  const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                  const playerAlive = playerUnits.length > 0;
                   alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
                 } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
                   const actions = turnManager.endPlayerCombat();
                   if (turnManager.getState() === Phase.End) {
-                    const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                    const playerAlive = playerUnits.length > 0;
                     setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
                   } else {
                     processEnemyActions(actions, 0);
@@ -377,12 +378,12 @@ function startGame(): void {
                 updateActionPanel();
                 if (gameOver) {
                   turnManager.endPlayerCombat();
-                  const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                  const playerAlive = playerUnits.length > 0;
                   alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!');
                 } else if (turnManager.getState() === Phase.PlayerCombat && turnManager.isAllUnitsActed()) {
                   const actions = turnManager.endPlayerCombat();
                   if (turnManager.getState() === Phase.End) {
-                    const playerAlive = manager.getUnitsByTeam(0).length > 0;
+                    const playerAlive = playerUnits.length > 0;
                     setTimeout(() => alert(playerAlive ? 'Player Wins!' : 'Enemy Wins!'), 200);
                   } else {
                     processEnemyActions(actions, 0);
@@ -447,7 +448,13 @@ function startGame(): void {
   renderer.setAnimationManager(animationManager);
 
   // --- Tooltip (mousemove/mouseleave) ---
+  let lastMoveTime = 0;
+  const MOVE_THROTTLE_MS = 33;
   canvas.addEventListener('mousemove', (e: MouseEvent) => {
+    const now = performance.now();
+    if (now - lastMoveTime < MOVE_THROTTLE_MS) return;
+    lastMoveTime = now;
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;

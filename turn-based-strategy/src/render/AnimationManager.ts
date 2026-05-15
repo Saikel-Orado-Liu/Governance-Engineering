@@ -1,6 +1,6 @@
 import type { Unit } from '../unit/Unit';
 
-export type AnimationCallback = (unit: Unit, progress: number) => void;
+type AnimationCallback = (unit: Unit, progress: number) => void;
 
 interface ActiveAnimation {
   unit: Unit;

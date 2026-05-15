@@ -91,11 +91,9 @@ function bfsReachable(grid: MapGrid, startRow: number, startCol: number): boolea
  * Isolated passable regions are connected by converting blocking obstacles to Plain.
  * Afterwards, tiles that were originally isolated are converted to Forest (balance).
  */
-function forceFullConnectivity(grid: MapGrid): void {
-  // 1) Identify passable tiles not reachable from (0,0)
+function findIsolatedPassable(grid: MapGrid): [number, number][] {
   const reachable = bfsReachable(grid, 0, 0);
   const isolatedPassable: [number, number][] = [];
-
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (grid.isPassable(r, c) && !reachable[r][c]) {
@@ -103,16 +101,14 @@ function forceFullConnectivity(grid: MapGrid): void {
       }
     }
   }
+  return isolatedPassable;
+}
 
-  if (isolatedPassable.length === 0) return;
-
-  // 2) Connect each isolated region by breaking through nearest obstacles
-  for (const [isoR, isoC] of isolatedPassable) {
-    // Skip if already connected (fixed by an earlier iteration)
+function connectRegion(grid: MapGrid, region: [number, number][]): void {
+  for (const [isoR, isoC] of region) {
     const currentConnected = bfsReachable(grid, 0, 0);
     if (currentConnected[isoR][isoC]) continue;
 
-    // BFS from isolated tile to nearest reachable tile (ignoring passability)
     const parent: ([number, number] | null)[][] = Array.from(
       { length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null)
     );
@@ -140,7 +136,6 @@ function forceFullConnectivity(grid: MapGrid): void {
 
     if (!foundTile) continue;
 
-    // Walk path from foundTile back to isolated tile, converting obstacles to Plain
     let [cr, cc] = foundTile;
     while (cr !== isoR || cc !== isoC) {
       const p = parent[cr][cc];
@@ -153,11 +148,19 @@ function forceFullConnectivity(grid: MapGrid): void {
       cc = pc;
     }
   }
+}
 
-  // 3) Convert originally-isolated passable tiles to Forest (balance measure)
+function convertToForest(grid: MapGrid, isolatedPassable: [number, number][]): void {
   for (const [r, c] of isolatedPassable) {
     grid.tiles[r][c] = TileType.Forest;
   }
+}
+
+function forceFullConnectivity(grid: MapGrid): void {
+  const isolatedPassable = findIsolatedPassable(grid);
+  if (isolatedPassable.length === 0) return;
+  connectRegion(grid, isolatedPassable);
+  convertToForest(grid, isolatedPassable);
 }
 
 function shuffleArray<T>(arr: T[]): T[] {

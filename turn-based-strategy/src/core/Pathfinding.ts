@@ -11,7 +11,7 @@ export interface PathNode {
 }
 
 /** 启发函数类型 */
-export type HeuristicFn = (
+type HeuristicFn = (
   row: number,
   col: number,
   targetRow: number,
@@ -99,13 +99,7 @@ export class Pathfinding {
     });
 
     while (openList.length > 0) {
-      // 查找 openList 中 f 值最小的节点
-      let lowestIdx = 0;
-      for (let i = 1; i < openList.length; i++) {
-        if (openList[i].f < openList[lowestIdx].f) {
-          lowestIdx = i;
-        }
-      }
+      const lowestIdx = this.findLowestF(openList);
 
       const current = openList[lowestIdx];
 
@@ -134,16 +128,7 @@ export class Pathfinding {
         const h = this.heuristic(nr, nc, endRow, endCol);
         const f = g + h;
 
-        // 若已在 openList 中且有更优 g 值则更新
-        const existing = openList.find(n => n.row === nr && n.col === nc);
-        if (existing) {
-          if (g < existing.g) {
-            existing.g = g;
-            existing.f = f;
-            existing.parent = current;
-          }
-          continue;
-        }
+        if (this.tryUpdateNode(openList, nr, nc, g, h, current)) continue;
 
         openList.push({ row: nr, col: nc, g, h, f, parent: current });
       }
@@ -231,5 +216,37 @@ export class Pathfinding {
       current = current.parent;
     }
     return path;
+  }
+
+  /** 在 openList 中查找 f 值最小的节点索引 */
+  private findLowestF(openList: PathNode[]): number {
+    let lowestIdx = 0;
+    for (let i = 1; i < openList.length; i++) {
+      if (openList[i].f < openList[lowestIdx].f) {
+        lowestIdx = i;
+      }
+    }
+    return lowestIdx;
+  }
+
+  /** 尝试更新 openList 中已有节点，返回 true 表示已存在并更新 */
+  private tryUpdateNode(
+    openList: PathNode[],
+    row: number,
+    col: number,
+    g: number,
+    h: number,
+    parent: PathNode,
+  ): boolean {
+    const existing = openList.find(n => n.row === row && n.col === col);
+    if (existing) {
+      if (g < existing.g) {
+        existing.g = g;
+        existing.f = g + h;
+        existing.parent = parent;
+      }
+      return true;
+    }
+    return false;
   }
 }

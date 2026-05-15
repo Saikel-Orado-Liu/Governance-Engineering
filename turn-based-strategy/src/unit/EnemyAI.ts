@@ -62,78 +62,80 @@ export class EnemyAI {
     const enemyUnits = this.unitManager.getUnitsByTeam(1);
 
     for (const enemyUnit of enemyUnits) {
-      if (!enemyUnit.isAlive()) {
-        continue;
-      }
+      if (!enemyUnit.isAlive()) continue;
 
-      // Phase 8: Skill check before movement/attack
-      if (this.useSkillFn) {
-        const skillUsage = this.evaluateSkillUsage(enemyUnit);
-        if (skillUsage) {
-          const result = this.useSkillFn(enemyUnit, skillUsage.target, this.unitManager);
-          if (result && result.success) {
-            actions.push({
-              unit: enemyUnit,
-              action: 'skill',
-              target: skillUsage.target,
-              skillType: skillUsage.abilityType,
-              skillResult: result,
-            });
-            continue;
-          }
-        }
-      }
+      if (this.processSkillPhase(enemyUnit, actions)) continue;
 
       const playerUnits = this.unitManager.getUnitsByTeam(0);
-      if (playerUnits.length === 0) {
-        break;
-      }
+      if (playerUnits.length === 0) break;
 
-      // Step 1: Check attack range — attack if any player within attackRange
-      const inRange = this.getEnemiesInRange(enemyUnit, playerUnits);
-      if (inRange.length > 0) {
-        const target = inRange.sort((a, b) => a.hp - b.hp)[0];
-        const combatResult = this.combatFn(enemyUnit, target, this.unitManager);
-        actions.push({
-          unit: enemyUnit,
-          action: 'attack',
-          target,
-          combatResult,
-        });
-        continue; // Attack only — no movement this turn
-      }
+      if (this.processAttackPhase(enemyUnit, playerUnits, actions)) continue;
 
-      // Step 2: No targets in range — pathfind toward nearest player
-      const nearest = this.findNearest(enemyUnit, playerUnits);
-      if (!nearest) {
-        actions.push({ unit: enemyUnit, action: 'idle' });
-        continue;
-      }
-
-      const moved = this.tryPathfindMove(enemyUnit, nearest, actions);
-      if (!moved) {
-        actions.push({ unit: enemyUnit, action: 'idle' });
-        continue;
-      }
-
-      // Step 3: After moving, check attack range again
-      const postInRange = this.getEnemiesInRange(
-        enemyUnit,
-        this.unitManager.getUnitsByTeam(0),
-      );
-      if (postInRange.length > 0) {
-        const target = postInRange.sort((a, b) => a.hp - b.hp)[0];
-        const combatResult = this.combatFn(enemyUnit, target, this.unitManager);
-        actions.push({
-          unit: enemyUnit,
-          action: 'attack',
-          target,
-          combatResult,
-        });
-      }
+      this.processMovementPhase(enemyUnit, playerUnits, actions);
     }
 
     return actions;
+  }
+
+  private processSkillPhase(enemyUnit: Unit, actions: EnemyAction[]): boolean {
+    if (!this.useSkillFn) return false;
+
+    const skillUsage = this.evaluateSkillUsage(enemyUnit);
+    if (!skillUsage) return false;
+
+    const result = this.useSkillFn(enemyUnit, skillUsage.target, this.unitManager);
+    if (result && result.success) {
+      actions.push({
+        unit: enemyUnit,
+        action: 'skill',
+        target: skillUsage.target,
+        skillType: skillUsage.abilityType,
+        skillResult: result,
+      });
+      return true;
+    }
+    return false;
+  }
+
+  private processAttackPhase(enemyUnit: Unit, playerUnits: Unit[], actions: EnemyAction[]): boolean {
+    const inRange = this.getEnemiesInRange(enemyUnit, playerUnits);
+    if (inRange.length === 0) return false;
+
+    const target = inRange.sort((a, b) => a.hp - b.hp)[0];
+    const combatResult = this.combatFn(enemyUnit, target, this.unitManager);
+    actions.push({
+      unit: enemyUnit,
+      action: 'attack',
+      target,
+      combatResult,
+    });
+    return true;
+  }
+
+  private processMovementPhase(enemyUnit: Unit, playerUnits: Unit[], actions: EnemyAction[]): void {
+    const nearest = this.findNearest(enemyUnit, playerUnits);
+    if (!nearest) {
+      actions.push({ unit: enemyUnit, action: 'idle' });
+      return;
+    }
+
+    const moved = this.tryPathfindMove(enemyUnit, nearest, actions);
+    if (!moved) {
+      actions.push({ unit: enemyUnit, action: 'idle' });
+      return;
+    }
+
+    const postInRange = this.getEnemiesInRange(enemyUnit, this.unitManager.getUnitsByTeam(0));
+    if (postInRange.length > 0) {
+      const target = postInRange.sort((a, b) => a.hp - b.hp)[0];
+      const combatResult = this.combatFn(enemyUnit, target, this.unitManager);
+      actions.push({
+        unit: enemyUnit,
+        action: 'attack',
+        target,
+        combatResult,
+      });
+    }
   }
 
   /**
