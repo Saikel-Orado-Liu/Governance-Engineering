@@ -11,20 +11,20 @@ dependencies:
   external: []
   internal:
     - "src/main.ts"                   # 导入 MapGenerator + MapRenderer 并在入口实例化
-    - "src/render/IsometricRenderer.ts"  # MapRenderer 使用 worldToScreen/screenToWorld/drawDiamondTile/TILE_W/TILE_H
+    - "src/render/IsometricRenderer.ts"  # MapRenderer 使用 worldToScreen/screenToWorld/drawDiamondTile/drawCubeTile/darkenColor/TILE_W/TILE_H
     - "src/render/AnimationManager.ts"  # MapRenderer 通过 setAnimationManager 桥接
     - "src/unit/Unit.ts"              # MapRenderer 使用 Unit 类型做单位渲染
 
 public_interface:
   - "MapGrid"                 # 8x8 网格数据模型，isPassable/getMoveCost 查询
   - "MapGenerator"            # 随机地图生成（带 BFS 路径保证）
-  - "calcOrigin()"            # 动态计算等距投影原点：originX=canvasW/2, originY=canvasH*0.08，适用于全屏响应式 Canvas
+  - "calcOrigin()"            # 动态计算等距投影原点：originX=canvasW/2, originY=canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2（垂直居中），适用于全屏响应式 Canvas
   - "MapRenderer"             # 等距 Canvas 渲染器，options 对象构造函数，公开 onClick 回调及 renderUnits/renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets/setFlashingUnits/clearFlashingUnits/setSelectedUnit/setAnimationManager/resize 方法
 
 exports:
   - "MapGenerator.generate()"  # 返回 MapGrid 实例
-  - "MapRenderer.render()"     # 在 Canvas 上绘制等距菱形网格：Painter's Algorithm (row+col sum 分组)
-  - "MapRenderer.renderUnits()" # 按 (row+col) 深度排序绘制单位：几何符号(盾/弓/V/五角星) + 队伍色(蓝/红) + HP 条(cy-18 上方)；选中镂空金边菱形覆盖层
+  - "MapRenderer.render()"     # 在 Canvas 上绘制等距立方体堆叠地形：drawCubeTile + Painter's Algorithm (row+col sum 分组)
+  - "MapRenderer.renderUnits()" # 按 (row+col) 深度排序绘制单位：几何符号(盾/弓/V/五角星) + 队伍色(蓝/红) + 瓦片高度 Y 偏移 + HP 条(cy-18*scale-unitHeightPx 上方)；选中镂空金边菱形覆盖层
   - "MapRenderer.setSelectedUnit()" # 设置/清除选中单位，renderUnits 末尾绘制金边菱形(rgba(255,215,0,0.15) + #ffd700)
   - "MapRenderer.onClick"      # 公开回调 (row, col, type) => void，内部使用 screenToWorld 做等距点击检测
   - "MapRenderer.setFlashingUnits()"   # 设置受击闪烁单位列表（#ff0000 覆盖队伍色）
@@ -37,7 +37,7 @@ components:
   - "TileType.ts":             # const enum Plain/Forest/Mountain/Water + TILE_PROPERTIES 属性表
   - "MapGrid.ts":              # 8x8 tiles[][] 数组，行列边界检查
   - "MapGenerator.ts":         # 随机地形（50/25/15/10%）+ forceFullConnectivity 全连通性 BFS
-  - "MapRenderer.ts":          # 全屏 Canvas 等距渲染，64x32 菱形瓦片，动态 Origin(canvasW/2, canvasH*0.08)；Painter's Algorithm 瓦片排列；Canvas 几何符号单位；screenToWorld 点击检测；options 对象构造函数；resize() 响应窗口变化
+  - "MapRenderer.ts":          # 全屏 Canvas 等距渲染，64x48 瓦片，动态 Origin(canvasW/2, canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2)；drawCubeTile 立方体堆叠地形 + Painter's Algorithm 深度排序；Canvas 几何符号单位 + 瓦片高度 Y 偏移；screenToWorld 点击检测；options 对象构造函数；resize() 响应窗口变化
   - "ActionPanel.ts":          # [跨模块引用] 浮动单位信息+技能面板，跟随选中单位位置并做边界检测，独立于 HUD 生命周期
 
 constraints:
@@ -45,7 +45,9 @@ constraints:
   - "Canvas 2D 直接绘制，不使用精灵图或瓦片图集"
   - "地形分布比例硬编码：Plain 50% / Forest 25% / Mountain 15% / Water 10%"
   - "先保证 (0,0)->(7,7) 有通路（bfsHasPath/bfsFindAnyPath），再保证所有可通行格构成单一连通分量（forceFullConnectivity BFS）"
-  - "等距渲染：TILE_W=64 / TILE_H=32（2:1 固定比例），投影原点由 calcOrigin() 动态计算：originX=canvasW/2, originY=canvasH*0.08；originY 的 8% 比例与 GRID_SIZE=8 + TILE_W:TILE_H=2:1 的视觉居中耦合"
+  - "等距渲染：TILE_W=64 / TILE_H=48，投影原点由 calcOrigin() 动态计算：originX=canvasW/2, originY=canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2（使 8x8 棋盘垂直居中）；scale 由 calcScale() 自动计算使棋盘占视口约 85%"
+  - "地形渲染使用 drawCubeTile 底部齐平立方体堆叠模型：所有瓦片从底座平面（cy）向上堆叠，TILE_HEIGHTS 全为非负（Plain=1/Forest=1/Mountain=3/Water=0），HEIGHT_UNIT=12px；Water 高度 0 回退为平面菱形（无侧面）"
+  - "单位与覆盖层 Y 偏移统一公式 cy - heightPx（坐落在瓦片顶面之上）：renderUnits 单位图标、renderDiamondCells 覆盖层（移动/攻击/技能范围/技能目标）、selectedUnit 选中高亮、HP 条均适用"
   - "瓦片渲染使用 Painter's Algorithm：按 row+col sum 从 0→14 递增分组绘制，先远后近保证重叠正确"
   - "单位渲染按 (row+col) 升序排序，front units draw on top——无需 Canvas depth/Z-buffer"
   - "受击闪烁使用 Set<Unit> 临时标记，闪烁期间覆盖队伍色为红色 #ff0000，完全在 renderUnits 分支中处理"
@@ -64,7 +66,7 @@ development_notes:
   - "构造函数使用 options 对象模式，便于后续扩展而不破坏调用方签名"
   - "MapRenderer 不再使用 ctx.shadowBlur 发光效果——原型阶段发光是为了让圆形图标在矩形网格中突出，等距菱形网格+几何符号本身已有视觉区分度"
   - "calcOrigin() 为模块导出函数（非 MapRenderer 方法），外部代码无需实例化 MapRenderer 即可预测投影原点位置"
-  - "originY = canvasH * 0.08 为经验值：对 8x8 网格和 2:1 菱形瓦片，8% 上边距使棋盘在垂直方向居中；若 GRID_SIZE 或 TILE_W/TILE_H 变更需重新校准"
+  - "originY = canvasH/2 - (GRID_SIZE-1)*TILE_H*scale/2 为 calcOrigin 的垂直居中公式：将 8x8 棋盘在垂直方向居中对齐；originY 与 GRID_SIZE、TILE_H、scale 三者耦合——任一变更会影响棋盘垂直位置"
   - "resize(w, h) 同时更新 canvas.width/height 和 originX/originY，并保留所有内部状态（selectedUnit/flashingUnits/animationManager）——调用方只需在 resize 事件中调用，无需重建 MapRenderer"
   - "originX/originY 为公开实例属性（非 private），main.ts 中 tooltip 的 screenToWorld 坐标转换直接读取 renderer.originX/renderer.originY"
   - "受击闪烁机制与原型相同：setFlashingUnits 接收 Unit[] 转为 Set<Unit> 引用存储；renderUnits 中提前分支判断 flashingUnits.has(unit) 决定颜色"
@@ -74,7 +76,9 @@ development_notes:
   - "四种兵种几何符号硬编码路径：Warrior 盾形(半圆8px+梯形)、Archer 弓形(弧±0.4π+弦)、Knight V形(两条直线r=9)、Mage 五角星(内外半径9/4)"
   - "几何符号使用 ctx.fill + ctx.stroke(lineWidth=2)，内部填充队伍色 + 深色边框——与原型发光效果视觉层级不同但可读性更好"
   - "选中单位使用 drawDiamondTile 在 renderUnits 末尾二次绘制——半透明金色填充 (rgba(255,215,0,0.15)) + 金色边框 (#ffd700)——保证在所有单位之上"
-  - "renderDiamondCells 内部方法封装了 worldToScreen + drawDiamondTile 循环，被 renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets 调用"
+  - "renderDiamondCells 内部方法封装了 worldToScreen + drawDiamondTile 循环，被 renderHighlights/renderAttackHighlights/renderAbilityRange/renderAbilityTargets 调用；高度感知：每个覆盖格读取地形高度，Y 偏移 = cy - heightPx 使覆盖层附着于瓦片顶面"
+  - "render() 使用 drawCubeTile 替代 drawBlockTile：底部齐平立方体堆叠，所有瓦片从底座平面向上延伸，无负高度分支；地形渲染与覆盖层统一适用 bottom-aligned Y 偏移"
+  - "renderUnits 中单位 Y 偏移 = cy - unitHeightPx（地形高度像素），单位坐落在瓦片顶面之上；HP 条 Y 偏移 = cy - 18*scale - unitHeightPx，在单位上方叠加地形高度"
   - "renderAbilityRange 和 renderAbilityTargets 为独立方法，原因与原型一致：生命周期独立于移动/攻击高亮"
   - "renderAbilityRange 接受 fillStyle 参数，renderAbilityTargets 固定 rgba(41,128,185,0.5)"
 

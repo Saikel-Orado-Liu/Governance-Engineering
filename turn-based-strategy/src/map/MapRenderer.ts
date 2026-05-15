@@ -5,7 +5,7 @@ import {
   worldToScreen,
   screenToWorld,
   drawDiamondTile,
-  drawBlockTile,
+  drawCubeTile,
   darkenColor,
   TILE_W,
   TILE_H,
@@ -41,11 +41,11 @@ const PLAIN_DARK = '#4e7e34';
 
 const HEIGHT_UNIT = 12;
 
-const TILE_HEIGHTS: Record<number, number> = {
-  [TileType.Plain]: 0,
-  [TileType.Forest]: 0,
+const TILE_HEIGHTS: Record<TileType, number> = {
+  [TileType.Plain]: 1,
+  [TileType.Forest]: 1,
   [TileType.Mountain]: 3,
-  [TileType.Water]: -1,
+  [TileType.Water]: 0,
 };
 
 export class MapRenderer {
@@ -281,7 +281,12 @@ export class MapRenderer {
     for (const { row, col } of cells) {
       if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
       const { x, y } = worldToScreen(row, col, this.originX, this.originY, this.scale);
-      drawDiamondTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, fillStyle);
+      let heightPx = 0;
+      if (this.currentGrid) {
+        const tileType = this.currentGrid.tiles[row][col];
+        heightPx = this.getTileHeightPx(tileType);
+      }
+      drawDiamondTile(this.ctx, x, y - heightPx, TILE_W * this.scale, TILE_H * this.scale, fillStyle);
     }
   }
 
@@ -329,7 +334,7 @@ export class MapRenderer {
         const sideRColor = darkenColor(baseColor, 0.75);
         const sideLColor = darkenColor(baseColor, 0.85);
 
-        drawBlockTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, baseColor, heightPx, sideRColor, sideLColor);
+        drawCubeTile(this.ctx, x, y, TILE_W * this.scale, TILE_H * this.scale, heightPx, baseColor, sideRColor, sideLColor);
       }
     }
   }

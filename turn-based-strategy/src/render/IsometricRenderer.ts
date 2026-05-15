@@ -134,3 +134,55 @@ export function drawBlockTile(
     drawLeftFace();
   }
 }
+
+export function drawCubeTile(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  tw: number,
+  th: number,
+  cubeHeight: number,
+  fillColor: string,
+  sideRightColor?: string,
+  sideLeftColor?: string,
+): void {
+  const rightColor = sideRightColor ?? darkenColor(fillColor, 0.75);
+  const leftColor = sideLeftColor ?? darkenColor(fillColor, 0.85);
+  const strokeColor = 'rgba(0,0,0,0.2)';
+
+  if (cubeHeight <= 0) {
+    drawDiamondTile(ctx, cx, cy, tw, th, fillColor, strokeColor);
+    return;
+  }
+
+  const cyTop = cy - cubeHeight;
+
+  // Right face: connects right->bottom edge of base to right->bottom edge of top
+  ctx.beginPath();
+  ctx.moveTo(cx + tw / 2, cy);                 // base right vertex
+  ctx.lineTo(cx, cy + th / 2);                 // base bottom vertex
+  ctx.lineTo(cx, cyTop + th / 2);              // top bottom vertex
+  ctx.lineTo(cx + tw / 2, cyTop);              // top right vertex
+  ctx.closePath();
+  ctx.fillStyle = rightColor;
+  ctx.fill();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Left face: connects left->bottom edge of base to left->bottom edge of top
+  ctx.beginPath();
+  ctx.moveTo(cx - tw / 2, cy);                 // base left vertex
+  ctx.lineTo(cx, cy + th / 2);                 // base bottom vertex
+  ctx.lineTo(cx, cyTop + th / 2);              // top bottom vertex
+  ctx.lineTo(cx - tw / 2, cyTop);              // top left vertex
+  ctx.closePath();
+  ctx.fillStyle = leftColor;
+  ctx.fill();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Top face (diamond at elevated position)
+  drawDiamondTile(ctx, cx, cyTop, tw, th, fillColor, strokeColor);
+}
