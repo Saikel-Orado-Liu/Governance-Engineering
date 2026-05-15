@@ -7,7 +7,11 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <canvas id="game-canvas"></canvas>
+    <div id="game-container" style="display:none">
+      <canvas id="game-canvas"></canvas>
+      <div class="huds-container"></div>
+    </div>
+    <div id="tooltip"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -1,0 +1,70 @@
+# Module Card: ui
+# DOM UI 组件系统 — 开始界面、单位信息面板、HUD 编排器
+
+module: ui
+path: "src/ui/"
+type: feature
+language: TypeScript 5.6
+framework: DOM + Canvas 2D
+
+dependencies:
+  external: []
+  internal:
+    - "src/unit/Unit.ts"              # UnitPanel + HUD 展示单位数据
+    - "src/unit/AbilityConfig.ts"     # HUD 技能栏读取技能配置
+    - "src/unit/PhaseTypes.ts"        # HUD 阶段文本显示
+    - "src/map/MapGrid.ts"            # HUD 小地图读取网格数据
+
+public_interface:
+  - "StartScreen"                     # 全屏 DOM 覆盖层开始界面类
+  - "StartScreen.show()"             # 创建并显示开始界面（标题+介绍+开始按钮）
+  - "StartScreen.hide()"             # 淡出 300ms 后移除 DOM
+  - "UnitPanel"                       # 侧边单位信息面板类
+  - "UnitPanel.update(unit | null, isEnemy)"  # 更新面板：中文名+HP 条+ATK/DEF+技能冷却
+  - "UnitPanel.container"            # 面板 DOM 元素引用，供 HUD 插入布局
+  - "HUD"                             # HUD 编排器类，options 对象构造函数
+  - "HUD.setPhase(phase, team)"     # 更新顶部阶段指示器
+  - "HUD.setGuideText(text)"        # 更新底部引导文本
+  - "HUD.updateSkillBar(units, actedUnits, selectedUnit, selectedSkill)"  # 更新技能按钮栏
+  - "HUD.showPauseMenu()"           # 显示暂停菜单（继续/重新开始）
+  - "HUD.hidePauseMenu()"           # 移除暂停菜单
+  - "HUD.renderMinimap(grid, units)"  # 渲染 100x100 Canvas 小地图
+  - "HUD.setEndTurnDisabled(disabled)"  # 启用/禁用结束回合按钮
+  - "HUD.setEndTurnText(text)"       # 设置结束回合按钮文本
+
+exports: []
+
+components:
+  - "StartScreen.ts":                # show() 创建 DOM（标题+介绍+规则+开始按钮），hide() 使用 opacity fadeOut 300ms 后 removeChild
+  - "UnitPanel.ts":                  # update() 更新中文单位名+HP 百分比条(team0 绿/#2ecc71, team1 红/#e74c3c)+ATK/DEF 数值+技能名及冷却；container 公开供 HUD 挂载
+  - "HUD.ts":                        # 编排器：构造函数 options 模式(onEndTurn/onPause/onRestart/onSkillSelect 回调)；装配 topBar(阶段+队伍)+rightPanel(minimap+UnitPanel+skillBar)+bottomBar(引导+结束回合按钮)；Escape 键暂停
+
+constraints:
+  - "所有 UI 组件使用 class 封装，构造函数接收回调（不直接操作游戏状态）"
+  - "StartScreen 的 DOM 全程由 show/hide 管理：show 时 create+appendChild，hide 时 fadeOut 300ms 后 removeChild"
+  - "UnitPanel 使用 querySelector 定位内部子元素——DOM 在构造函数中一次性创建(buildHTML)，后续 update 只更新 textContent 和样式属性"
+  - "HUD 构造函数一次性创建所有子 DOM（topBar/rightPanel/bottomBar），后续 setXxx 方法只更新 textContent/display/disabled——不重复创建 DOM 树"
+  - "HUD 的 skill bar 每次调用 updateSkillBar 重建 innerHTML（不保留事件监听），触发回调 onSkillSelect"
+  - "HUD 使用 document.addEventListener('keydown', ...) 监听 Escape 键触发 onPause 回调（无 removeEventListener——HUD 与页面同生命周期）"
+  - "HUD.renderMinimap 接收 MapGrid 快照和 Unit[]，渲染 100x100 Canvas 小地图"
+  - "pause overlay 使用 showPauseMenu/hidePauseMenu 管理 DOM 生命周期，showPauseMenu 重复调用被 guard 拦截"
+  - "UnitPanel 使用硬编码中文单位名映射 (UNIT_TYPE_NAMES)，与 UnitType const enum 数值索引对齐"
+  - "HUD PHASE_NAMES 静态映射：Phase 枚举值→中文名（'deploy'→'部署阶段', ...），与字符串枚举对齐"
+
+known_issues:
+  - "HUD.skillBar 每次 updateSkillBar 重建 DOM（innerHTML='' + appendChild），按钮数 ≤3 时性能可忽略，但会丢失事件监听需每次重新绑定"
+
+development_notes:
+  - "HUD 的 options 对象构造函数模式 (new HUD({container, unitPanel, onEndTurn, ...}))，与 MapRenderer/MapRenderer options 模式一致"
+  - "HUD 不持有 game state 引用，通过 updateSkillBar/renderMinimap 等方法接收数据快照——数据流单向：main.ts → HUD.setXxx()"
+  - "UnitPanel 直接修改 DOM 属性（非虚拟 DOM），性能在小规模范围内可接受"
+  - "skill bar 重建策略与 Phase 7 的 renderSkillBar 模式一致，但 HUD 封装了此逻辑——外部只需调用 updateSkillBar"
+  - "minimap Canvas 在 HUD 构造函数中一次创建（width=100, height=100），renderMinimap 每次 clearRect 后重新绘制"
+  - "HUD 的 setEndTurnDisabled/setEndTurnText 在 Phase PlayerMove/PlayerCombat 阶段通过 onPhaseChange 回调调用，逻辑集中在 main.ts"
+  - "pause overlay 使用独立创建/销毁模式（非 display:none/block toggle）：show 时创建 DOM 元素挂到 document.body，hide 时 removeChild——避免 DOM 缓存导致的样式残留"
+
+lessons_learned:
+  - "HUD 组件 class 封装 + 回调注入：UI 零游戏状态依赖，所有状态通过方法参数传入——便于重构和状态管理"
+  - "DOM 一次性创建 + 增量更新模式：构造函数创建完整 DOM 树，setXxx 方法只更新属性——避免频繁 DOM 操作"
+
+last_updated: "2026-05-15"

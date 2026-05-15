@@ -1,0 +1,61 @@
+# Module Card: render
+# 等距坐标数学 + RAF 动画系统
+
+module: render
+path: "src/render/"
+type: utility
+language: TypeScript 5.6
+framework: Canvas 2D
+
+dependencies:
+  external: []
+  internal:
+    - "src/unit/Unit.ts"            # AnimationManager 导入 Unit 类型
+
+public_interface:
+  - "TILE_W / TILE_H"              # 菱形瓦片尺寸常量 (64x32)，等距投影基准
+  - "worldToScreen()"              # (row, col, originX, originY) => ScreenPoint {x,y} 菱形网格→屏幕坐标
+  - "screenToWorld()"              # (sx, sy, originX, originY) => GridCoord {row,col} 屏幕坐标→菱形网格
+  - "drawDiamondTile()"            # (ctx, cx, cy, tw, th, fillColor, strokeColor?) Canvas 菱形瓦片绘制
+  - "AnimationManager"             # RAF 动画管理器类
+  - "AnimationManager.startMoveAnimation()"  # (unit, fromRow, fromCol, toRow, toCol, durationMs?, onFrame?)
+  - "AnimationManager.getVisualPosition()"   # (unit) => {row,col} | {vx,vy} — 双模输出
+  - "AnimationManager.isAnimating()"         # (unit) => boolean
+  - "AnimationManager.cancelAll()"           # 清除动画并取消 RAF
+
+exports:
+  - "TILE_W/TILE_H (const)"        # 菱形基准尺寸：宽64高32，2:1 固定比例
+  - "worldToScreen(row, col, ox, oy): ScreenPoint"  # 等距正变换：x=ox+(col-row)*32, y=oy+(row+col)*16
+  - "screenToWorld(sx, sy, ox, oy): GridCoord"      # 等距逆变换：先归一化再解方程组，Math.round 取整
+  - "drawDiamondTile(ctx, cx, cy, tw, th, fillColor, strokeColor?)"  # Canvas Path 菱形绘制
+
+components:
+  - "IsometricRenderer.ts":        # 纯数学模块：菱形网格↔屏幕坐标双向变换 + Canvas 菱形绘制；零游戏实体依赖
+  - "AnimationManager.ts":         # RAF 驱动动画器：startMoveAnimation(lerp+easeInOutQuad 200ms 默认)，getVisualPosition 双模输出，cancelAll
+
+constraints:
+  - "IsometricRenderer 为纯函数模块（非类），无内部状态"
+  - "TILE_W:TILE_H = 2:1 (64x32)，固定比例不可变——等距投影强制要求"
+  - "AnimationManager 使用 RAF (requestAnimationFrame) 驱动动画循环，非 setTimeout/setInterval"
+  - "startMoveAnimation 默认 duration=200ms，使用 easeInOutQuad 缓动函数"
+  - "getVisualPosition: 动画中时返回 {vx, vy} 浮点插值位置，否则返回 {row, col} 网格位置——调用方需用 'vx' in pos 或 'row' in pos 区分"
+  - "动画完成后自动调用 unit.setPosition(toRow, toCol) 同步网格位置"
+  - "cancelAll 清空动画列表并取消 RAF，但不恢复已部分移动的 unit 位置"
+
+known_issues: []
+
+development_notes:
+  - "worldToScreen 使用 (col - row) * halfW 计算水平偏移，(row + col) * halfH 计算垂直偏移：行+列投影到上斜边，行-列投影到下斜边"
+  - "screenToWorld 从归一化 dx/dy 解方程组：col = (dx+dy)/2, row = (dy-dx)/2；最后 Math.round 取整到最近网格坐标"
+  - "AnimationManager 延迟创建 RAF 循环：首次 startMoveAnimation 时注册 RAF，全部动画完成时自动取消 RAF（rafId = null），不运行时无开销"
+  - "easeInOutQuad 函数：t<0.5 时 2t^2 (加速)，t≥0.5 时 -1+(4-2t)t (减速)，符合 CSS ease-in-out 曲线意图"
+  - "AnimationManager 使用 Map<Unit, ActiveAnimation> 做单位→动画映射；每个单位同时只能有一个动画"
+  - "active animation 的 onFrame 回调在每个 RAF tick 中调用，传入 (unit, progress) 用于外部帧同步"
+  - "completed 动画在 tick 末尾统一从 Map 中 delete——避免在迭代过程中修改 Map"
+
+lessons_learned:
+  - "等距投影正逆变换公式来源于线性代数：将菱形网格视为旋转 45° 的直角坐标系，投影矩阵 [halfW, halfW; -halfH, halfH] 及其逆矩阵"
+  - "screenToWorld 的 Math.round 取整隐式约束往返误差：对连续两次 worldToScreen→screenToWorld，只要中间运算不超出 double 精度范围，round 确保精确整数还原"
+  - "RAF 动画管理器模式：使用 requestAnimationFrame 驱动 ticks，自动在动画结束时取消 RAF，避免永久循环"
+
+last_updated: "2026-05-15"

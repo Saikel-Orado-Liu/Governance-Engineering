@@ -5,47 +5,310 @@
 }
 
 body {
-  background: #111;
+  background: #1a1a2e;
+  font-family: 'Segoe UI', sans-serif;
+  color: #eee;
+  min-height: 100vh;
+}
+
+/* ---- Layout ---- */
+
+#game-container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
-  overflow: hidden;
+  gap: 16px;
+  padding: 16px;
 }
 
 #game-canvas {
-  border: 1px solid #333;
+  border: 2px solid #333;
+  border-radius: 4px;
 }
 
-#phase-label {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  padding: 6px 14px;
+/* ---- HUD container ---- */
+
+.huds-container {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- Top bar ---- */
+
+.hud-top-bar {
+  background: #16213e;
+  border: 1px solid #0f3460;
   border-radius: 6px;
-  font-family: monospace;
-  font-size: 14px;
-  z-index: 100;
-  pointer-events: none;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-#guide-label {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
-  color: #ccc;
-  padding: 8px 20px;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 13px;
-  z-index: 100;
-  pointer-events: none;
-  white-space: nowrap;
+.hud-phase-text {
+  font-size: 14px;
+  font-weight: bold;
+  color: #eee;
 }
+
+.hud-team-text {
+  font-size: 12px;
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* ---- Right panel ---- */
+
+.hud-right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- Minimap ---- */
+
+.hud-minimap {
+  width: 100px;
+  height: 100px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+/* ---- Unit panel ---- */
+
+.unit-panel {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.unit-panel-header {
+  margin-bottom: 2px;
+}
+
+.unit-panel-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #eee;
+}
+
+.unit-panel-hp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unit-panel-label {
+  font-size: 12px;
+  color: #aaa;
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.unit-panel-hp-bar-bg {
+  flex: 1;
+  height: 14px;
+  background: #333;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.unit-panel-hp-bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.3s ease;
+  min-width: 0;
+}
+
+.unit-panel-hp-text {
+  font-size: 12px;
+  color: #ccc;
+  min-width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.unit-panel-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.unit-panel-stat {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.unit-panel-skill {
+  font-size: 13px;
+  color: #aaa;
+}
+
+.unit-panel-skill-name {
+  color: #ffd700;
+}
+
+/* ---- Skill bar ---- */
+
+.skill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.skill-btn {
+  background: #2c3e50;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.skill-btn:hover {
+  border-color: #888;
+}
+
+.skill-btn.active {
+  border-color: #e94560;
+  box-shadow: 0 0 6px rgba(233, 69, 96, 0.5);
+}
+
+.skill-btn.on-cooldown {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #555;
+  border-color: #444;
+}
+
+/* ---- Bottom bar ---- */
+
+.hud-bottom-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-guide-text {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+}
+
+.end-turn-btn {
+  width: 100%;
+  padding: 12px;
+  background: #e94560;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.15s;
+}
+
+.end-turn-btn:hover {
+  background: #d63851;
+}
+
+.end-turn-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Start screen ---- */
+
+.start-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.start-content h1 {
+  font-size: 48px;
+  color: #e94560;
+  margin-bottom: 24px;
+}
+
+.start-content p {
+  line-height: 1.8;
+  margin-bottom: 32px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.start-content button {
+  padding: 16px 48px;
+  background: #e94560;
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.15s;
+}
+
+.start-content button:hover {
+  background: #d63851;
+}
+
+/* ---- Pause overlay ---- */
+
+.hud-pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+
+.hud-pause-menu {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud-pause-menu button {
+  padding: 12px 24px;
+  background: #e94560;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.15s;
+}
+
+.hud-pause-menu button:hover {
+  background: #d63851;
+}
+
+/* ---- Tooltip (kept for existing main.ts compatibility) ---- */
 
 #tooltip {
   position: fixed;
@@ -63,40 +326,11 @@ body {
   line-height: 1.5;
 }
 
-#skill-bar {
-  position: fixed;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  display: flex;
-  gap: 8px;
-}
+/* ---- Responsive ---- */
 
-.skill-btn {
-  background: #2c3e50;
-  color: #fff;
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 8px 14px;
-  font-family: monospace;
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.skill-btn:hover {
-  border-color: #888;
-}
-
-.skill-btn.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
-}
-
-.skill-btn.on-cooldown {
-  background: #555;
-  color: #999;
-  cursor: not-allowed;
-  border-color: #444;
+@media (max-width: 900px) {
+  #game-container {
+    flex-direction: column;
+    align-items: center;
+  }
 }
