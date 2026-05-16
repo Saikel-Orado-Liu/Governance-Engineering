@@ -31,7 +31,7 @@ git status
 
 ```bash
 # 从治理工程仓库复制模板到你的项目
-cp -r /path/to/Governance-Engineering/temp/. .
+cp -r /path/to/Governance-Engineering/claude-template/. .
 ```
 
 模板包含：

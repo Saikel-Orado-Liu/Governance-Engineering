@@ -16,7 +16,7 @@ requires: theory/governance-engineering-theory.zh.md
 
 ——基于 Claude Code 的完整落地指南与可运行模板
 
-> **文档系列说明**：本文为系列第 2 部分（参考示例文档），基于第 1 部分的理论与设计原则，提供可在 UE5.7+ 项目中直接复制使用的完整实现。配套 `temp/` 目录包含所有可运行的配置文件和 Agent 定义。
+> **文档系列说明**：本文为系列第 2 部分（参考示例文档），基于第 1 部分的理论与设计原则，提供可在 UE5.7+ 项目中直接复制使用的完整实现。配套 `claude-template/` 目录包含所有可运行的配置文件和 Agent 定义。
 
 ---
 
@@ -24,17 +24,17 @@ requires: theory/governance-engineering-theory.zh.md
 
 [第 1 部分（理论与设计）](../theory/governance-engineering-theory.zh.md) 建立了五大设计原则和三层架构模型。本文档将这些理论映射为一套可运行的 Claude Code 项目配置，目标技术栈为 **Unreal Engine 5.7+ / C++20**。
 
-本文档的配套实现在 `temp/` 目录下，包含：
+本文档的配套实现在 `claude-template/` 目录下，包含：
 
-| 目录                          | 内容                | 说明                                               |
-| ----------------------------- | ------------------- | -------------------------------------------------- |
-| `temp/CLAUDE.md`              | AI 组织章程         | 纯调度者模式，主对话永不执行任务                   |
-| `temp/.claude/agents/`        | 11 个 Agent 定义    | 8 个流水线 Agent + 3 个离线 Agent                  |
-| `temp/.claude/skills/`        | 5 个 Skill 入口     | confirm / plan / sync / refactor / optimize + init |
-| `temp/.claude/schemas/`       | Agent 间通信 Schema | YAML 结构化数据交换标准                            |
-| `temp/.claude/rules/`         | 路径匹配规则        | architecture.md + coding-standards.md              |
-| `temp/.claude/agent-memory/`  | 团队共享记忆        | orchestrator / summarize / sync                    |
-| `temp/.claude/output-styles/` | 输出样式            | 极简调度者风格                                     |
+| 目录                                     | 内容                | 说明                                               |
+| ---------------------------------------- | ------------------- | -------------------------------------------------- |
+| `claude-template/CLAUDE.md`              | AI 组织章程         | 纯调度者模式，主对话永不执行任务                   |
+| `claude-template/.claude/agents/`        | 11 个 Agent 定义    | 8 个流水线 Agent + 3 个离线 Agent                  |
+| `claude-template/.claude/skills/`        | 5 个 Skill 入口     | confirm / plan / sync / refactor / optimize + init |
+| `claude-template/.claude/schemas/`       | Agent 间通信 Schema | YAML 结构化数据交换标准                            |
+| `claude-template/.claude/rules/`         | 路径匹配规则        | architecture.md + coding-standards.md              |
+| `claude-template/.claude/agent-memory/`  | 团队共享记忆        | orchestrator / summarize / sync                    |
+| `claude-template/.claude/output-styles/` | 输出样式            | 极简调度者风格                                     |
 
 ---
 
@@ -84,7 +84,7 @@ requires: theory/governance-engineering-theory.zh.md
 
 ## 三、目录结构设计
 
-以下是从理论模型映射到 UE5 项目的完整目录结构（见 `temp/` 目录）：
+以下是从理论模型映射到 UE5 项目的完整目录结构（见 `claude-template/` 目录）：
 
 ```
 project/
@@ -175,7 +175,7 @@ project/
 
 ## 四、CLAUDE.md：AI 组织章程
 
-`temp/CLAUDE.md` 是本参考实现的核心配置文件，作为模板使用 `{{PLACEHOLDER}}` 标记需要项目特定的内容。
+`claude-template/CLAUDE.md` 是本参考实现的核心配置文件，作为模板使用 `{{PLACEHOLDER}}` 标记需要项目特定的内容。
 
 ### 4.1 设计要点
 
@@ -189,17 +189,17 @@ project/
 
 ### 4.2 CLAUDE.md 的"不可以"清单
 
-| 不可以                     | 原因                        | 正确做法                           |
-| -------------------------- | --------------------------- | ---------------------------------- |
-| 不可以塞入完整的编码规范   | 占用大量上下文空间          | 写入 `docs/ai/standards/` 独立文件 |
-| 不可以列出所有模块的 API   | 随代码变更频繁过期          | 通过 MODULE_INDEX.yaml 索引引用    |
-| 不可以嵌入长段示例代码     | 耗费大量上下文且信息密度低  | 放入 `docs/ai/patterns/`           |
-| 不可以写"怎么做的"流程细节 | 应由 Skill 和 Agent 定义    | 写入对应 Skill 和 Agent 文件       |
-| 不可以使用模糊语言         | 对 AI 没有约束力            | 使用精确的可验证约束               |
+| 不可以                     | 原因                       | 正确做法                           |
+| -------------------------- | -------------------------- | ---------------------------------- |
+| 不可以塞入完整的编码规范   | 占用大量上下文空间         | 写入 `docs/ai/standards/` 独立文件 |
+| 不可以列出所有模块的 API   | 随代码变更频繁过期         | 通过 MODULE_INDEX.yaml 索引引用    |
+| 不可以嵌入长段示例代码     | 耗费大量上下文且信息密度低 | 放入 `docs/ai/patterns/`           |
+| 不可以写"怎么做的"流程细节 | 应由 Skill 和 Agent 定义   | 写入对应 Skill 和 Agent 文件       |
+| 不可以使用模糊语言         | 对 AI 没有约束力           | 使用精确的可验证约束               |
 
 ### 4.3 关键模板变量
 
-`temp/CLAUDE.md` 中的占位符说明：
+`claude-template/CLAUDE.md` 中的占位符说明：
 
 | 占位符                | 说明         | 示例值                                           |
 | --------------------- | ------------ | ------------------------------------------------ |
@@ -238,7 +238,7 @@ project/
 
 ### 5.2 Agent 间通信协议
 
-所有 Agent 间数据交换通过 YAML Schema 标准化。Schema 注册表位于 `temp/.claude/schemas/INDEX.yaml`。
+所有 Agent 间数据交换通过 YAML Schema 标准化。Schema 注册表位于 `claude-template/.claude/schemas/INDEX.yaml`。
 
 **YAML 传递铁律**：
 
@@ -274,7 +274,7 @@ standard: confirm_result → explore_report → plan_result → developer_result
 
 #### Inspector Agent（独立审查者）
 
-见 `temp/.claude/agents/inspector-agent.md`。核心设计要点：
+见 `claude-template/.claude/agents/inspector-agent.md`。核心设计要点：
 
 - **信息隔离**：绝对禁止阅读 Plan Agent 的计划文件或需求文档
 - **只读权限**：不修改代码，只找问题
@@ -283,7 +283,7 @@ standard: confirm_result → explore_report → plan_result → developer_result
 
 #### Developer Agent（代码生成者）
 
-见 `temp/.claude/agents/developer-agent.md`。核心设计要点：
+见 `claude-template/.claude/agents/developer-agent.md`。核心设计要点：
 
 - **自审机制**：生成代码后自行编译验证，修复编译错误
 - **结构化输出**：verdict（approved/escalate/blocked）+ next_phase 建议
@@ -295,7 +295,7 @@ standard: confirm_result → explore_report → plan_result → developer_result
 
 ### 6.1 settings.json
 
-`temp/.claude/settings.json` 是项目级设置。在 UE5 项目中推荐扩展如下：
+`claude-template/.claude/settings.json` 是项目级设置。在 UE5 项目中推荐扩展如下：
 
 ```json
 {
@@ -521,7 +521,7 @@ mkdir -p docs/{human/{architecture,guides,api},ai/{modules,interfaces,standards,
 mkdir -p .claude/{skills,agents,scripts,rules,agent-memory/{orchestrator,summarize,sync},output-styles,schemas}
 mkdir -p Source/{Runtime,Editor}
 
-# 2. 复制 temp/CLAUDE.md 骨架，替换 {{PLACEHOLDER}} 占位符
+# 2. 复制 claude-template/CLAUDE.md 骨架，替换 {{PLACEHOLDER}} 占位符
 # 3. 复制 .claude/ 下的所有配置文件
 # 4. 运行 Init Agent: /init
 # 5. 审查 Init Agent 生成的模块卡片和索引
@@ -552,20 +552,20 @@ mkdir -p Source/{Runtime,Editor}
 
 ---
 
-## 十一、与 temp/ 目录的对照索引
+## 十一、与 claude-template/ 目录的对照索引
 
-| 本文章节       | temp/ 对应文件                             | 说明                            |
-| -------------- | ------------------------------------------ | ------------------------------- |
-| 四、CLAUDE.md  | `temp/CLAUDE.md`                           | 主对话 AI 章程模板              |
-| 五、Agent 系统 | `temp/.claude/agents/*.md`                 | 11 个 Agent 人格定义            |
-| 五、Agent 系统 | `temp/.claude/schemas/*.yaml`              | Agent 间通信 Schema             |
-| 五、Agent 系统 | `temp/.claude/skills/**/SKILL.md`          | 用户入口 Skill 定义             |
-| 六、Hooks 配置 | `temp/.claude/settings.json`               | 项目级 hooks 配置               |
-| 六、Hooks 配置 | `temp/.claude/rules/architecture.md`       | Fork 决策矩阵与流水线定义       |
-| 七、知识库     | `temp/.claude/rules/coding-standards.md`   | 编码规范（路径匹配注入）        |
-| 七、知识库     | `temp/.claude/agent-memory/`               | 团队共享记忆示例                |
-| 四、输出风格   | `temp/.claude/output-styles/dispatcher.md` | 极简调度者风格定义              |
-| 十、初始化     | `temp/.claude/skills/init/`                | Init Agent 定义、模板与验证脚本 |
+| 本文章节       | claude-template/ 对应文件                             | 说明                            |
+| -------------- | ----------------------------------------------------- | ------------------------------- |
+| 四、CLAUDE.md  | `claude-template/CLAUDE.md`                           | 主对话 AI 章程模板              |
+| 五、Agent 系统 | `claude-template/.claude/agents/*.md`                 | 11 个 Agent 人格定义            |
+| 五、Agent 系统 | `claude-template/.claude/schemas/*.yaml`              | Agent 间通信 Schema             |
+| 五、Agent 系统 | `claude-template/.claude/skills/**/SKILL.md`          | 用户入口 Skill 定义             |
+| 六、Hooks 配置 | `claude-template/.claude/settings.json`               | 项目级 hooks 配置               |
+| 六、Hooks 配置 | `claude-template/.claude/rules/architecture.md`       | Fork 决策矩阵与流水线定义       |
+| 七、知识库     | `claude-template/.claude/rules/coding-standards.md`   | 编码规范（路径匹配注入）        |
+| 七、知识库     | `claude-template/.claude/agent-memory/`               | 团队共享记忆示例                |
+| 四、输出风格   | `claude-template/.claude/output-styles/dispatcher.md` | 极简调度者风格定义              |
+| 十、初始化     | `claude-template/.claude/skills/init/`                | Init Agent 定义、模板与验证脚本 |
 
 ---
 

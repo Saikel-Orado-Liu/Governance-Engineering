@@ -13,7 +13,7 @@ All notable changes to the Governance Engineering methodology and reference impl
 - **11 Specialized Agents**: 8 pipeline agents (confirm / explore / plan / developer / inspector / test / summarize / commit) + 3 offline agents (refactor / optimize / sync).
 - **Stage-Gate Hooks**: PreToolUse / PostToolUse / Notification automated checkpoints that prevent workflow steps from being skipped.
 - **Structured Memory System**: 5-layer shared memory hierarchy (Conversation → Agent Memory → Module Cards → Standards Rules → Git History).
-- **Template Directory `temp/`**: Out-of-the-box project configuration including Agent definitions, Skill entry points, communication Schemas, and rule files.
+- **Template Directory `claude-template/`**: Out-of-the-box project configuration including Agent definitions, Skill entry points, communication Schemas, and rule files.
 - **Pure Dispatcher Pattern**: The main conversation AI never directly executes code operations; all work is delegated to forked sub-agents.
 - **Dual-Path Dispatch**: Simple tasks take the simplified path (skip explore/plan); complex tasks follow the full standard pipeline.
 - **Academic Documentation**: `Governance Engineering — Theory & Design` — methodology comparison, five design principles, three-layer architecture, model tiering & cost control.

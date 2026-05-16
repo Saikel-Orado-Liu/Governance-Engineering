@@ -16,7 +16,7 @@ requires: theory/governance-engineering-theory.en.md
 
 ——A Complete Implementation Guide with Runnable Templates for Claude Code
 
-> **Document Series Note**: This document is Part 2 of the series (Reference Implementation Document). Based on the theory and design principles from Part 1, it provides a complete implementation that can be directly copied and used in UE5.7+ projects. The accompanying `temp/` directory contains all runnable configuration files and Agent definitions.
+> **Document Series Note**: This document is Part 2 of the series (Reference Implementation Document). Based on the theory and design principles from Part 1, it provides a complete implementation that can be directly copied and used in UE5.7+ projects. The accompanying `claude-template/` directory contains all runnable configuration files and Agent definitions.
 
 ---
 
@@ -24,17 +24,17 @@ requires: theory/governance-engineering-theory.en.md
 
 [Part 1 (Theory & Design)](../theory/governance-engineering-theory.en.md) established five design principles and a three-layer architecture model. This document maps those theories to a runnable set of Claude Code project configurations, targeting **Unreal Engine 5.7+ / C++20**.
 
-The accompanying implementation resides in the `temp/` directory, containing:
+The accompanying implementation resides in the `claude-template/` directory, containing:
 
-| Directory                     | Contents                 | Description                                                     |
-| ----------------------------- | ------------------------ | --------------------------------------------------------------- |
-| `temp/CLAUDE.md`              | AI Organization Charter  | Pure Dispatcher Pattern, main conversation never executes tasks |
-| `temp/.claude/agents/`        | 11 Agent Definitions     | 8 Pipeline Agents + 3 Offline Agents                            |
-| `temp/.claude/skills/`        | 5 Skill Entry Points     | confirm / plan / sync / refactor / optimize + init              |
-| `temp/.claude/schemas/`       | Inter-Agent Comm Schemas | YAML structured data exchange standards                         |
-| `temp/.claude/rules/`         | Path Matching Rules      | architecture.md + coding-standards.md                           |
-| `temp/.claude/agent-memory/`  | Team Shared Memory       | orchestrator / summarize / sync                                 |
-| `temp/.claude/output-styles/` | Output Styles            | Minimalist Dispatcher style                                     |
+| Directory                                | Contents                 | Description                                                     |
+| ---------------------------------------- | ------------------------ | --------------------------------------------------------------- |
+| `claude-template/CLAUDE.md`              | AI Organization Charter  | Pure Dispatcher Pattern, main conversation never executes tasks |
+| `claude-template/.claude/agents/`        | 11 Agent Definitions     | 8 Pipeline Agents + 3 Offline Agents                            |
+| `claude-template/.claude/skills/`        | 5 Skill Entry Points     | confirm / plan / sync / refactor / optimize + init              |
+| `claude-template/.claude/schemas/`       | Inter-Agent Comm Schemas | YAML structured data exchange standards                         |
+| `claude-template/.claude/rules/`         | Path Matching Rules      | architecture.md + coding-standards.md                           |
+| `claude-template/.claude/agent-memory/`  | Team Shared Memory       | orchestrator / summarize / sync                                 |
+| `claude-template/.claude/output-styles/` | Output Styles            | Minimalist Dispatcher style                                     |
 
 ---
 
@@ -84,7 +84,7 @@ User Input
 
 ## 3. Directory Structure Design
 
-Below is the complete directory structure mapped from the theoretical model to a UE5 project (see `temp/` directory):
+Below is the complete directory structure mapped from the theoretical model to a UE5 project (see `claude-template/` directory):
 
 ```
 project/
@@ -175,7 +175,7 @@ project/
 
 ## 4. CLAUDE.md: AI Organization Charter
 
-`temp/CLAUDE.md` is the core configuration file of this reference implementation. It uses `{{PLACEHOLDER}}` markers for project-specific content.
+`claude-template/CLAUDE.md` is the core configuration file of this reference implementation. It uses `{{PLACEHOLDER}}` markers for project-specific content.
 
 ### 4.1 Design Principles
 
@@ -191,15 +191,15 @@ project/
 
 | Do Not                                | Reason                               | Correct Practice                                 |
 | ------------------------------------- | ------------------------------------ | ------------------------------------------------ |
-| Do not embed full coding standards    | Consumes excessive context space          | Write separate files in `docs/ai/standards/`     |
+| Do not embed full coding standards    | Consumes excessive context space     | Write separate files in `docs/ai/standards/`     |
 | Do not list all module APIs           | Goes stale as code changes           | Reference via MODULE_INDEX.yaml index            |
-| Do not include long code examples     | High context cost, low info density    | Place in `docs/ai/patterns/`                     |
+| Do not include long code examples     | High context cost, low info density  | Place in `docs/ai/patterns/`                     |
 | Do not write "how-to" process details | Should be defined by Skill and Agent | Write in the corresponding Skill and Agent files |
 | Do not use vague language             | Not binding for AI                   | Use precise, verifiable constraints              |
 
 ### 4.3 Key Template Variables
 
-Placeholder descriptions in `temp/CLAUDE.md`:
+Placeholder descriptions in `claude-template/CLAUDE.md`:
 
 | Placeholder           | Description          | Example Value                                    |
 | --------------------- | -------------------- | ------------------------------------------------ |
@@ -238,7 +238,7 @@ This reference implementation defines 11 Agents, assigned by model capability an
 
 ### 5.2 Inter-Agent Communication Protocol
 
-All inter-Agent data exchange is standardized via YAML Schemas. The schema registry is at `temp/.claude/schemas/INDEX.yaml`.
+All inter-Agent data exchange is standardized via YAML Schemas. The schema registry is at `claude-template/.claude/schemas/INDEX.yaml`.
 
 **YAML Transfer Iron Rules**:
 
@@ -274,7 +274,7 @@ standard: confirm_result → explore_report → plan_result → developer_result
 
 #### Inspector Agent (Independent Reviewer)
 
-See `temp/.claude/agents/inspector-agent.md`. Core design points:
+See `claude-template/.claude/agents/inspector-agent.md`. Core design points:
 
 - **Information Isolation**: Absolutely prohibited from reading Plan Agent's plan files or requirement documents
 - **Read-Only Permissions**: Does not modify code, only finds issues
@@ -283,7 +283,7 @@ See `temp/.claude/agents/inspector-agent.md`. Core design points:
 
 #### Developer Agent (Code Generator)
 
-See `temp/.claude/agents/developer-agent.md`. Core design points:
+See `claude-template/.claude/agents/developer-agent.md`. Core design points:
 
 - **Self-Review Mechanism**: After generating code, self-compiles to verify and fixes compilation errors
 - **Structured Output**: verdict (approved/escalate/blocked) + next_phase suggestions
@@ -295,7 +295,7 @@ See `temp/.claude/agents/developer-agent.md`. Core design points:
 
 ### 6.1 settings.json
 
-`temp/.claude/settings.json` is the project-level settings. Recommended extension for UE5 projects:
+`claude-template/.claude/settings.json` is the project-level settings. Recommended extension for UE5 projects:
 
 ```json
 {
@@ -521,7 +521,7 @@ mkdir -p docs/{human/{architecture,guides,api},ai/{modules,interfaces,standards,
 mkdir -p .claude/{skills,agents,scripts,rules,agent-memory/{orchestrator,summarize,sync},output-styles,schemas}
 mkdir -p Source/{Runtime,Editor}
 
-# 2. Copy temp/CLAUDE.md skeleton, replace {{PLACEHOLDER}} placeholders
+# 2. Copy claude-template/CLAUDE.md skeleton, replace {{PLACEHOLDER}} placeholders
 # 3. Copy all configuration files under .claude/
 # 4. Run Init Agent: /init
 # 5. Review module cards and index generated by Init Agent
@@ -552,20 +552,20 @@ mkdir -p Source/{Runtime,Editor}
 
 ---
 
-## 11. Cross-Reference Index with temp/ Directory
+## 11. Cross-Reference Index with claude-template/ Directory
 
-| Section                | Corresponding temp/ File                   | Description                                              |
-| ---------------------- | ------------------------------------------ | -------------------------------------------------------- |
-| 4. CLAUDE.md           | `temp/CLAUDE.md`                           | Main conversation AI charter template                    |
-| 5. Agent System        | `temp/.claude/agents/*.md`                 | 11 Agent persona definitions                             |
-| 5. Agent System        | `temp/.claude/schemas/*.yaml`              | Inter-Agent communication schemas                        |
-| 5. Agent System        | `temp/.claude/skills/**/SKILL.md`          | User entry point Skill definitions                       |
-| 6. Hooks Configuration | `temp/.claude/settings.json`               | Project-level hooks configuration                        |
-| 6. Hooks Configuration | `temp/.claude/rules/architecture.md`       | Fork decision matrix and pipeline definitions            |
-| 7. Knowledge Base      | `temp/.claude/rules/coding-standards.md`   | Coding standards (path-matching injection)               |
-| 7. Knowledge Base      | `temp/.claude/agent-memory/`               | Team shared memory examples                              |
-| 4. Output Style        | `temp/.claude/output-styles/dispatcher.md` | Minimalist dispatcher style definition                   |
-| 10. Initialization     | `temp/.claude/skills/init/`                | Init Agent definition, templates, and validation scripts |
+| Section                | Corresponding claude-template/ File                   | Description                                              |
+| ---------------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| 4. CLAUDE.md           | `claude-template/CLAUDE.md`                           | Main conversation AI charter template                    |
+| 5. Agent System        | `claude-template/.claude/agents/*.md`                 | 11 Agent persona definitions                             |
+| 5. Agent System        | `claude-template/.claude/schemas/*.yaml`              | Inter-Agent communication schemas                        |
+| 5. Agent System        | `claude-template/.claude/skills/**/SKILL.md`          | User entry point Skill definitions                       |
+| 6. Hooks Configuration | `claude-template/.claude/settings.json`               | Project-level hooks configuration                        |
+| 6. Hooks Configuration | `claude-template/.claude/rules/architecture.md`       | Fork decision matrix and pipeline definitions            |
+| 7. Knowledge Base      | `claude-template/.claude/rules/coding-standards.md`   | Coding standards (path-matching injection)               |
+| 7. Knowledge Base      | `claude-template/.claude/agent-memory/`               | Team shared memory examples                              |
+| 4. Output Style        | `claude-template/.claude/output-styles/dispatcher.md` | Minimalist dispatcher style definition                   |
+| 10. Initialization     | `claude-template/.claude/skills/init/`                | Init Agent definition, templates, and validation scripts |
 
 ---
 

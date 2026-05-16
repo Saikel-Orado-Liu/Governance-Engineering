@@ -37,10 +37,10 @@
 
 ## Quick Start
 
-Copy the contents of the template `temp` folder into your project:
+Copy the contents of the `claude-template/` folder into your project:
 
 ```bash
-cp -r temp/. .
+cp -r claude-template/. .
 ```
 
 Then let `/init` adapt it to your stack:
@@ -125,7 +125,7 @@ Governance Engineering and [Harness Engineering](https://openai.com/index/harnes
 
 ### Current Version (v1.0)
 
-The current implementation maps all five management principles: 11 specialized agents, 6 stage-gate hooks, 5-layer structured memory, and a three-layer orchestration model (Orchestrator → Domain → Execution). The `temp/` template provides out-of-the-box project configuration, with `/init` adapting it to your stack.
+The current implementation maps all five management principles: 11 specialized agents, 6 stage-gate hooks, 5-layer structured memory, and a three-layer orchestration model (Orchestrator → Domain → Execution). The `claude-template/` provides out-of-the-box project configuration, with `/init` adapting it to your stack.
 
 ### Gaps from the Ideal Architecture
 

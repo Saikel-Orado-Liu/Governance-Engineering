@@ -31,7 +31,7 @@ git status
 
 ```bash
 # Copy the template from the Governance Engineering repository to your project
-cp -r /path/to/Governance-Engineering/temp/. .
+cp -r /path/to/Governance-Engineering/claude-template/. .
 ```
 
 The template includes:
