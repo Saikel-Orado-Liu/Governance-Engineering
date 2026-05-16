@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Governance Engineering methodology and reference implementation.
+All notable changes to the `claude-template/` template.
 
 ---
 
@@ -8,14 +8,14 @@ All notable changes to the Governance Engineering methodology and reference impl
 
 ### Initial Release
 
-- **Five Design Principles**: Specialization, Standardized Process, Institutionalized Knowledge, Explicit Requirements, Layered Review.
-- **Three-Layer Architecture Model**: Orchestrator (L0) → Domain → Execution (L1) → Knowledge (L2).
-- **11 Specialized Agents**: 8 pipeline agents (confirm / explore / plan / developer / inspector / test / summarize / commit) + 3 offline agents (refactor / optimize / sync).
-- **Stage-Gate Hooks**: PreToolUse / PostToolUse / Notification automated checkpoints that prevent workflow steps from being skipped.
-- **Structured Memory System**: 5-layer shared memory hierarchy (Conversation → Agent Memory → Module Cards → Standards Rules → Git History).
-- **Template Directory `claude-template/`**: Out-of-the-box project configuration including Agent definitions, Skill entry points, communication Schemas, and rule files.
-- **Pure Dispatcher Pattern**: The main conversation AI never directly executes code operations; all work is delegated to forked sub-agents.
-- **Dual-Path Dispatch**: Simple tasks take the simplified path (skip explore/plan); complex tasks follow the full standard pipeline.
-- **Academic Documentation**: `Governance Engineering — Theory & Design` — methodology comparison, five design principles, three-layer architecture, model tiering & cost control.
-- **Implementation Documentation**: `Governance Engineering — UE5 Reference Implementation` — complete Claude Code implementation guide with runnable templates.
-- **Example Projects**: task-board / turn-based-strategy / markdown-ssg / scientific-computing / ue5 — covering 5 different tech stacks.
+- **CLAUDE.md** — Pure dispatcher-mode AI charter with `{{PLACEHOLDER}}` markers for project-specific content.
+- **11 Agent Definitions** — 8 pipeline agents (confirm / explore / plan / developer / inspector / test / summarize / commit) + 3 offline agents (refactor / optimize / sync).
+- **6 Skill Entry Points** — confirm (requirement triage) / plan (architecture design) / sync (VCS knowledge sync) / refactor (codebase health scan) / optimize (multi-approach evaluation) / init (project initialization engine).
+- **13 YAML Communication Schemas** — Standardized inter-agent data exchange contracts for all pipeline and offline operations.
+- **Architecture Rules** — Fork decision matrix, SIMPLE vs STANDARD dispatch, fault tolerance with checkpoint recovery, and YAML data isolation anti-injection rules.
+- **Coding Standards Template** — Generic coding standards file for `/init` to generate stack-specific rules.
+- **Team Shared Memory** — 3 sample memory structures (orchestrator tech-debt / summarize lessons-learned / sync last-sync).
+- **Output Style** — Minimalist dispatcher style definition.
+- **Project Settings** — PreToolUse / PostToolUse / Notification stage-gate hooks configuration.
+- **Init Engine** — Agent definition + placeholder mapping (9 placeholders) + 4 coding-standards templates (C++/UE, Python, Rust, TypeScript/React) + project pattern library + validation script + eval cases.
+- **.claudeignore** — Excludes build artifacts, dependency directories, and IDE-generated files from AI context.

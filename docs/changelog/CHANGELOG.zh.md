@@ -1,6 +1,6 @@
 # 版本更新日志
 
-治理工程方法论与参考实现的所有重要变更。
+`claude-template/` 模板的所有重要变更。
 
 ---
 
@@ -8,14 +8,14 @@
 
 ### 初始发布
 
-- **五大设计原则**: 专业化分工、标准化流程、制度化知识、需求明确化、分层审查。
-- **三层架构模型**: 编排层 (L0) → 领域层 → 执行层 (L1) → 知识层 (L2)。
-- **11 个专业化 Agent**: 8 个流水线 Agent（confirm / explore / plan / developer / inspector / test / summarize / commit）+ 3 个离线 Agent（refactor / optimize / sync）。
-- **阶段闸门 Hooks**: PreToolUse / PostToolUse / Notification 三类自动化检查点。
-- **结构化 Memory 系统**: 5 层共享记忆层级（对话上下文 → Agent Memory → 模块卡片 → 规范规则 → Git 历史）。
-- **模板目录 `claude-template/`**: 开箱即用的项目配置模板，含 Agent 定义、Skill 入口、通信 Schema、规则文件。
-- **纯调度者模式**: 主对话 AI 永不执行代码操作，仅 Fork 子 Agent 完成任务。
-- **双路径调度**: 简单需求走 simplified 路径（跳过 explore/plan），复杂需求走 standard 完整流水线。
-- **学术文档**: `治理工程 — 理论与设计.md` — 方法论演进对比、五大设计原则、三层架构模型、模型分级与费用控制。
-- **实现文档**: `治理工程 — UE5 项目参考实现.md` — 基于 Claude Code 的完整落地指南与可运行模板。
-- **示例项目**: task-board / turn-based-strategy / markdown-ssg / scientific-computing / ue5 — 覆盖 5 种技术栈。
+- **CLAUDE.md** — 纯调度者模式 AI 章程，含 `{{PLACEHOLDER}}` 占位符供 `/init` 替换项目特定内容。
+- **11 个 Agent 定义** — 8 个流水线 Agent（confirm / explore / plan / developer / inspector / test / summarize / commit）+ 3 个离线 Agent（refactor / optimize / sync）。
+- **6 个 Skill 入口** — confirm（需求确认）/ plan（架构设计）/ sync（知识同步）/ refactor（代码健康扫描）/ optimize（方案评估）/ init（项目初始化引擎）。
+- **13 个 YAML 通信 Schema** — 覆盖全部流水线和离线操作的 Agent 间标准化数据交换契约。
+- **架构规则** — Fork 决策矩阵、SIMPLE vs STANDARD 双路径调度、断点续传容错机制、YAML 数据隔离防注入规则。
+- **编码规范模板** — 通用编码规范文件，供 `/init` 生成技术栈特定规则。
+- **团队共享记忆** — 3 个示例记忆结构（orchestrator 技术债务 / summarize 经验教训 / sync 同步状态）。
+- **输出样式** — 极简调度者风格定义。
+- **项目设置** — PreToolUse / PostToolUse / Notification 阶段闸门 hooks 配置。
+- **Init 引擎** — Agent 定义 + 占位符映射（9 个占位符）+ 4 种编码规范模板（C++/UE、Python、Rust、TypeScript/React）+ 项目模式库 + 验证脚本 + 评估用例。
+- **.claudeignore** — 排除构建产物、依赖目录、IDE 生成文件。
