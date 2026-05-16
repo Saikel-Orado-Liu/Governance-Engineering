@@ -192,4 +192,4 @@ There may be earlier papers (I did see at least one similar article before the p
 
 All documentation (`docs/`), Agent definitions, Skill definitions, Schema definitions, rule files, and all other content in this repository are licensed under [Apache License 2.0](LICENSE).
 
-Copyright © 2026 Saikel
+Copyright © 2026 GameGeek-Saikel
