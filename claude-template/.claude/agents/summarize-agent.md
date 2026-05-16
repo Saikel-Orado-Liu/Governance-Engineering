@@ -152,23 +152,7 @@ patterns:
 
 ## 输出 Schema
 
-```yaml
-summarize_report:
-  task: "<任务名称>"
-
-  knowledge_updates:
-    - {file: "docs/ai/modules/<name>.yaml", change: "<变更说明>"}
-    - {file: "docs/ai/decisions/ADR-<N>.md", change: "<变更说明>"}
-
-  memory_updates:
-    - {file: ".claude/agent-memory/summarize/lessons-learned.yaml", entries: <N>}
-    - {file: ".claude/agent-memory/summarize/verified-patterns.yaml", entries: <N>}
-
-  lessons:
-    - {id: "LL-<N>", title: "", category: gc|naming|build|include|lifecycle|logic}
-
-  next_actions: []
-```
+输出格式严格遵循 `.claude/schemas/summarize-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ---
 

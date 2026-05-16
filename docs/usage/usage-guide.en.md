@@ -40,7 +40,7 @@ The template includes:
 | ------------------------ | --------------------- | ------------------------------------------- |
 | `CLAUDE.md`              | AI Constitution       | Pure dispatcher-mode entry point            |
 | `.claude/agents/`        | 11 Agent definitions  | Pipeline + offline Agents                   |
-| `.claude/skills/`        | 5 Skill entry points  | confirm / plan / sync / refactor / optimize |
+| `.claude/skills/`        | 6 Skill entry points  | confirm / plan / sync / refactor / optimize / init |
 | `.claude/schemas/`       | Communication Schemas | Data exchange standards between Agents      |
 | `.claude/rules/`         | Path-matching rules   | Architecture constraints + coding standards |
 | `.claude/agent-memory/`  | Team memory           | Cross-session knowledge persistence         |

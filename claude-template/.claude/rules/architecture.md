@@ -64,11 +64,24 @@ paths:
 
 每个 Fork 只注入：
 1. 任务指令（来自 Agent 定义）
-2. 上游 YAML（纯文本，去 ``` 包裹）
-3. 必要的源文件内容
-4. 自动注入的规则（路径匹配）
+2. **输出 Schema 内容**（来自 `.claude/schemas/<name>.schema.yaml`，Read 后裸文本注入）
+3. 上游 YAML（纯文本，去 ``` 包裹）
+4. 必要的源文件内容
+5. 自动注入的规则（路径匹配）
 
 **不注入**：MODULE_INDEX、模块卡片、CLAUDE.md（除非 Agent 定义明确要求）
+
+### Schema 注入规则（v4.1 强制）
+
+Agent 定义文件不再内联输出 Schema。Team Lead 必须在构造 Fork prompt 时：
+1. 根据 Agent 名称确定 Schema 文件路径 —— `agent_name` 中 `_` 替换为 `-`，加 `.schema.yaml`（如 `plan-agent` → `.claude/schemas/plan-result.schema.yaml`），或查 `schemas/INDEX.yaml`
+2. Read Schema 文件内容（裸 YAML，去 ``` 包裹）
+3. 在 Fork prompt 中 TASK DATA 之前注入 Schema，格式：
+   ```
+   输出 Schema（严格遵循此格式，字段和枚举值不可偏离）：
+   <Schema 文件裸 YAML 内容>
+   ```
+4. Agent 定义中的"字段规则"文字保留（是给 Agent 的行为指引），仅移除内联 YAML 代码块
 
 ### YAML 数据隔离（防注入）
 

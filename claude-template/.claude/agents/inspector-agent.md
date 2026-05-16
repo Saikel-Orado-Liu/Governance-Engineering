@@ -163,37 +163,7 @@ developer-agent → developer_result → [≥3文件 或 .h变更 或 LOC>50 或
 
 ## 输出 Schema
 
-```yaml
-inspector_report:
-  overall: approved|changes_requested|rejected
-
-  review_static:
-    total_issues: <N>
-    issues:
-      - {file: "<路径>:<行号>", severity: critical|major|minor, rule: "<规范条目>", problem: "<描述>", fix: "<修复建议>"}
-
-  review_build:
-    status: passed|failed|blocked|skipped
-    mode: {{BUILD_MODE}}
-    errors: []
-    warnings: []
-
-  review_runtime:
-    risks:
-      - {file: "<路径>:<行号>", risk: "<gc|tick|constructor|thread>", fix: "<建议>"}
-
-  simplify_suggestions:
-    - {file: "<路径>:<行号>", type: duplicate|abstract|naming|structure, what: "<建议>", why: "<理由>"}
-
-  summary:
-    critical: <N>
-    major: <N>
-    minor: <N>
-    build: passed|failed|skipped|<N>_errors|<N>_warnings
-    runtime_risks: <N>
-    simplifications_suggested: <N>
-```
-
+输出格式严格遵循 `.claude/schemas/inspector-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 ### 字段规则
 
 - `overall`: 综合判断

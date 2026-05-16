@@ -4,6 +4,35 @@
 
 ---
 
+## [V1.1] — 2026-05-16
+
+### Schema 外置化与按需注入
+
+- **移除所有 Agent 定义中的内联输出 Schema**。输出 Schema 现仅存于 `.claude/schemas/`，由 Team Lead 按新增的 Schema 注入规则（见 `.claude/rules/architecture.md`）在 Fork prompt 中注入裸 YAML。
+
+### plan-agent 升级为技术债感知型
+
+- **阶段 0 — 技术债分析**: plan-agent 在架构设计前先扫描 `.claude/agent-memory/orchestrator/tech-debt.yaml` + 源码中的弃用 API、不一致模式、重复代码、命名违规、模块耦合。
+- **步骤规格细化**: 每个 step 增加 `step_type`、`target`、`purpose`、`fields[]`、`functions[]`、`tech_debt_warnings[]`。算法函数（新数据结构或 >20 LOC）须附加 `algorithm_steps[]`。
+- **复杂度三档**: `small`（≤20 LOC, 单文件）| `medium`（21-50 LOC, 或 2 文件）| `large`（>50 LOC 或 ≥3 文件）。
+- **自检清单**: 6 项 → 10 项。
+
+### 新增记忆文件
+
+- `.claude/agent-memory/summarize/` 下新增 `health-report.yaml`、`verified-patterns.yaml` 结构化模板。
+- `lessons-learned.yaml` 重置为空初始状态（移除项目特定数据）。
+
+### 流水线终止规则
+
+- `dispatcher.md`: 汇报完毕后必须立即停止——不追问、不自行开启新任务。
+- `CLAUDE.md`: 两条流水线路径末尾均标记 `→ [终止]`。
+
+### Skill 入口适配
+
+- 全部 6 个 Skill 入口更新为在 Fork prompt 中注入外部 Schema YAML。
+
+---
+
 ## [V1.0] — 2026-04-30
 
 ### 初始发布

@@ -1,0 +1,18 @@
+# 知识库健康报告
+# 由 Summarize Agent 自动维护。追踪知识库文件大小和条目质量。
+
+files:
+  lessons-learned.yaml:
+    entries: 0
+    max: 50
+    status: ok
+  verified-patterns.yaml:
+    entries: 0
+    max: 80
+    status: ok
+  health-report.yaml:
+    lines: 0
+    max: 40
+    status: ok
+
+last_check: null

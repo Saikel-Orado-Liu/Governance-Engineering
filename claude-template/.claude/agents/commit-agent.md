@@ -137,15 +137,7 @@ git commit <过滤后的文件列表> -m '<提交消息>'
 
 ## 输出 Schema
 
-```yaml
-commit_report:
-  status: committed|skipped|blocked
-  mode: auto|manual
-  message: "<提交消息>"
-  files_committed: <N>
-  files_skipped: <N>
-  reason: "<SKIPPED 或 BLOCKED 时的原因>"
-```
+输出格式严格遵循 `.claude/schemas/commit-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ---
 

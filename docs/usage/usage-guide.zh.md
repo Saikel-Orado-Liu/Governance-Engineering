@@ -40,7 +40,7 @@ cp -r /path/to/Governance-Engineering/claude-template/. .
 | ------------------------ | ---------------- | ------------------------------------------- |
 | `CLAUDE.md`              | AI 组织章程      | 纯调度者模式入口                            |
 | `.claude/agents/`        | 11 个 Agent 定义 | 流水线 + 离线 Agent                         |
-| `.claude/skills/`        | 5 个 Skill 入口  | confirm / plan / sync / refactor / optimize |
+| `.claude/skills/`        | 6 个 Skill 入口  | confirm / plan / sync / refactor / optimize / init |
 | `.claude/schemas/`       | 通信 Schema      | Agent 间数据交换标准                        |
 | `.claude/rules/`         | 路径匹配规则     | 架构约束 + 编码规范                         |
 | `.claude/agent-memory/`  | 团队记忆         | 跨会话知识持久化                            |

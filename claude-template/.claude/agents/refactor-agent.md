@@ -227,38 +227,7 @@ proposals:
 
 ## 输出 Schema
 
-```yaml
-refactor_report:
-  scan_summary:
-    files_scanned: <N>
-    total_issues: <N>
-
-  quality_scan:
-    unused_code: <N>
-    naming_violations: <N>
-    cyclic_deps: <N>
-    high_complexity: <N>
-    long_functions: <N>
-    long_files: <N>
-
-  performance_scan:  # v3 新增
-    hot_functions: <N>
-    sync_io_in_loops: <N>
-    cache_opportunities: <N>
-    simd_opportunities: <N>
-
-  risk_distribution:
-    low: <N>      # 已自动执行
-    medium: <N>   # 批量提案
-    high: <N>     # 逐项审批
-    performance: <N>  # 性能相关
-
-  auto_applied:
-    - {file, change, risk: low}
-
-  proposals:
-    - {id: RF-<N>, title, risk, category, type, current_state, proposed_change, expected_benefit, risk_if_not_done}
-```
+输出格式严格遵循 `.claude/schemas/refactor-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ## 失败模式
 

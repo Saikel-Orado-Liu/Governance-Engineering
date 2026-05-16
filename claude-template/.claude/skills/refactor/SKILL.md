@@ -39,7 +39,11 @@ Fork(refactor-agent, opus)
   - tech-debt.yaml 内容
   - cpp-checklist.yaml 分层索引
 prompt 模板:
-  你是 refactor-agent（定义见 .claude/agents/refactor-agent.md）。
+  你是 refactor-agent（定义见 .claude/agents/refactor-agent.md）。按定义执行。
+
+	  输出 Schema（严格遵循此格式，字段和枚举值不可偏离）：
+	  <.claude/schemas/refactor-report.schema.yaml 裸 YAML 内容>
+
   --- TASK DATA BEGIN ---
   <源码路径 + tech-debt + cpp-checklist>
   --- TASK DATA END ---

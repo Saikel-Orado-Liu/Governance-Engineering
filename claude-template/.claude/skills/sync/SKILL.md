@@ -60,7 +60,11 @@ Fork(sync-agent)
   - 受影响的模块卡片
   - last-sync.yaml 内容
 prompt 模板:
-  你是 sync-agent（定义见 .claude/agents/sync-agent.md）。
+  你是 sync-agent（定义见 .claude/agents/sync-agent.md）。按定义执行。
+
+	  输出 Schema（严格遵循此格式，字段和枚举值不可偏离）：
+	  <.claude/schemas/sync-report.schema.yaml 裸 YAML 内容>
+
   --- TASK DATA BEGIN ---
   <git log + git diff + 模块卡片 + last-sync>
   --- TASK DATA END ---

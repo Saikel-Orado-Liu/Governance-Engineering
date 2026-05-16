@@ -99,43 +99,7 @@ memory: project
 
 ## 输出 Schema
 
-```yaml
-optimize_report:
-  user_intent: "<提取的核心诉求>"
-  constraints: ["<项目约束>"]
-
-  alternatives:
-    - id: A
-      name: "<方案名称>"
-      approach: "<实现路径概述>"
-      files_affected: ["<路径>"]
-      estimated_loc: <N>
-      scores:
-        performance: <1-5>
-        maintainability: <1-5>
-        ue_convention: <1-5>
-        simplicity: <1-5>
-        extensibility: <1-5>
-        consistency: <1-5>
-        risk: <1-5 (越低越好)>
-      pros: ["<优点>"]
-      cons: ["<缺点>"]
-      best_for: "<最适合什么场景>"
-
-    - id: B
-      name: "..."
-      # ... 同上
-
-  recommendation:
-    ranked: [A, B, C]
-    rationale: "<推荐理由>"
-    weighted_for: "<当前任务的偏好维度>"
-
-  downstream_hint:
-    complexity: simple|standard
-    auto_routing: >
-      用户选择 A/B/C 后 → Fork(confirm-agent) with chosen_plan → 标准流水线
-```
+输出格式严格遵循 `.claude/schemas/optimize-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ---
 

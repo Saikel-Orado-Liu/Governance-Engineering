@@ -204,33 +204,7 @@ bool F<ClassName>_<MethodName>_<Scenario>::RunTest(const {{STRING_TYPE}}& Parame
 
 ### 成功完成
 
-```yaml
-test_report:
-  verdict: passed|partial|failed|not_run
-
-  coverage:
-    files_tested: <N>
-    methods_tested: <N>
-    tests_generated: <N>
-    tests_passed: <N>
-    tests_failed: <N>
-
-  test_files:
-    - {file: "<路径>", class: "<类名>", methods: ["<方法名>"]}
-
-  build:
-    status: passed|failed
-    mode: {{BUILD_MODE}}
-    fix_cycles: <N>
-
-  results:
-    - {test: "<测试名>", status: passed|failed, duration_ms: <N>, error: "<失败原因>"}
-
-  inspector_regressions:
-    - {issue: "<inspector 发现的问题>", test: "<覆盖的测试名>", covered: true|false}
-
-  notes: "<补充说明>"
-```
+输出格式严格遵循 `.claude/schemas/test-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ### 跳过
 

@@ -228,36 +228,7 @@ STANDARD: plan-agent → developer-agent (你) → [inspector-agent] → summari
 
 ### 成功完成
 
-```yaml
-developer_result:
-  verdict: complete
-
-  input_type: simple|standard
-  plan_adherence: full|partial
-
-  generate:
-    files_created:
-      - {path: "<路径>", reason: "<说明>"}
-    files_changed:
-      - {path: "<路径>", change: "<说明>", lines: <N>}
-    total_loc: <N>
-    project_sync:
-      - {file: "<路径>", action: "<操作>"}
-
-  self_review:
-    static_analysis: passed|issues_found_and_fixed
-    issues_found: <N>
-    issues_fixed: <N>
-
-  build:
-    status: passed|passed_with_warnings|failed|blocked
-    mode: {{BUILD_MODE}}
-    editor_status: connected|not_connected
-
-  fix_cycles: <N>
-
-  next_phase: summarize|inspector
-```
+输出格式严格遵循 `.claude/schemas/developer-result.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ### 升级
 

@@ -138,45 +138,7 @@ simplicity_score = round(Σ(weight_i × score_i) / 100)
 
 ## 统一输出 Schema
 
-```yaml
-confirm_result:
-  requirement: "<需求概括>"
-  status: normal|already_complete
-
-  ambiguity:
-    high: []
-    medium: []
-    low: []
-    none: true|false
-
-  detection:
-    interface_conflict: {passed: true|false, findings: []}
-    naming_ambiguity: {passed: true|false, findings: []}
-    behavior_ambiguity: {passed: true|false, findings: []}
-
-  simplicity_score: <0-100>
-  simplicity_tier: simple|standard
-  estimated_loc: <N>
-  confidence: high|medium|low
-
-  scoring_breakdown:
-    - {criterion: public_api_changes, weight: 30, score: 100, weighted: 30.0, note: ""}
-    - {criterion: header_changes, weight: 20, score: 100, weighted: 20.0, note: ""}
-    - {criterion: files_modified, weight: 15, score: 100, weighted: 15.0, note: ""}
-    - {criterion: algorithmic_novelty, weight: 15, score: 100, weighted: 15.0, note: ""}
-    - {criterion: estimated_loc, weight: 10, score: 100, weighted: 10.0, note: ""}
-    - {criterion: new_module_deps, weight: 5, score: 100, weighted: 5.0, note: ""}
-    - {criterion: files_created, weight: 3, score: 100, weighted: 3.0, note: ""}
-    - {criterion: ambiguity_level, weight: 2, score: 100, weighted: 2.0, note: ""}
-
-  restatement:
-    scope: "<涉及的文件和模块范围>"
-    affected_modules:
-      - {name: "", impact: "modify|create|none", files: [""]}
-    constraints: []
-    clarifications: []
-    assumptions: []
-```
+输出格式严格遵循 `.claude/schemas/confirm-result.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ### 字段规则
 

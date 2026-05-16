@@ -17,6 +17,27 @@ search_phase:
   required: true
   description: independent=自己搜索完成; integrated=整合了 explore_report
 
+tech_debt_analysis:
+  type: object
+  required: true
+  description: 技术债分析——文档记录 + 源码扫描的合并结果
+  fields:
+    documented_debts:
+      type: array
+      required: true
+      description: 从 .claude/agent-memory/orchestrator/tech-debt.yaml 提取的已知债务。source 必须为 "tech-debt.yaml"。无记录时为空数组。源码中发现的问题一律归入 discovered_debts
+      items: {pattern: string, severity: enum[high, medium, low], source: "tech-debt.yaml", recommendation: string}
+    discovered_debts:
+      type: array
+      required: true
+      description: 源码扫描中新发现的潜在技术债
+      items: {pattern: string, location: string, severity: enum[high, medium, low], recommendation: string}
+    avoid_patterns:
+      type: array
+      required: true
+      description: 本次任务必须避免的具体模式清单。必须至少 1 条
+      items: string
+
 references:
   type: object
   required: true
@@ -24,30 +45,65 @@ references:
     files: [string]
     symbols: [string]
     engine_apis: [string]
-    missing_info: [string]  # 未能确认的信息→implement阶段需注意
+    missing_info: [string]
 
 architecture_rationale:
   type: object
-  required: false  # simplicity_tier=standard&total_steps≤3时可省略
+  required: false
   fields:
-    considered: [string]  # 至少2个备选方案
+    considered: [string]
     chosen: string
 
 risk_assessment:
   type: array
   required: true
-  items: {risk, impact: low|medium|high, likelihood: low|medium|high, mitigation}
-  notes: "仅列出 impact≥medium 且 likelihood≥medium 的风险"
+  items: {risk: string, impact: enum[low, medium, high], likelihood: enum[low, medium, high], mitigation: string, debt_related: boolean}
+  notes: "仅列出 impact ≥ medium 且 likelihood ≥ medium 的风险。debt_related 标注是否与技术债相关"
 
 affected_modules:
   type: array
   required: true
-  items: {name, impact: low|medium|high, action: modify|create|delete}
+  items: {name: string, impact: enum[low, medium, high], action: enum[modify, create, delete]}
 
 steps:
   type: array
   required: true
-  items: {id, action, files: [string], acceptance: [string], complexity: small|large}
+  description: 每步对应一个类/文件/模块/函数的创建或修改，含完整结构规格
+  items:
+    - id: integer
+      step_type: enum[class_creation, struct_creation, interface_creation, file_creation, module_creation, function_addition, method_addition, modification]
+      target: string
+      purpose: string
+      files: [string]
+      fields:
+        type: array
+        required: false
+        description: class_creation 或需要状态的 file_creation 必须列出。仅函数集合可省略
+        items: {name: string, type: string, visibility: enum[private, protected, public], desc: string, init: string}
+      functions:
+        type: array
+        required: true
+        description: 本步骤要实现的函数列表。每个函数至少写功能描述
+        items:
+          - name: string
+            return_type: string
+            desc: string
+            is_algorithmic: boolean
+            algorithm_steps:
+              type: array
+              required: false
+              description: 仅 is_algorithmic=true 时需要。算法实现步骤
+              items: string
+      tech_debt_warnings:
+        type: array
+        required: true
+        description: 与此步骤直接相关的具体避免事项
+        items: string
+      acceptance:
+        type: array
+        required: true
+        items: string
+      complexity: enum[small, medium, large]
 
 total_steps:
   type: integer
@@ -60,7 +116,7 @@ estimated_total_loc:
 downstream:
   type: literal["Fork(developer-agent)"]
   required: true
-  description: v3 固定值，无 Agent Team
+  description: 固定值，无 Agent Team
 
 # 传递链
 # plan_result → Fork(developer-agent) at standard tasks

@@ -42,7 +42,10 @@ Fork(confirm-agent)
 **Fork prompt 内容**（只包含任务数据，不重复 schema。遵循数据隔离规则）：
 
 ```
-你是 confirm-agent（定义见 .claude/agents/confirm-agent.md）。按定义中的三步流程和输出 Schema 执行。
+你是 confirm-agent（定义见 .claude/agents/confirm-agent.md）。按定义中的三步流程执行。
+
+输出 Schema（严格遵循此格式，字段和枚举值不可偏离）：
+<.claude/schemas/confirm-result.schema.yaml 裸 YAML 内容>
 
 --- TASK DATA BEGIN ---
 

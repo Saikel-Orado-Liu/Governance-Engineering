@@ -37,7 +37,11 @@ Fork(optimize-agent, opus)
   - 模块卡片
   - explore_report（如有）
 prompt 模板:
-  你是 optimize-agent（定义见 .claude/agents/optimize-agent.md）。
+  你是 optimize-agent（定义见 .claude/agents/optimize-agent.md）。按定义执行。
+
+	  输出 Schema（严格遵循此格式，字段和枚举值不可偏离）：
+	  <.claude/schemas/optimize-report.schema.yaml 裸 YAML 内容>
+
   --- TASK DATA BEGIN ---
   <用户方案 + 源码 + 模块卡片 + explore_report>
   --- TASK DATA END ---

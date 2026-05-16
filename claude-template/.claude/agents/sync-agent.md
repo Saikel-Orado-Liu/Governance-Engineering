@@ -93,24 +93,7 @@ git diff --name-status <last-sync-commit>..HEAD → 获取受影响的文件
 
 ## 输出 Schema
 
-```yaml
-sync_report:
-  status: synced|conflicts_found|blocked
-
-  range:
-    last_sync: "<commit hash>"
-    current_head: "<commit hash>"
-    human_commits: <N>
-
-  knowledge_updates:
-    - {file: "<模块卡片路径>", change: "<更新说明>"}
-
-  conflicts:
-    - {conflict: "<描述>", resolution: "NEEDS_HUMAN_CONFIRMATION", suggested_fix: "<建议>"}
-
-  skipped:
-    - {file: "<路径>", reason: "纯实现变更|AI提交|非代码文件"}
-```
+输出格式严格遵循 `.claude/schemas/sync-report.schema.yaml`。Team Lead 会在 Fork prompt 中注入完整 Schema 内容。
 
 ## 失败模式
 
