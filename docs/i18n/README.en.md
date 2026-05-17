@@ -129,7 +129,7 @@ The current implementation maps all five management principles: 12 specialized a
 
 ### Gaps from the Ideal Architecture
 
-1. **Context transfer overhead.** While sub-agents pass context between each other, each agent must still re-read the specific files within its scope, consuming more context than traditional single-session approaches.
+1. **Context transfer overhead.** Although sub-agents pass highly compressed YAML summaries between each other, each agent must still re-read the specific files within its scope, consuming more context than traditional single-session approaches.
 2. **Time overhead.** Multi-agent scheduling, review, and confirmation steps take more time than traditional methods. Under DeepSeek V4 API testing, a high-level requirement averages 20-40 minutes end-to-end.
 3. **Limited creative autonomy.** Each sub-agent strictly follows its defined objective and lacks awareness of the user's original intent. In scenarios requiring full AI ownership of a project (e.g., a non-programmer building a complete website from scratch), it may underperform compared to unconstrained conversation.
 4. **High iteration cost.** The current architecture favors medium-to-large projects; the process overhead is excessive for small projects and rapid-iteration scenarios, yielding poor return on investment.
