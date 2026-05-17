@@ -3,20 +3,32 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "/init — 初始化这个 项目框架 C++ 项目。项目名称 Test，单模块，引擎版本 5.7，依赖 Core/CoreUObject/Engine/RHI。构建用 UBT，VCS 用 Git。源码在 {{SOURCE_DIR}}/Test/ 下。",
-      "expected_output": "init_report.verdict=complete, 生成 CLAUDE.md 含 UE 5.7 C++20 描述, 编码规范为 cpp-ue, agent 工具保留 mcp__{{BUILD_TOOL}}, 占位符全部替换",
+      "prompt": "/init — 初始化这个 TypeScript React 项目。package.json 中有 react 18 和 typescript 5。源码在 src/ 下，用 vitest 测试，npm run build 构建。git 版本控制。",
+      "expected_output": "init_report.verdict=complete, 匹配 typescript-react 模式, 编码规范为 typescript-react, agent 工具移除 mcp (用 Bash+npm), mcp.auto_installed 含 context7, mcp.manual_pending 可能含 vercel-mcp/git-mcp/figma-mcp 等（取决于用户选择）, 占位符全部替换",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "/init — 初始化这个 TypeScript React 项目。package.json 中有 react 18 和 typescript 5。源码在 src/ 下，用 vitest 测试，npm run build 构建。git 版本控制。",
-      "expected_output": "init_report.verdict=complete, 生成 CLAUDE.md 含 TypeScript React 描述, 编码规范为 typescript-react, agent 工具移除 mcp (用 Bash+npm), VCS 为 git",
+      "prompt": "/init — 初始化这个 Python 科学计算项目。pyproject.toml 中有 numpy/scipy/matplotlib 依赖。源码在 src/ 下，用 pytest 测试。git 版本控制。",
+      "expected_output": "init_report.verdict=complete, 匹配 python 模式, mcp.auto_installed 含 context7, mcp.manual_pending 列出可选 MCP（git-mcp/docker-mcp/brave-search/postgres-mcp/aws-mcp/gcp-mcp）供用户选择, 占位符全部替换",
       "files": []
     },
     {
       "id": 3,
       "prompt": "/init — 初始化一个新的空项目目录。还没有任何代码文件，只有 README.md。",
-      "expected_output": "init_report.verdict=partial, 匹配 generic 模式, missing_placeholders 非空, 列出需手动提供的项目信息",
+      "expected_output": "init_report.verdict=partial, 匹配 generic 模式, mcp.auto_installed 含 context7, mcp.manual_pending 含 brave-search/git-mcp 作为可选, missing_placeholders 非空, 列出需手动提供的项目信息",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "/init — 初始化这个 Rust CLI 工具项目。Cargo.toml 中有 clap/tokio/serde 依赖。源码在 src/ 下（main.rs + lib.rs）。cargo build 构建，cargo test 测试。git 版本控制。",
+      "expected_output": "init_report.verdict=complete, 匹配 rust 模式, 编码规范为 rust, mcp.auto_installed 含 context7, mcp.manual_pending 列出可选 MCP（git-mcp/docker-mcp/brave-search）, agent 工具用 Bash+cargo, 占位符全部替换",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "/init — 初始化这个 Go 后端项目。go.mod 中 module github.com/myorg/api，依赖 gin/gorm。源码在 cmd/ 和 pkg/ 下。go build 构建，go test 测试。git 版本控制。我想安装所有推荐的 MCP，但跳过需要 API key 的。",
+      "expected_output": "init_report.verdict=complete, 匹配 go 模式, mcp.auto_installed 含 context7, mcp.skipped 含所有 manual 类型 MCP（用户选择跳过需要凭证的）, 占位符全部替换",
       "files": []
     }
   ]

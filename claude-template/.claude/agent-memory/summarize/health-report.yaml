@@ -1,18 +1,19 @@
-# 知识库健康报告
-# 由 Summarize Agent 自动维护。追踪知识库文件大小和条目质量。
+# 知识库健康报告 — 结构化指标
+# 由 Summarize Agent 自动维护。全量数字可对比，非文本描述。
+#
+# 字段说明：
+#   storage: 各记忆文件的条目数和配额状态
+#   code_quality: 按类型+严重性统计的问题分布
+#   test_coverage: 测试覆盖计数（如有测试数据）
 
-files:
-  lessons-learned.yaml:
-    entries: 0
-    max: 50
-    status: ok
-  verified-patterns.yaml:
-    entries: 0
-    max: 80
-    status: ok
-  health-report.yaml:
-    lines: 0
-    max: 40
-    status: ok
-
-last_check: null
+checked: null    # ISO date
+storage:
+  lessons_learned:  {entries: 0, limit: 50,  status: ok}
+  verified_patterns: {entries: 0, limit: 80,  status: ok}
+  tech_debt:        {entries: 0, by_severity: {critical: 0, major: 0, minor: 0}}
+code_quality:
+  issues_by_type: {}
+  issues_by_severity: {critical: 0, major: 0, minor: 0}
+test_coverage:
+  unit_tests: null
+  integration_tests: null

@@ -1,6 +1,14 @@
 # 上次同步状态
-# 由 sync-agent 自动维护。首次运行时使用 HEAD~10 作为起点。
+# 由 sync-agent 自动维护。init-agent 在项目初始化时创建初始状态。
+#
+# last_sync_commit 存储 VCS 特定的变更标识符：
+#   Git: commit hash (40-char hex)
+#   SVN: revision number
+#   P4:  changelist number
+#   Hg:  changeset id
+#   CM:  changeset number
 
 last_sync_commit: null
 last_sync_date: null
 synced_files: 0
+vcs_type: null

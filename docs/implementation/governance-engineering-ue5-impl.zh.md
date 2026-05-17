@@ -29,7 +29,7 @@ requires: theory/governance-engineering-theory.zh.md
 | 目录                                     | 内容                | 说明                                               |
 | ---------------------------------------- | ------------------- | -------------------------------------------------- |
 | `claude-template/CLAUDE.md`              | AI 组织章程         | 纯调度者模式，主对话永不执行任务                   |
-| `claude-template/.claude/agents/`        | 11 个 Agent 定义    | 8 个流水线 Agent + 3 个离线 Agent                  |
+| `claude-template/.claude/agents/`        | 12 个 Agent 定义    | 8 个流水线 Agent + 3 个离线 Agent                  |
 | `claude-template/.claude/skills/`        | 5 个 Skill 入口     | confirm / plan / sync / refactor / optimize + init |
 | `claude-template/.claude/schemas/`       | Agent 间通信 Schema | YAML 结构化数据交换标准                            |
 | `claude-template/.claude/rules/`         | 路径匹配规则        | architecture.md + coding-standards.md              |

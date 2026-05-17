@@ -30,4 +30,13 @@ skipped:
   required: false
   items: {file, reason}
 
+mcp_tool_gaps:
+  type: array
+  required: false
+  description: 已安装到 settings.json 但未注入到任何 Agent tools: 列表的 MCP
+  items:
+    server_id: string
+    installed_in_settings: boolean
+    injected_to_agents: [string]
+
 # 不参与流水线 — 手动 /sync 或 Cron 触发

@@ -1,0 +1,363 @@
+# MCP 兼容性参考表
+# 定义通用 MCP 注册表、项目模式→MCP 映射、安装类型判定
+# init 流程步骤 2 使用此表快速推荐 MCP；无匹配时自动联网搜索
+#
+# 每个 MCP 条目的 install_steps 是静态回退值——init 始终优先联网搜索最新安装过程。
+# 仅当网络不可用时才使用 install_steps 作为回退。
+
+# === MCP 分类定义 ===
+categories:
+  language-framework:
+    description: "语言和框架专属 MCP——提供特定技术栈的编译器/编辑器/调试集成"
+  database:
+    description: "数据库 MCP——提供 SQL/NoSQL 查询、schema 管理、数据迁移"
+  cloud:
+    description: "云服务 MCP——提供部署、存储、函数计算等云平台集成"
+  dev-tools:
+    description: "开发工具 MCP——提供 Git、Docker、CI/CD 等开发流程集成"
+  search-knowledge:
+    description: "搜索与知识 MCP——提供文档搜索、网页搜索、知识库查询"
+
+# === MCP 注册表 ===
+# 字段说明：
+#   setup_type: config_only=仅需写入 settings.json 配置 | needs_setup=需要项目级初始化命令
+#   install_steps: setup_type=needs_setup 时必须。项目根目录下依次执行的命令列表。静态回退值。
+#   install_search_query: 联网搜索安装过程的查询模板（{name} 替换为 MCP 名称）
+#   agent_tools: MCP 安装后，init-agent 自动注入到对应 Agent 定义 tools: 列表中的工具名。
+#                格式: {agent-name: ["mcp__<server>__<tool>", ...]}
+#   applicable_patterns 引用 project-patterns.yaml 中的模式名
+mcp_index:
+  # --- 语言/框架 ---
+  ue-mcp:
+    name: "UE-MCP"
+    description: "Unreal Engine 编辑器桥接——蓝图、资产、关卡、动画等 425+ 操作"
+    category: language-framework
+    applicable_patterns: ["cpp-ue"]
+    install_type: auto
+    setup_type: needs_setup
+    install_steps:
+      - "npx ue-mcp init"
+    install_search_query: "{name} installation setup guide how to install"
+    agent_tools:
+      developer-agent: ["mcp__ue-mcp__project", "mcp__ue-mcp__editor", "mcp__ue-mcp__blueprint", "mcp__ue-mcp__level", "mcp__ue-mcp__asset"]
+      inspector-agent: ["mcp__ue-mcp__project"]
+      test-agent: ["mcp__ue-mcp__editor", "mcp__ue-mcp__project"]
+      plan-agent: ["mcp__ue-mcp__reflection"]
+      explore-agent: ["mcp__ue-mcp__reflection", "mcp__ue-mcp__project"]
+    config_template: |
+      "ue-mcp": {
+        "command": "npx",
+        "args": ["-y", "@anthropic/ue-mcp"]
+      }
+    search_keywords: ["unreal engine mcp", "ue mcp server", "unreal engine claude integration"]
+
+  unity-mcp:
+    name: "Unity MCP"
+    description: "Unity 编辑器集成——场景管理、预制体、资源操作"
+    category: language-framework
+    applicable_patterns: ["csharp-dotnet"]
+    install_type: auto
+    setup_type: config_only
+    install_search_query: "{name} installation setup guide how to install"
+    agent_tools:
+      developer-agent: ["mcp__unity-mcp__scene", "mcp__unity-mcp__prefab", "mcp__unity-mcp__asset", "mcp__unity-mcp__project"]
+    config_template: |
+      "unity-mcp": {
+        "command": "npx",
+        "args": ["-y", "unity-mcp"]
+      }
+    search_keywords: ["unity mcp server", "unity claude integration", "unity editor mcp"]
+
+  # --- 数据库 ---
+  postgres-mcp:
+    name: "PostgreSQL MCP"
+    description: "PostgreSQL 数据库查询、schema 检查、迁移管理"
+    category: database
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet"]
+    install_type: manual
+    manual_reason: "需要数据库连接字符串（含密码），不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} connection setup environment variables"
+    agent_tools:
+      developer-agent: ["mcp__postgres-mcp__query", "mcp__postgres-mcp__schema"]
+    config_template: |
+      "postgres-mcp": {
+        "command": "npx",
+        "args": ["-y", "@anthropic/postgres-mcp"],
+        "env": {
+          "DATABASE_URL": "<你的 PostgreSQL 连接字符串>"
+        }
+      }
+    search_keywords: ["postgresql mcp server", "postgres claude integration"]
+
+  sqlite-mcp:
+    name: "SQLite MCP"
+    description: "SQLite 本地数据库查询和 schema 管理"
+    category: database
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go"]
+    install_type: auto
+    setup_type: config_only
+    install_search_query: "{name} installation setup"
+    agent_tools:
+      developer-agent: ["mcp__sqlite-mcp__query"]
+    config_template: |
+      "sqlite-mcp": {
+        "command": "npx",
+        "args": ["-y", "sqlite-mcp-server"]
+      }
+    search_keywords: ["sqlite mcp server", "sqlite claude integration"]
+
+  redis-mcp:
+    name: "Redis MCP"
+    description: "Redis 缓存查询、键管理、性能监控"
+    category: database
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven"]
+    install_type: manual
+    manual_reason: "需要 Redis 连接地址（含密码），不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} connection setup environment variables"
+    agent_tools:
+      developer-agent: ["mcp__redis-mcp__query"]
+    config_template: |
+      "redis-mcp": {
+        "command": "npx",
+        "args": ["-y", "redis-mcp-server"],
+        "env": {
+          "REDIS_URL": "<你的 Redis 连接地址>"
+        }
+      }
+    search_keywords: ["redis mcp server", "redis claude integration"]
+
+  # --- 云服务 ---
+  aws-mcp:
+    name: "AWS MCP"
+    description: "AWS 服务集成——Lambda、S3、DynamoDB、CloudFormation 等"
+    category: cloud
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet"]
+    install_type: manual
+    manual_reason: "需要 AWS 凭证（Access Key + Secret Key），不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} AWS credentials setup configuration"
+    agent_tools:
+      developer-agent: ["mcp__aws-mcp__deploy", "mcp__aws-mcp__list"]
+    config_template: |
+      "aws-mcp": {
+        "command": "npx",
+        "args": ["-y", "@anthropic/aws-mcp"],
+        "env": {
+          "AWS_ACCESS_KEY_ID": "<你的 AWS Access Key>",
+          "AWS_SECRET_ACCESS_KEY": "<你的 AWS Secret Key>",
+          "AWS_REGION": "<你的 AWS Region>"
+        }
+      }
+    search_keywords: ["aws mcp server", "aws claude integration", "amazon web services mcp"]
+
+  vercel-mcp:
+    name: "Vercel MCP"
+    description: "Vercel 部署管理——项目配置、域名、环境变量、日志"
+    category: cloud
+    applicable_patterns: ["typescript-react", "typescript-node"]
+    install_type: manual
+    manual_reason: "需要 Vercel API Token，不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} Vercel token setup configuration"
+    agent_tools:
+      developer-agent: ["mcp__vercel-mcp__deploy", "mcp__vercel-mcp__list", "mcp__vercel-mcp__logs"]
+    config_template: |
+      "vercel-mcp": {
+        "command": "npx",
+        "args": ["-y", "vercel-mcp"],
+        "env": {
+          "VERCEL_TOKEN": "<你的 Vercel API Token>"
+        }
+      }
+    search_keywords: ["vercel mcp server", "vercel claude integration", "vercel deployment mcp"]
+
+  gcp-mcp:
+    name: "Google Cloud MCP"
+    description: "Google Cloud Platform 服务集成——Cloud Run、BigQuery、Cloud Storage 等"
+    category: cloud
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven"]
+    install_type: manual
+    manual_reason: "需要 GCP 服务账号凭证文件路径，不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} GCP service account setup configuration"
+    agent_tools:
+      developer-agent: ["mcp__gcp-mcp__deploy", "mcp__gcp-mcp__list"]
+    config_template: |
+      "gcp-mcp": {
+        "command": "npx",
+        "args": ["-y", "gcp-mcp-server"],
+        "env": {
+          "GOOGLE_APPLICATION_CREDENTIALS": "<你的 GCP 服务账号 JSON 文件路径>"
+        }
+      }
+    search_keywords: ["google cloud mcp server", "gcp claude integration", "google cloud platform mcp"]
+
+  # --- 开发工具 ---
+  git-mcp:
+    name: "Git MCP"
+    description: "Git 版本控制增强——PR 管理、代码审查、仓库操作"
+    category: dev-tools
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet", "generic"]
+    install_type: manual
+    manual_reason: "需要 GitHub/GitLab Token，不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} GitHub token setup configuration"
+    agent_tools:
+      developer-agent: ["mcp__git-mcp__pr", "mcp__git-mcp__review"]
+    config_template: |
+      "git-mcp": {
+        "command": "npx",
+        "args": ["-y", "@anthropic/git-mcp"],
+        "env": {
+          "GITHUB_TOKEN": "<你的 GitHub Personal Access Token>"
+        }
+      }
+    search_keywords: ["github mcp server", "git mcp claude", "github claude integration"]
+
+  docker-mcp:
+    name: "Docker MCP"
+    description: "Docker 容器管理——镜像构建、容器编排、Compose 管理"
+    category: dev-tools
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet"]
+    install_type: auto
+    setup_type: config_only
+    install_search_query: "{name} Docker setup requirements"
+    agent_tools:
+      developer-agent: ["mcp__docker-mcp__build", "mcp__docker-mcp__run"]
+    config_template: |
+      "docker-mcp": {
+        "command": "npx",
+        "args": ["-y", "docker-mcp-server"]
+      }
+    search_keywords: ["docker mcp server", "docker claude integration", "container management mcp"]
+
+  figma-mcp:
+    name: "Figma MCP"
+    description: "Figma 设计稿集成——读取设计文件、导出资源、样式提取"
+    category: dev-tools
+    applicable_patterns: ["typescript-react", "typescript-node"]
+    install_type: manual
+    manual_reason: "需要 Figma Personal Access Token，不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} Figma token setup configuration"
+    agent_tools:
+      developer-agent: ["mcp__figma-mcp__read"]
+    config_template: |
+      "figma-mcp": {
+        "command": "npx",
+        "args": ["-y", "figma-mcp-server"],
+        "env": {
+          "FIGMA_TOKEN": "<你的 Figma Personal Access Token>"
+        }
+      }
+    search_keywords: ["figma mcp server", "figma claude integration", "figma design mcp"]
+
+  # --- 搜索/知识 ---
+  context7:
+    name: "Context7"
+    description: "实时文档搜索——自动查找最新库/框架文档和示例代码"
+    category: search-knowledge
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet", "cpp-ue", "generic"]
+    install_type: auto
+    setup_type: config_only
+    install_search_query: "{name} upstash installation setup"
+    agent_tools:
+      explore-agent: ["mcp__context7__search", "mcp__context7__resolve-library-id"]
+      plan-agent: ["mcp__context7__search"]
+      developer-agent: ["mcp__context7__search"]
+    config_template: |
+      "context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"]
+      }
+    search_keywords: ["context7 mcp", "library documentation mcp", "upstash context7"]
+
+  brave-search:
+    name: "Brave Search MCP"
+    description: "Brave 网页搜索——实时搜索互联网获取最新信息"
+    category: search-knowledge
+    applicable_patterns: ["typescript-react", "typescript-node", "python", "rust", "go", "java-gradle", "java-maven", "csharp-dotnet", "cpp-ue", "generic"]
+    install_type: manual
+    manual_reason: "需要 Brave Search API Key，不宜自动写入配置文件"
+    setup_type: config_only
+    install_search_query: "{name} Brave API key setup configuration"
+    agent_tools:
+      explore-agent: ["mcp__brave-search__search"]
+    config_template: |
+      "brave-search": {
+        "command": "npx",
+        "args": ["-y", "@anthropic/brave-search-mcp"],
+        "env": {
+          "BRAVE_API_KEY": "<你的 Brave Search API Key>"
+        }
+      }
+    search_keywords: ["brave search mcp", "web search mcp server", "brave search api claude"]
+
+# === 项目模式 → MCP 推荐映射 ===
+pattern_recommendations:
+  cpp-ue:
+    categories: ["language-framework", "search-knowledge"]
+    recommended: ["ue-mcp", "context7"]
+    optional: ["brave-search"]
+  typescript-react:
+    categories: ["search-knowledge", "cloud", "dev-tools"]
+    recommended: ["context7"]
+    optional: ["vercel-mcp", "git-mcp", "figma-mcp", "docker-mcp", "brave-search"]
+  typescript-node:
+    categories: ["search-knowledge", "cloud", "dev-tools"]
+    recommended: ["context7"]
+    optional: ["vercel-mcp", "git-mcp", "docker-mcp", "brave-search"]
+  python:
+    categories: ["search-knowledge", "cloud", "dev-tools", "database"]
+    recommended: ["context7"]
+    optional: ["git-mcp", "docker-mcp", "brave-search", "postgres-mcp", "aws-mcp", "gcp-mcp"]
+  rust:
+    categories: ["search-knowledge", "dev-tools"]
+    recommended: ["context7"]
+    optional: ["git-mcp", "docker-mcp", "brave-search"]
+  go:
+    categories: ["search-knowledge", "cloud", "dev-tools"]
+    recommended: ["context7"]
+    optional: ["git-mcp", "docker-mcp", "brave-search", "aws-mcp", "gcp-mcp"]
+  java-gradle:
+    categories: ["search-knowledge", "cloud", "dev-tools", "database"]
+    recommended: ["context7"]
+    optional: ["git-mcp", "docker-mcp", "brave-search", "postgres-mcp", "aws-mcp", "gcp-mcp"]
+  java-maven:
+    categories: ["search-knowledge", "cloud", "dev-tools", "database"]
+    recommended: ["context7"]
+    optional: ["git-mcp", "docker-mcp", "brave-search", "postgres-mcp", "aws-mcp", "gcp-mcp"]
+  csharp-dotnet:
+    categories: ["language-framework", "search-knowledge", "cloud", "dev-tools"]
+    recommended: ["context7"]
+    optional: ["unity-mcp", "git-mcp", "docker-mcp", "brave-search", "aws-mcp"]
+  generic:
+    categories: ["search-knowledge"]
+    recommended: ["context7"]
+    optional: ["brave-search", "git-mcp"]
+
+# === 联网搜索规则 ===
+web_search:
+  enabled: true
+
+  # MCP 发现搜索——查表无匹配时触发
+  discovery:
+    trigger: "pattern_recommendations 中没有匹配当前项目模式的条目，或 recommended+optional 均为空"
+    search_query_template: "{language} {framework} MCP server Claude integration site:npmjs.com OR site:github.com"
+    max_results: 5
+    fallback_message: "未能找到适合「{project_type}」的已知 MCP。你可以手动指定 MCP 名称，或跳过 MCP 安装。"
+
+  # MCP 安装过程搜索——对每个选中的 MCP 强制触发
+  # 查表中的 install_steps 仅作网络不可用时的回退值
+  install:
+    trigger: "始终——对每个推荐给用户的 MCP 搜索其最新安装过程"
+    search_query_template: "{mcp_name} MCP server install setup getting started guide"
+    max_results: 3
+    extract:
+      - "安装命令（如 npx X init, pip install X, npm install -g X）"
+      - "项目级初始化步骤（如生成配置文件、注册插件、数据库迁移）"
+      - "前置依赖（如需要 Node.js >= 18、Python >= 3.10、Docker 运行中）"
+      - "环境变量或凭证需求（API key、连接字符串等）——用于判断 auto/manual"
+    note: "搜索到的 install_steps 覆盖查表中的静态回退值。若网络不可用则使用查表值。"

@@ -1,0 +1,22 @@
+# VCS 配置 — 版本控制系统命令映射
+# 由 init-agent 在项目初始化时自动生成。
+# commit-agent 读取此文件确定使用哪些 VCS 命令。
+#
+# 字段说明：
+#   type: VCS 类型标识符（作为主键，用于 docs/ai/ 引用和日志输出）
+#   commands: VCS 核心命令映射。每个值是完整可执行的命令（不含具体文件参数）
+#   commit_args: commit 子命令的参数格式。{message} 为占位符
+#   file_syntax: 文件列表在命令中的位置约定（append=追加在命令后, flag=通过参数标志指定）
+
+vcs:
+  type: git
+  commands:
+    status: "git status"
+    diff: "git diff"
+    stage: "git add"
+    commit_base: "git commit"
+    commit_template: "git commit {files} -m {message}"
+  commit_args:
+    message_flag: "-m"
+    file_position: append
+  auto_mark: "[AI]"

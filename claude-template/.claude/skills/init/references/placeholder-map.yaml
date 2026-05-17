@@ -73,15 +73,37 @@ placeholders:
 
   VCS_STATUS:
     description: "版本控制状态查看命令"
-    rule: "检测 VCS 类型 → .git/ → 'git status', git 命令存在 → 'git status'"
-    default: "git status"
+    rule: "从 vcs-reference.yaml 的 known_vcs 查表，或从步骤 1.5 联网搜索获取。格式: '<vcs_executable> <status_subcommand>'"
+    examples:
+      git: "git status"
+      svn: "svn status"
+      p4: "p4 opened"
     priority: auto
+    source: "vcs-config.yaml → vcs.commands.status"
 
   VCS_COMMIT:
-    description: "版本控制提交命令"
-    rule: "检测 VCS 类型 → .git/ → 'git commit', git 命令存在 → 'git commit'"
-    default: "git commit <files> -m '<message>'"
+    description: "版本控制提交命令模板"
+    rule: "从 vcs-reference.yaml 的 known_vcs 查表，或从步骤 1.5 联网搜索获取。{files} 和 {message} 为占位符，commit-agent 在运行时替换"
+    examples:
+      git: "git commit {files} -m '{message}'"
+      svn: "svn commit {files} -m '{message}'"
+      p4: "p4 submit -d '{message}' {files}"
     priority: auto
+    source: "vcs-config.yaml → vcs.commands.commit + vcs.commit_args"
+
+  VCS_DIFF:
+    description: "版本控制差异查看命令"
+    rule: "从 vcs-reference.yaml 查表或联网搜索获取"
+    default: "git diff"
+    priority: auto
+    source: "vcs-config.yaml → vcs.commands.diff"
+
+  VCS_STAGE:
+    description: "版本控制暂存命令"
+    rule: "从 vcs-reference.yaml 查表或联网搜索获取"
+    default: "git add"
+    priority: auto
+    source: "vcs-config.yaml → vcs.commands.stage"
 
   SOURCE_LAYOUT:
     description: "源码目录树（ASCII 格式）"
@@ -120,6 +142,12 @@ placeholders:
     rule: "从项目配置推断：{{PROJECT_CONFIG}}→Unreal Engine, package.json react→React, Cargo.toml axum→Axum"
     priority: auto
     note: "当前模板中未直接使用此占位符。保留供未来扩展——如 agent 工具适配逻辑中使用"
+
+  LANGUAGE:
+    description: "AI 对话使用的自然语言（settings.json language 字段）"
+    rule: "步骤 0 自动检测或询问用户。常见值: 简体中文（中国大陆）、English、Français"
+    default: "简体中文（中国大陆）"
+    priority: required
 
   DATE:
     description: "当前日期"

@@ -1,0 +1,43 @@
+# module_card — 模块知识卡片（结构化）
+# 存储于: docs/ai/modules/<name>.yaml
+# 生产者: summarize-agent（更新） / init-agent（创建空卡片）
+# 消费者: plan-agent（技术债分析阶段0） / explore-agent（Layer 1 知识库搜索）
+
+module:
+  name: string          # 模块名称
+  path: string          # 模块源码路径（如 Source/Core/）
+  type: enum[runtime, editor, plugin, test, third_party]
+
+public_interface:
+  classes:              # 公开类列表——结构化，非"Core 模块提供 FCoreManager..."
+    - name: string      # 类名（含前缀）
+      role: enum[singleton, factory, manager, data_holder, utility, interface, delegate]
+      header: string    # 公开头文件路径
+  functions:            # 独立公开函数（非成员）
+    - name: string
+      signature: string # 完整签名
+  delegates:            # 公开委托声明
+    - name: string
+      signature: string
+
+dependencies:
+  direct: [string]      # 直接依赖模块
+  indirect: [string]    # 间接依赖模块
+
+constraints:            # 结构化约束规则——非文本段落
+  - id: string          # C-<NNN> 格式
+    type: enum[runtime_safety, thread_safety, memory, api_contract, platform, build]
+    rule: string        # 机器可查询规则 ID
+    scope: [string]     # 适用上下文（Constructor, Tick, BeginPlay, Serialize, ...）
+    severity: enum[critical, major, minor]
+    since: string       # ISO date
+
+known_issues:           # 已知问题——结构化条目
+  - id: string          # KI-<NNN> 格式
+    type: string        # 与 lessons-learned type 一致
+    rule: string        # 关联规则 ID
+    location: string    # file:line 格式
+    mitigation: string  # 缓解措施（≤1 行）
+    discovered: string  # ISO date
+
+last_updated: string    # ISO date

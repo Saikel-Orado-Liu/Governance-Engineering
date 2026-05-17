@@ -23,7 +23,7 @@ color: yellow
 memory: project
 ---
 
-# Confirm Agent v3
+# Confirm Agent
 
 你是 Confirm Agent——流水线的智能闸门。单次 Fork 完成三项分析：歧义检测 → 复杂度评分 → 需求重述。你只输出结构化 YAML，不做任何代码修改。
 
@@ -109,7 +109,7 @@ memory: project
 simplicity_score = round(Σ(weight_i × score_i) / 100)
 ```
 
-### 判定阈值 (v3)
+### 判定阈值
 
 | 分数 | 等级 | 流程 |
 |------|------|------|

@@ -1,0 +1,107 @@
+# VCS 检测与命令参考
+# 用于 init-agent 在项目预扫描阶段检测 VCS 类型并获取命令语法。
+# 已知 VCS 直接查表；未知 VCS 通过联网搜索补充。
+
+# === VCS 检测标记 ===
+# 按优先级排列。检测到多个标记时取第一个匹配的。
+detection_signals:
+  git:
+    markers: [".git/", ".git"]
+    check_command: "git --version"
+    priority: 1
+  subversion:
+    markers: [".svn/"]
+    check_command: "svn --version"
+    priority: 2
+  perforce:
+    markers: [".p4config", ".p4ignore", "P4CONFIG"]
+    check_command: "p4 -V"
+    priority: 3
+  mercurial:
+    markers: [".hg/"]
+    check_command: "hg --version"
+    priority: 4
+  plastic:
+    markers: [".plastic/", "plastic.workspace"]
+    check_command: "cm version"
+    priority: 5
+
+# === 已知 VCS 命令参考 ===
+# 当 detection_signals 匹配成功后直接使用，无需联网搜索。
+known_vcs:
+  git:
+    status: "git status"
+    diff: "git diff"
+    diff_staged: "git diff --cached"
+    stage: "git add"
+    stage_all: "git add -A"
+    commit: "git commit"
+    commit_with_files: "git commit {files} -m {message}"
+    commit_all: "git commit -a -m {message}"
+    file_position: append
+    message_flag: "-m"
+    auto_mark: "[AI]"
+
+  subversion:
+    status: "svn status"
+    diff: "svn diff"
+    diff_staged: "svn diff"  # SVN 无 staging area
+    stage: "svn add"         # svn add 用于新文件
+    stage_all: "svn add --force ."
+    commit: "svn commit"
+    commit_with_files: "svn commit {files} -m {message}"
+    commit_all: "svn commit -m {message}"
+    file_position: append
+    message_flag: "-m"
+    auto_mark: "[AI]"
+
+  perforce:
+    status: "p4 opened"
+    diff: "p4 diff"
+    diff_staged: "p4 diff"   # P4 无 staging area，opened 文件即待提交
+    stage: "p4 add"           # 新文件用 p4 add，编辑的文件自动在 changelist
+    stage_all: "p4 reconcile"
+    commit: "p4 submit"
+    commit_with_files: "p4 submit -d {message} {files}"
+    commit_all: "p4 submit -d {message}"
+    file_position: append     # P4: files come after -d message
+    message_flag: "-d"
+    auto_mark: "[AI]"
+
+  mercurial:
+    status: "hg status"
+    diff: "hg diff"
+    diff_staged: "hg diff"    # Hg 无 staging area
+    stage: "hg add"
+    stage_all: "hg addremove"
+    commit: "hg commit"
+    commit_with_files: "hg commit {files} -m {message}"
+    commit_all: "hg commit -m {message}"
+    file_position: append
+    message_flag: "-m"
+    auto_mark: "[AI]"
+
+  plastic:
+    status: "cm status"
+    diff: "cm diff"
+    diff_staged: "cm diff"    # Plastic 无传统 staging area
+    stage: "cm add"
+    stage_all: "cm add ."
+    commit: "cm commit"
+    commit_with_files: "cm commit {files} -m {message}"
+    commit_all: "cm commit -a -m {message}"  # -a = commit all changes
+    file_position: append
+    message_flag: "-m"
+    auto_mark: "[AI]"
+
+# === 联网搜索规则（VCS 不在 known_vcs 中时触发） ===
+web_search:
+  enabled: true
+  detect_query: "{vcs_name} version control command line interface reference"
+  commands_query: "{vcs_name} CLI commands status diff add commit syntax"
+  note: >
+    对于不在 known_vcs 中的 VCS（如 Diversion），通过 WebSearch 获取：
+    1. 基础命令名（如 dv 而非 diversion）
+    2. status/diff/add/commit 子命令语法
+    3. 提交消息参数标志（如 -m、-d、--message）
+    4. 文件列表在命令中的位置约定

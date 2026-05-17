@@ -38,11 +38,10 @@ memory: project
 由 Team Lead 注入：
 
 1. 项目信息（名称、类型、语言、框架、模块、构建/测试/VCS 命令、编码偏好）
-2. 用户语言（步骤 0 检测或询问得到的 `language` 值）
-3. 通用模板路径（`{{TEMPLATE_ROOT_PATH}}`）
-4. 目标项目根路径
-5. 编码规范模板路径（`references/coding-standards-templates/{语言}.yaml`）
-6. MCP 安装清单：`{auto: [...], manual: [...]}`
+2. 通用模板路径（`{{TEMPLATE_ROOT_PATH}}`）
+3. 目标项目根路径
+4. 编码规范模板路径（`references/coding-standards-templates/{语言}.yaml`）
+5. MCP 安装清单：`{auto: [...], manual: [...]}`
 
 ---
 
@@ -134,7 +133,6 @@ memory: project
 | `{{SOURCE_PATH_PATTERN}}` | 阶段一扫描 | `{{SOURCE_DIR}}/**/*.{h,cpp}` or `src/**/*.ts` |
 | `{{CODING_RULES}}` | 编码规范模板 | 从 coding-standards-templates/{语言}.yaml 加载 |
 | `{{FRAMEWORK_NAME}}` | 框架检测 | UE→Unreal Engine, React→React 18 |
-| `{{LANGUAGE}}` | 用户语言（Team Lead 注入） | 步骤 0 检测或 AskUserQuestion 得到的值 |
 | `{{DATE}}` | 当前日期 | YYYY-MM-DD 格式 |
 
 对于无法自动推断的占位符 → 保持原样并记录到 `missing_placeholders`。
@@ -163,11 +161,6 @@ memory: project
 14. docs/ai/standards/*.yaml    # 依赖：目录
 15. CLAUDE.md                   # 最后写入（引用以上所有文件）
 ```
-
-**CLAUDE.md 行数约束**：写入后立即执行 `Bash: wc -l <目标路径>/CLAUDE.md`。若行数 > 180，按以下优先级压缩至 ≤ 180：
-1. `{{SOURCE_LAYOUT}}` 截断至 ≤ 15 行（只保留顶层目录）
-2. `{{CODING_RULES}}` 改为引用 `.claude/rules/coding-standards.md` 详情，仅保留 3 行核心规则摘要
-3. `{{PROJECT_MODULES}}` 截断至 ≤ 3 行
 
 ### 4.2 文件保护规则
 
@@ -238,41 +231,6 @@ vcs:
 - `commit_args.message_flag` 是提交消息的标志（Git/SVN: `-m`，P4: `-d`）
 - `commit_args.file_position: append` 表示文件列在命令末尾（绝大多数 VCS）
 - commit-agent 在运行时将文件列表和提交消息拼接到命令中
-- sync SKILL.md 步骤 0 和步骤 3 依赖此文件确定 VCS 命令
-
-#### 4.5.3 初始化 sync 状态
-
-写入 vcs-config.yaml 后，为 sync 模块建立初始同步起点：
-
-```
-1. 如果 vcs_type != none：
-   a. Bash 执行 VCS status 命令确认 workspace 可用
-   b. 获取当前 HEAD/最新 revision/最新 changelist 作为初始同步起点
-      Git: git rev-parse HEAD
-      SVN: svn info --show-item revision
-      P4:  p4 changes -m 1 -t 
-      Hg:  hg id -i
-      CM:  cm status --cset
-   c. Write .claude/agent-memory/sync/last-sync.yaml:
-      last_sync_commit: <VCS 变更标识>
-      last_sync_date: "<YYYY-MM-DD>"
-      synced_files: 0
-      vcs_type: <vcs.type>
-2. 如果 vcs_type = none：
-   a. 仍写入 last-sync.yaml，但标记为空状态：
-      last_sync_commit: null
-      last_sync_date: null
-      synced_files: 0
-      vcs_type: none
-   b. sync SKILL.md 步骤 0 会检测到 vcs-config.yaml type=none 并跳过
-3. 如果 VCS 无提交历史（新仓库）：
-   last_sync_commit: null
-   last_sync_date: "<YYYY-MM-DD>"
-   synced_files: 0
-   vcs_type: <vcs.type>
-```
-
-**为什么必须初始化**：sync SKILL.md 步骤 2 依赖 `last-sync.yaml` 确定上次同步的起点。不初始化会导致首次 `/sync` 找不到文件而报错。正确初始化后，首次 sync 会以当前状态为起点，后续的变更才会触发同步。
 
 ### 4.6 MCP 配置写入
 
@@ -315,47 +273,6 @@ vcs:
 - install_steps 来自联网搜索结果，用户已在步骤 2.3 确认
 - 命令在项目根目录执行
 - 安装失败不阻塞整体 init 流程——记录错误继续
-
-#### 4.6.2b 注入 MCP 工具到 Agent 定义
-
-MCP 安装到 settings.json 后，Agent 并不会自动获得对应的工具。必须将 MCP 工具名写入对应 Agent 定义的 `tools:` 列表中。
-
-```
-对 auto 列表中每个已安装的 MCP：
-  1. 从 mcp-compatibility.yaml 的 mcp_index.<id>.agent_tools 获取映射
-  2. 对映射中每个 agent-name → [tool-names]：
-     a. Read .claude/agents/<agent-name>.md
-     b. 在 frontmatter 的 tools: 列表末尾追加新工具（不重复已有工具）
-     c. 工具名格式: mcp__<server-id>__<tool-name>
-  3. 如 agent_tools 为空 → 该 MCP 不注入任何 Agent（仅安装到系统）
-```
-
-**工具注入示例**：安装 context7 MCP 后：
-
-```yaml
-# explore-agent.md 的 tools: 列表变为：
-tools:
-  - Read
-  - Glob
-  - Grep
-  - mcp__context7__search
-  - mcp__context7__resolve-library-id
-```
-
-**为什么必须做这一步**：Claude Code 的 Fork 机制只允许 Agent 使用其 frontmatter 中 `tools:` 列表内声明的工具。即使 MCP 在 settings.json 中配置正确，若 Agent 未在 `tools:` 中列出对应的 `mcp__*` 工具名，Agent 将无法调用该 MCP。不注入工具 = MCP 安装了但 Agent 用不了。
-
-**安全原则**：
-- 只注入用户已确认安装的 MCP 的工具
-- 不覆盖 Agent 已有的基础工具（Read/Glob/Grep/Edit/Write/Bash）
-- 不注入 manual 类型 MCP 的工具（凭证未填入前 MCP 不可用）
-- 对已存在于 tools: 列表中的 MCP 工具不重复添加
-
-**回退策略（联网搜索到的 MCP 或 agent_tools 为空时）**：
-1. 通过 Grep `.claude/settings.json` 提取该 MCP 的 `mcpServers` key（即 server-id）
-2. 工具名前缀为 `mcp__<server-id>__`，但完整工具名未知
-3. 将所有 `mcp__<server-id>__*` 工具全部注入 **developer-agent**
-4. 在 init_report 中标注 `agent_tools: fallback`（提示用户：联网搜索到的 MCP 工具未分类，已全部注入 developer-agent，请审查是否需要分配给其他 Agent）
-5. 如后续 /sync 发现更准确的工具分类，可更新 Agent 定义
 
 #### 4.6.3 处理 manual 类型 MCP（生成安装说明）
 
@@ -437,7 +354,6 @@ Bash: grep -r "\{\{.*\}\}" {目标路径}/CLAUDE.md {目标路径}/.claude/
 4. 如有 install_errors，标注在验证结果中
 5. 检查 manual 列表中的 MCP 是否全部生成安装说明
 6. 检查无敏感凭证泄漏（mcpServers 中无明文 password/secret/key/token 值未用占位符包裹）
-7. 检查 Agent 定义中是否已注入 MCP 工具——Grep .claude/agents/*.md 验证每个已安装 MCP 的 mcp__* 工具名存在于对应 Agent 的 tools: 列表中
 ```
 
 ### 5.4 运行验证脚本

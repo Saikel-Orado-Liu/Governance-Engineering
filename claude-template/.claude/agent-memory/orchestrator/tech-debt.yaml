@@ -1,4 +1,11 @@
-# 技术债务清单
-# 由 refactor-agent 自动维护。首次扫描后自动填充。
+# 技术债务清单 — 结构化技术债存储
+# 由 refactor-agent 自动维护。条目使用枚举和精确位置引用。
+#
+# 字段说明：
+#   type: code_quality | performance | architecture | dependency | api_deprecation
+#   severity: critical | major | minor
+#   location: {file, line, symbol} — 精确到符号级别
+#   auto_fixable: 是否可自动修复（决定 refactor-agent 的处理策略）
+#   resolution: 解决方式枚举 + 引用关联的 plan/task
 
 entries: []

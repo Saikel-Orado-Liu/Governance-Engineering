@@ -1,0 +1,30 @@
+# adr — 架构决策记录（结构化 YAML）
+# 存储于: docs/ai/decisions/ADR-<NNN>.yaml
+# 生产者: summarize-agent（步骤2） / developer-agent（大规模架构变更时）
+# 消费者: plan-agent（阶段0 技术债分析） / 新成员了解历史决策
+#
+# 替代旧版 docs/ai/decisions/ADR-<N>.md markdown 格式。
+# 优势：可机器查询 status=accepted 的决策、按 affected_modules 过滤、追踪 supersedes 链。
+
+id: integer
+title: string
+status: enum[proposed, accepted, deprecated, superseded]
+date: string           # ISO date
+
+context:
+  problem: string      # ≤2 行问题描述
+  alternatives:        # 考虑过的替代方案
+    - name: string
+      rejected_reason: string  # ≤1 行拒绝原因
+
+decision:
+  chosen: string       # 选择的方案名称（对应 alternatives[].name 之一）
+  reason: string       # ≤2 行核心原因
+
+consequences:
+  positive: [string]   # 正面影响
+  negative: [string]   # 负面影响
+  affected_modules: [string]  # 受影响的模块名
+
+supersedes: null       # integer | null — 被本 ADR 取代的 ADR ID
+superseded_by: null    # integer | null — 取代本 ADR 的 ADR ID

@@ -1,6 +1,6 @@
 # init_report — 项目初始化结果
 # 生产者: init-agent → 消费者: Team Lead
-# 传递方式: Team Lead 提取裸 YAML → 展示 + 处理残留占位符
+# 传递方式: Team Lead 提取裸 YAML → 展示 + 处理残留占位符 + 展示 MCP 安装说明
 
 verdict:
   type: enum[complete, partial, blocked]
@@ -42,12 +42,58 @@ placeholders:
     replaced: integer
     remaining: integer
 
+mcp:
+  type: object
+  required: true
+  description: MCP 安装结果——auto 已写入配置+执行安装命令，manual 已生成安装说明
+  fields:
+    auto_installed:
+      type: array
+      items:
+        id: string
+        name: string
+        setup: enum[config_only, needs_setup]
+      description: 已自动写入 settings.json 的 MCP
+    install_steps_executed:
+      type: array
+      required: false
+      items:
+        mcp: string
+        command: string
+        status: enum[success, failed]
+      description: 已执行的项目级安装命令
+    install_errors:
+      type: array
+      required: false
+      items:
+        mcp: string
+        command: string
+        error: string
+      description: 安装命令执行失败详情
+    manual_pending:
+      type: array
+      items:
+        id: string
+        name: string
+        reason: string
+      description: 已生成安装说明，待用户手动填入凭证的 MCP
+    skipped:
+      type: array
+      items: {id: string, name: string}
+      description: 用户选择跳过的 MCP
+    warnings:
+      type: array
+      items: string
+      required: false
+      description: MCP 配置相关警告（如配置格式问题、兼容性风险）
+
 verification:
   type: object
   required: true
   fields:
     structure_check: enum[passed, issues_found]
     placeholder_check: enum[passed, failed]
+    mcp_config_check: enum[passed, failed, skipped]
     validate_script: enum[passed, failed, not_found]
 
 missing_placeholders:
@@ -58,4 +104,4 @@ missing_placeholders:
 manual_steps:
   type: array
   required: false
-  description: verdict=partial 时需手动完成的操作
+  description: verdict=partial 时需手动完成的操作（含 manual MCP 的安装说明）

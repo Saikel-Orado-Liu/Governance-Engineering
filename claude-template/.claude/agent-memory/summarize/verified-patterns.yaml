@@ -1,5 +1,14 @@
-# 已验证代码模式
-# 由 Summarize Agent 自动维护——审查通过的非标准模式记录于此。
-# 后续任务可引用这些模式，减少重复探索。
+# Verified Patterns — 结构化代码模式存储
+# 由 Summarize Agent 自动维护。记录审查通过的可复用模式。
+# 查询：按 type/anti_pattern 过滤；按 applies_to.file_patterns 匹配当前文件。
+#
+# 字段说明：
+#   type: memory_safety | thread_safety | performance | api_design | error_handling | data_flow
+#   anti_pattern: 该模式要替代的反模式 ID（机器可查询）
+#   applies_to:
+#     contexts: 适用上下文枚举（cross_module_reference | tick_handler | constructor | io_bound | ui_binding | serialization | networking）
+#     file_patterns: glob 模式列表，用于 Agent 自动判断当前文件是否应引用此模式
+#   proven_in: 验证过该模式的任务/模块引用
+#   verified_count: 已验证次数（数字，非文本）
 
 patterns: []

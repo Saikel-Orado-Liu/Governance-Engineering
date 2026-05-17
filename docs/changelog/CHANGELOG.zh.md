@@ -4,6 +4,41 @@
 
 ---
 
+## [V1.2] — 2026-05-17
+
+### Agent 层 VCS 无关化
+
+- **commit-agent 重写**: 不再硬编码 Git 命令。所有 VCS 操作由 `.claude/vcs-config.yaml` 驱动——支持 Git、SVN、Perforce、Mercurial、Plastic SCM。使用 `commit_template` 占位符替换实现跨 VCS 安全提交。
+- **sync-agent 升级**: VCS log/diff 操作移交 Skill 层通过 `vcs-config.yaml` 执行。新增步骤 5——MCP 工具缺口检测（已安装到 settings.json 但未注入到任何 Agent `tools:` 列表的 MCP）。
+- **新增 `.claude/vcs-config.yaml`**: init-agent 在 `/init` 时生成，将 VCS 类型映射到 status/diff/stage/commit 命令及占位符模板。
+
+### 知识库结构化
+
+- **ADR 格式迁移**: 从 `ADR-<N>.md` markdown 迁移到 `ADR-<NNN>.yaml` 结构化 YAML。机器可查询字段：`status`、`supersedes`/`superseded_by` 决策链、枚举 `type`/`scope`。新增 `adr.schema.yaml`。
+- **模块卡片结构化**: 从自由文本迁移到 schema 驱动的 YAML，使用枚举字段（`public_interface.classes[].role`、`constraints[].type`、`constraints[].severity`）。新增 `module-card.schema.yaml`。
+- **summarize-agent 重写**: 所有知识写入使用枚举类型和机器可查询规则 ID，替代自然语言描述。自由文本字段硬限制 ≤2 行。自检重新定位为 schema 合规检查。
+- **INDEX.yaml 扩展**: 新增 `module_card`、`adr` 持久化存储 schema 条目。
+
+### Init 引擎 V2
+
+- **步骤 0 — 语言检测**: 从用户输入文本自动检测语言（中文/英文），无法判断时回退到 AskUserQuestion。结果驱动 `settings.json` 的 language 字段。
+- **步骤 2 — MCP 推荐**: 查询 `mcp-compatibility.yaml` 查找表匹配技术栈推荐 MCP 工具，可选联网搜索新工具。询问用户安装哪些。
+- **init-agent 大幅扩展** (+288 行): 生成 `vcs-config.yaml`、VCS 参考文件、MCP 增强的 Agent 定义、项目语言设置。占位符映射扩展了 VCS 特定条目。
+- **验证脚本升级**: `validate_init.py` 现检查 VCS 配置、MCP 引用、ADR/模块卡片 Schema、国际化文件。
+- **新增参考资料**: `mcp-compatibility.yaml`（MCP 查找表）、`vcs-reference.yaml`（VCS 检测模式）。
+- **新资产**: `init-agent.md` 提升到 `.claude/agents/` 作为独立 Agent 定义。
+
+### Schema 扩展
+
+- `summarize-report.schema.yaml` — 新增 `health` 快照（按严重程度统计 lessons/patterns/tech_debt 条目数）、lessons 增加 `type`/`rule`/`severity` 枚举。
+- `sync-report.schema.yaml` — 新增 `mcp_tool_gaps` 数组，报告未分配 MCP 工具。
+
+### 模板清理
+
+- **CLAUDE.md 精简**: 流水线图浓缩、移除 HTML 注释头、移除冗长 YAML 传递链、移除语言规则（现由 init 语言检测处理）。
+
+---
+
 ## [V1.1] — 2026-05-16
 
 ### Schema 外置化与按需注入

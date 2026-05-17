@@ -1,4 +1,14 @@
-# Lessons Learned
-# 由 Summarize Agent 自动维护。从任务产出中提取经验教训。
+# Lessons Learned — 结构化经验教训存储
+# 由 Summarize Agent 自动维护。条目使用枚举和精确引用，非自由文本。
+# 查询：按 type/severity/rule 过滤；按 date 排序。避免全文搜索。
+#
+# 字段说明：
+#   type: pattern_violation | api_misuse | missing_guard | build_error | naming | lifecycle | logic
+#   rule: 机器可查询规则 ID（如 no_loadobject_in_tick），用于自动匹配
+#   severity: critical | major | minor
+#   trigger: 触发该问题的代码位置和符号
+#   fix: 修复方式——类型枚举 + 引用已验证模式（如有）
+#   tests: 新增的回归测试引用（如有）
+#   resolved: 是否已永久解决
 
 entries: []

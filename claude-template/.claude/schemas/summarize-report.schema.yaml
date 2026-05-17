@@ -1,6 +1,8 @@
 # summarize_report — 知识沉淀结果
 # 生产者: summarize-agent → 消费者: commit-agent / Team Lead
 # 传递方式: Team Lead 提取裸 YAML → Fork(commit-agent)
+#
+# v4 变更: lessons 条目增加 type/rule/severity 枚举字段，替代旧版自由文本 category/title
 
 task:
   type: string
@@ -10,25 +12,60 @@ task:
 knowledge_updates:
   type: array
   required: false
-  description: 知识库文件更新
-  items: {file, change}
+  description: 知识库文件更新（模块卡片、ADR、编码规范等）
+  items:
+    file: string
+    change: string
+    type: enum[module_card, adr, coding_standard, module_index]
 
 memory_updates:
   type: array
   required: false
-  description: 共享记忆文件更新
-  items: {file, entries: integer}
+  description: agent-memory 文件更新
+  items:
+    file: string
+    entries: integer
+    action: enum[append, update]
 
 lessons:
   type: array
   required: false
-  description: 新提取的经验教训
-  items: {id: string, title: string, category: gc|naming|build|include|lifecycle|logic}
+  description: 新提取的经验教训（摘要字段——完整条目在 lessons-learned.yaml 中）
+  items:
+    id: string
+    type: enum[pattern_violation, api_misuse, missing_guard, build_error, naming, lifecycle, logic]
+    rule: string
+    severity: enum[critical, major, minor]
+
+health:
+  type: object
+  required: false
+  description: 更新后的知识库健康快照
+  fields:
+    lessons_learned:
+      entries: integer
+      limit: integer
+      status: enum[ok, approaching_limit, over_limit]
+    verified_patterns:
+      entries: integer
+      limit: integer
+      status: enum[ok, approaching_limit, over_limit]
+    tech_debt:
+      entries: integer
+      by_severity:
+        critical: integer
+        major: integer
+        minor: integer
+    issues_by_type: object
+    issues_by_severity:
+      critical: integer
+      major: integer
+      minor: integer
 
 next_actions:
   type: array
   required: false
-  description: 建议的后续操作
+  description: 建议的后续操作（≤1 行/条）
 
 # 传递链
 # summarize_report → Fork(commit-agent) — 提交知识库变更

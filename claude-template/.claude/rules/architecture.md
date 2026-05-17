@@ -71,7 +71,7 @@ paths:
 
 **不注入**：MODULE_INDEX、模块卡片、CLAUDE.md（除非 Agent 定义明确要求）
 
-### Schema 注入规则（v4.1 强制）
+### Schema 注入规则（强制）
 
 Agent 定义文件不再内联输出 Schema。Team Lead 必须在构造 Fork prompt 时：
 1. 根据 Agent 名称确定 Schema 文件路径 —— `agent_name` 中 `_` 替换为 `-`，加 `.schema.yaml`（如 `plan-agent` → `.claude/schemas/plan-result.schema.yaml`），或查 `schemas/INDEX.yaml`

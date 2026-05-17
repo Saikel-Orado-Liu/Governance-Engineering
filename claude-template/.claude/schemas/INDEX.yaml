@@ -89,6 +89,22 @@ schemas:
     direction: terminal
     notes: "手动 /init 触发。扫描项目→加载模板→替换占位符→生成配置。opus 模型。schema 位于 skills/init/assets/"
 
+# --- 持久化存储 Schema（非流水线传递，定义文件格式） ---
+
+  module_card:
+    file: module-card.schema.yaml
+    location: docs/ai/modules/<name>.yaml
+    producer: [summarize-agent, init-agent]
+    consumers: [plan-agent, explore-agent]
+    notes: "结构化模块知识卡片。替代旧版文本密集型格式。按 type/rule/severity 可机器查询"
+
+  adr:
+    file: adr.schema.yaml
+    location: docs/ai/decisions/ADR-<NNN>.yaml
+    producer: [summarize-agent, developer-agent]
+    consumers: [plan-agent, explore-agent]
+    notes: "结构化架构决策记录。替代旧版 docs/ai/decisions/ADR-<N>.md markdown 格式。可查询 status=accepted 的决策、追踪 supersedes 链"
+
 # YAML 传递铁律
 # 1. 传递时提取裸 YAML（去掉 ``` 包裹）
 # 2. 展示时保留 ```yaml 代码块

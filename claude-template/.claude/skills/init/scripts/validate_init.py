@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Init 技能验证脚本。检查初始化后的项目结构完整性。"""
+"""Init 技能验证脚本。检查初始化后的项目结构完整性、配置格式、MCP 安全。"""
 import sys
 import os
 import json
@@ -13,6 +13,15 @@ FORCE_SCHEMAS = ["INDEX.yaml", "confirm-result", "developer-result", "inspector-
 FORCE_SKILLS = ["confirm", "plan", "init"]
 FORCE_SECTIONS = ["项目概述", "常用命令", "编码规范", "工作流", "架构约定"]
 
+# MCP 配置中不应出现的明文凭证关键词
+# 匹配 JSON key 中包含敏感词且 value 为长字符串（疑似真实凭证）的情况
+# key 中敏感词后可跟后缀（如 AWS_ACCESS_KEY_ID 中的 _ID）
+# 值为 <你的...> 占位符的不算泄漏
+SENSITIVE_PATTERNS = [
+    r'(?i)"[^"]*(?:password|secret|api[_-]?key|access[_-]?key|token)[^"]*"\s*:\s*"[A-Za-z0-9+/=_-]{20,}"',
+]
+
+
 def load_known_placeholders(project_path):
     """从 placeholder-map.yaml 加载所有已知占位符（含标准14个 + 框架适配）"""
     known = set()
@@ -23,10 +32,8 @@ def load_known_placeholders(project_path):
         import yaml
         with open(map_path, encoding='utf-8') as f:
             data = yaml.safe_load(f)
-        # 标准占位符
         for key in data.get('placeholders', {}):
             known.add(key.upper())
-        # 框架适配占位符
         for mode in data.get('framework_adaptations', {}).values():
             if isinstance(mode, dict) and 'replacements' in mode:
                 for key in mode['replacements']:
@@ -34,6 +41,68 @@ def load_known_placeholders(project_path):
     except:
         pass
     return known
+
+
+def validate_mcp_config(claude_dir: str) -> list[str]:
+    """验证 MCP 配置的安全性和格式正确性"""
+    errors = []
+    settings_path = os.path.join(claude_dir, "settings.json")
+    if not os.path.exists(settings_path):
+        return errors  # settings.json 由其他检查项报告缺失
+
+    try:
+        with open(settings_path, encoding='utf-8') as f:
+            settings = json.load(f)
+    except json.JSONDecodeError as e:
+        errors.append(f"settings.json JSON 格式错误: {e}")
+        return errors
+
+    mcp_servers = settings.get("mcpServers")
+    if mcp_servers is None:
+        return errors  # 无 MCP 配置是合法的
+
+    # 1. 类型检查
+    if not isinstance(mcp_servers, dict):
+        errors.append("settings.json mcpServers 必须是对象 (dict)")
+        return errors
+
+    # 2. 每条 MCP 条目结构验证
+    for mcp_id, mcp_config in mcp_servers.items():
+        if not isinstance(mcp_config, dict):
+            errors.append(f"MCP '{mcp_id}': 配置必须是对象")
+            continue
+
+        # 必须有 command 或 args
+        if "command" not in mcp_config:
+            errors.append(f"MCP '{mcp_id}': 缺少 'command' 字段")
+
+        # args 如果存在必须是数组
+        if "args" in mcp_config and not isinstance(mcp_config["args"], list):
+            errors.append(f"MCP '{mcp_id}': 'args' 必须是数组")
+
+        # env 如果存在必须是对象
+        if "env" in mcp_config and not isinstance(mcp_config["env"], dict):
+            errors.append(f"MCP '{mcp_id}': 'env' 必须是对象")
+
+    # 3. 凭证安全检查——检测明文凭证泄漏
+    settings_text = json.dumps(settings, indent=2)
+    for pattern in SENSITIVE_PATTERNS:
+        matches = re.findall(pattern, settings_text)
+        for match in matches:
+            key = match[0] if isinstance(match, tuple) else match
+            errors.append(
+                f"settings.json 可能包含明文凭证（{key}=***）。"
+                f"manual 类型的 MCP 不应将实际凭证写入配置文件，"
+                f"应使用 '<你的凭证>' 占位符"
+            )
+
+    # 4. 检查是否有占位符被正确使用
+    placeholder_pattern = re.compile(r'<你的\s*\w+>')
+    placeholders_found = placeholder_pattern.findall(settings_text)
+    if placeholders_found:
+        pass  # 有占位符说明 manual MCP 的凭证未被填入，这是安全的
+
+    return errors
 
 
 def validate(path: str) -> list[str]:
@@ -67,7 +136,6 @@ def validate(path: str) -> list[str]:
         for r in ["architecture.md"]:
             if not os.path.exists(os.path.join(rules, r)):
                 errors.append(f".claude/rules/{r} 缺失")
-        # coding-standards.md 或 coding-standards 的变体
         cs = [f for f in os.listdir(rules) if "coding" in f.lower() and f.endswith(".md")]
         if not cs:
             errors.append(".claude/rules/ 中无编码规范文件 (coding-standards*.md)")
@@ -81,7 +149,6 @@ def validate(path: str) -> list[str]:
         for a in FORCE_AGENTS:
             if f"{a}.md" not in agent_files:
                 errors.append(f"强制 Agent 缺失: {a}.md")
-        # 验证 frontmatter
         for af in agent_files:
             if not af.endswith(".md"):
                 continue
@@ -149,6 +216,10 @@ def validate(path: str) -> list[str]:
         for sub in ["summarize", "sync", "orchestrator"]:
             if not os.path.isdir(os.path.join(mem, sub)):
                 errors.append(f".claude/agent-memory/{sub}/ 缺失")
+
+    # 9. MCP 配置验证
+    mcp_errors = validate_mcp_config(claude_dir)
+    errors.extend(mcp_errors)
 
     return errors
 

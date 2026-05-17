@@ -29,7 +29,7 @@ The accompanying implementation resides in the `claude-template/` directory, con
 | Directory                                | Contents                 | Description                                                     |
 | ---------------------------------------- | ------------------------ | --------------------------------------------------------------- |
 | `claude-template/CLAUDE.md`              | AI Organization Charter  | Pure Dispatcher Pattern, main conversation never executes tasks |
-| `claude-template/.claude/agents/`        | 11 Agent Definitions     | 8 Pipeline Agents + 3 Offline Agents                            |
+| `claude-template/.claude/agents/`        | 12 Agent Definitions     | 8 Pipeline Agents + 3 Offline Agents                            |
 | `claude-template/.claude/skills/`        | 5 Skill Entry Points     | confirm / plan / sync / refactor / optimize + init              |
 | `claude-template/.claude/schemas/`       | Inter-Agent Comm Schemas | YAML structured data exchange standards                         |
 | `claude-template/.claude/rules/`         | Path Matching Rules      | architecture.md + coding-standards.md                           |
